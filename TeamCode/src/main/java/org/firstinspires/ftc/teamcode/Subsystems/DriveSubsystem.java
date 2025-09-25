@@ -1,15 +1,14 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.Subsystems;
 
 // FTCLib imports
-import com.arcrobotics.ftclib.command.SubsystemBase; // Base class for FTCLib subsystems
+import com.arcrobotics.ftclib.command.SubsystemBase;
 
-// Pedro Pathing imports - for field-centric driving and autonomous
-import com.pedropathing.follower.Follower;           // Pedro Pathing's main control class
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants; // Our Pedro Pathing configuration
+import com.pedropathing.follower.Follower;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 // Standard FTC imports
-import com.qualcomm.robotcore.hardware.DcMotor;      // Motor control
-import com.qualcomm.robotcore.hardware.HardwareMap;  // Hardware configuration access
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.HardwareMap;
 
 /**
  * DriveSubsystem - Controls the robot's mecanum drive system with field-centric control
@@ -23,10 +22,10 @@ import com.qualcomm.robotcore.hardware.HardwareMap;  // Hardware configuration a
  * For example, pushing the joystick "forward" always moves toward the opponent's side,
  * regardless of which way the robot is facing.
  */
-public class DriveSubsystem extends SubsystemBase { // Extends FTCLib's SubsystemBase for command-based programming
+public class DriveSubsystem extends SubsystemBase {
     
     // HARDWARE COMPONENTS:
-    private DcMotor frontLeft, frontRight, backLeft, backRight; // 4 mecanum drive motors
+    private DcMotor frontLeft, frontRight, backLeft, backRight;
     private Follower follower; // Pedro Pathing Follower - handles Pinpoint odometry and provides robot position/heading
     
     /**
@@ -45,6 +44,12 @@ public class DriveSubsystem extends SubsystemBase { // Extends FTCLib's Subsyste
         frontLeft.setDirection(DcMotor.Direction.REVERSE);  // Reverse left front motor
         backLeft.setDirection(DcMotor.Direction.REVERSE);   // Reverse left back motor
         // Right side motors stay FORWARD (default)
+
+        // Set zero power behavior to brake
+        frontLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        frontRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        backLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        backLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         
         // PEDRO PATHING SETUP - Creates Follower with Pinpoint odometry sensor
         follower = Constants.createFollower(hardwareMap); // Uses our Constants class configuration
@@ -66,30 +71,27 @@ public class DriveSubsystem extends SubsystemBase { // Extends FTCLib's Subsyste
         double heading = follower.getPose().getHeading(); // Returns heading in radians
         
         // FIELD-CENTRIC TRANSFORMATION - Rotate joystick inputs by robot's heading
-        // This makes the robot move relative to the field instead of relative to itself
-        double rotatedForward = forward * Math.cos(-heading) - strafe * Math.sin(-heading); // Transform forward component
-        double rotatedStrafe = forward * Math.sin(-heading) + strafe * Math.cos(-heading);  // Transform strafe component
+        double rotatedForward = forward * Math.cos(-heading) - strafe * Math.sin(-heading);
+        double rotatedStrafe = forward * Math.sin(-heading) + strafe * Math.cos(-heading);
         // Note: -heading because we want field-relative, not robot-relative movement
         
         // MECANUM DRIVE CALCULATIONS - Convert movement vectors to individual wheel powers
-        // Mecanum drive formula: each wheel contributes to forward, strafe, and rotation
-        double fl = rotatedForward + rotatedStrafe + rotate; // Front left wheel power
-        double fr = rotatedForward - rotatedStrafe - rotate; // Front right wheel power  
-        double bl = rotatedForward - rotatedStrafe + rotate; // Back left wheel power
-        double br = rotatedForward + rotatedStrafe - rotate; // Back right wheel power
+        double fl = rotatedForward + rotatedStrafe + rotate;
+        double fr = rotatedForward - rotatedStrafe - rotate;
+        double bl = rotatedForward - rotatedStrafe + rotate;
+        double br = rotatedForward + rotatedStrafe - rotate;
         
         // POWER NORMALIZATION - Ensure no wheel power exceeds 1.0 (100%)
-        // Find the maximum absolute power value
         double max = Math.max(1.0, Math.max(Math.max(Math.abs(fl), Math.abs(fr)), 
                                            Math.max(Math.abs(bl), Math.abs(br))));
         // If any wheel power > 1.0, scale all wheels down proportionally
-        // This maintains the movement direction while staying within motor limits
+
         
         // APPLY MOTOR POWERS - Set the calculated and normalized powers to motors
-        frontLeft.setPower(fl / max);  // Apply normalized power to front left
-        frontRight.setPower(fr / max); // Apply normalized power to front right
-        backLeft.setPower(bl / max);   // Apply normalized power to back left
-        backRight.setPower(br / max);  // Apply normalized power to back right
+        frontLeft.setPower(fl / max);
+        frontRight.setPower(fr / max);
+        backLeft.setPower(bl / max);
+        backRight.setPower(br / max);
     }
     
     /**
