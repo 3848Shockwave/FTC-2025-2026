@@ -9,32 +9,18 @@ import com.bylazar.field.Style;
 
 /**
  * PanelsSubsystem - Controls the Panels telemetry and field visualization system
- * 
- * This subsystem encapsulates:
- * - Panels telemetry display
- * - Field visualization with robot position and paths
- * - Integration with Pedro Pathing odometry
  */
 public class PanelsSubsystem extends SubsystemBase {
-    
-    // Panels components
     private TelemetryManager telemetryM;
     private FieldManager panelsField;
     
-    // Styles for drawing
-    private Style robotStyle = new Style("", "#FF5722", 0.0);  // Orange robot
-    private Style pathStyle = new Style("", "#4CAF50", 1.0);   // Green path
-    private Style targetStyle = new Style("Target", "#2196F3", 2.0); // Blue target
+    private Style robotStyle = new Style("", "#FF5722", 0.0);
+    private Style pathStyle = new Style("", "#4CAF50", 1.0);
+    private Style targetStyle = new Style("Target", "#2196F3", 2.0);
     
-    /**
-     * Constructor - Initializes Panels components
-     */
     public PanelsSubsystem() {
-        // Initialize Panels components
         telemetryM = PanelsTelemetry.INSTANCE.getTelemetry();
         panelsField = PanelsField.INSTANCE.getField();
-        
-        // Set field offsets for Pedro Pathing
         panelsField.setOffsets(PanelsField.INSTANCE.getPresets().getPEDRO_PATHING());
     }
     
@@ -50,7 +36,6 @@ public class PanelsSubsystem extends SubsystemBase {
         telemetryM.debug("Robot Y", String.format("%.1f", robotY));
         telemetryM.debug("Heading", String.format("%.1f°", Math.toDegrees(heading)));
         
-        // Add any additional data
         for (String data : additionalData) {
             telemetryM.debug(data);
         }
@@ -65,12 +50,10 @@ public class PanelsSubsystem extends SubsystemBase {
      * @param heading Robot heading in radians
      */
     public void drawRobot(double x, double y, double heading) {
-        // Draw robot body
         panelsField.setStyle(robotStyle);
         panelsField.moveCursor(x, y);
         panelsField.circle(9);
         
-        // Draw heading indicator
         double headX = x + 15 * Math.cos(heading);
         double headY = y + 15 * Math.sin(heading);
         panelsField.moveCursor(x, y);
