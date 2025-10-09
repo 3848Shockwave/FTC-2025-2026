@@ -134,7 +134,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
                 backLeftPower   /= max;
                 backRightPower  /= max;
             }
-
+            
             // This is test code:
             //
             // Uncomment the following code to test your motor directions.
@@ -163,5 +163,7 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
             telemetry.addData("Front left/Right", "%4.2f, %4.2f", frontLeftPower, frontRightPower);
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", backLeftPower, backRightPower);
             telemetry.update();
+
+
         }
     }}
