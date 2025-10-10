@@ -1,5 +1,5 @@
 ## TeamCode Module
-
+### DO NOT USE AGP TO UPGRADE OR IT WILL BREAK EVERYTHING!
 Welcome!
 
 This module, TeamCode, is the place where you will write/paste the code for your team's
