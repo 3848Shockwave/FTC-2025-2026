@@ -49,5 +49,7 @@ public class DriveTest extends NextFTCOpMode {
     @Override public void onUpdate() {
         BindingManager.update();
     }
-    @Override public void onStop() { }
+    @Override public void onStop() {
+        BindingManager.reset();
+    }
 }
