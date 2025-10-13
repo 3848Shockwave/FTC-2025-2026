@@ -5,10 +5,12 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 import dev.nextftc.bindings.BindingManager;
+import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.extensions.pedro.PedroDriverControlled;
 import dev.nextftc.ftc.Gamepads;
 import dev.nextftc.ftc.NextFTCOpMode;
+import dev.nextftc.ftc.components.BulkReadComponent;
 import dev.nextftc.hardware.driving.DriverControlledCommand;
 
 // at the top of the file:
@@ -20,7 +22,9 @@ import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 public class DriveTest extends NextFTCOpMode {
     {
         addComponents(
-                new PedroComponent(Constants::createFollower)
+                new PedroComponent(Constants::createFollower),
+                BulkReadComponent.INSTANCE,
+                BindingsComponent.INSTANCE
         );
 
     }
