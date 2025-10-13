@@ -37,6 +37,7 @@ public class DriveTest extends NextFTCOpMode {
 
     @Override public void onInit() {
         follower().setStartingPose(startPose);
+        follower().update();
     }
     @Override public void onWaitForStart() {
 
