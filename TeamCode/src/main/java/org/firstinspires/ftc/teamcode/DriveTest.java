@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
+
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
@@ -15,6 +16,7 @@ import dev.nextftc.hardware.driving.DriverControlledCommand;
 
 // at the top of the file:
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;
+import com.pedropathing.geometry.Pose;
 
 
 
@@ -29,16 +31,16 @@ public class DriveTest extends NextFTCOpMode {
 
     }
 
-
-
-
-
-
+    private final Pose startPose = new Pose(28.5, 128, Math.toRadians(180)); // Start Pose of our robot.
+    // TODO: calibrate and check if this works first
 
 
     @Override public void onInit() {
+        follower().setStartingPose(startPose);
     }
-    @Override public void onWaitForStart() { }
+    @Override public void onWaitForStart() {
+
+    }
     @Override public void onStartButtonPressed() {
         DriverControlledCommand driverControlled = new PedroDriverControlled(
                 Gamepads.gamepad1().leftStickY(),
@@ -51,9 +53,9 @@ public class DriveTest extends NextFTCOpMode {
 
     }
     @Override public void onUpdate() {
-        BindingManager.update();
+
     }
     @Override public void onStop() {
-        BindingManager.reset();
+
     }
 }
