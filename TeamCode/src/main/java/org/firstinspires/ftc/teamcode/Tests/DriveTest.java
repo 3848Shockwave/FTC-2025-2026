@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.Tests;
 
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -12,8 +12,6 @@ import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.hardware.driving.DriverControlledCommand;
 
 // at the top of the file:
-import static dev.nextftc.extensions.pedro.PedroComponent.follower;
-
 
 
 @TeleOp(name = "DriveTest", group = "Testing")
@@ -26,13 +24,8 @@ public class DriveTest extends NextFTCOpMode {
     }
 
 
-
-
-
-
-
-
     @Override public void onInit() {
+
     }
     @Override public void onWaitForStart() { }
     @Override public void onStartButtonPressed() {
@@ -44,8 +37,10 @@ public class DriveTest extends NextFTCOpMode {
         );
         driverControlled.schedule();
 
-
     }
+
+
+
     @Override public void onUpdate() {
         BindingManager.update();
     }
