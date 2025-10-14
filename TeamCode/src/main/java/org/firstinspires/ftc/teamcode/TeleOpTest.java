@@ -11,6 +11,8 @@ import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
 import dev.nextftc.hardware.driving.FieldCentric;
 import dev.nextftc.hardware.driving.MecanumDriverControlled;
+import dev.nextftc.hardware.impl.Direction;
+import dev.nextftc.hardware.impl.IMUEx;
 import dev.nextftc.hardware.impl.MotorEx;
 
 @TeleOp(name = "DefaultNextFTCTeleOp", group = "Testing")
@@ -22,12 +24,13 @@ public class TeleOpTest extends NextFTCOpMode {
         );
     }
 
+    private final IMUEx imu = new IMUEx("pinpoint", Direction.UP, Direction.FORWARD).zeroed();
+
     // change the names and directions to suit your robot
     private final MotorEx frontLeftMotor = new MotorEx("front_left").reversed();
     private final MotorEx frontRightMotor = new MotorEx("front_right");
     private final MotorEx backLeftMotor = new MotorEx("back_left").reversed();
     private final MotorEx backRightMotor = new MotorEx("back_right");
-
 
 
     @Override
@@ -39,7 +42,8 @@ public class TeleOpTest extends NextFTCOpMode {
                 backRightMotor,
                 Gamepads.gamepad1().leftStickY().negate(),
                 Gamepads.gamepad1().leftStickX(),
-                Gamepads.gamepad1().rightStickX()
+                Gamepads.gamepad1().rightStickX(),
+                new FieldCentric(imu)
 
         );
         driverControlled.schedule();

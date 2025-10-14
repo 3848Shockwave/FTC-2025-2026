@@ -19,6 +19,7 @@ import dev.nextftc.hardware.driving.DriverControlledCommand;
 
 // at the top of the file:
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;
+
 import com.pedropathing.geometry.Pose;
 
 
@@ -34,22 +35,29 @@ public class DriveTest extends NextFTCOpMode {
 
     }
 
-    public static Pose startPose;// = new Pose(28.5, 128, Math.toRadians(180)); // Start Pose of our robot.
+    public static Pose startPose = new Pose(0, 0, 0); // Start Pose of our robot.
     // TODO: calibrate and check if this works first
 
     private TelemetryManager telemetryManager;
 
 
-    @Override public void onInit() {
-        follower().setStartingPose(startPose == null ? new Pose() : startPose); // this is how pedropathing does it normally i guess
+    @Override
+    public void onInit() {
+        follower().setStartingPose(startPose); // this is how pedropathing does it normally i guess
         follower().update();
 
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
-    }
-    @Override public void onWaitForStart() {
 
     }
-    @Override public void onStartButtonPressed() {
+
+    @Override
+    public void onWaitForStart() {
+
+    }
+
+    @Override
+    public void onStartButtonPressed() {
+        follower().startTeleopDrive();
         DriverControlledCommand driverControlled = new PedroDriverControlled(
                 Gamepads.gamepad1().leftStickY(),
                 Gamepads.gamepad1().leftStickX(),
@@ -60,11 +68,15 @@ public class DriveTest extends NextFTCOpMode {
 
 
     }
-    @Override public void onUpdate() {
+
+    @Override
+    public void onUpdate() {
         telemetryManager.update();
 
     }
-    @Override public void onStop() {
+
+    @Override
+    public void onStop() {
 
     }
 }
