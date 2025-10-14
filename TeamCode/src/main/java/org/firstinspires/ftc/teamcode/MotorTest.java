@@ -12,7 +12,7 @@ import static dev.nextftc.bindings.Bindings.*;
 
 
 @Configurable
-@TeleOp(name = "Motor Test", group = "Testing")
+@TeleOp(name = "MotorTest", group = "Testing")
 public class MotorTest extends NextFTCOpMode {
     {
         addComponents(/* vararg components */);

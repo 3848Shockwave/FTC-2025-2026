@@ -13,7 +13,7 @@ import dev.nextftc.hardware.driving.FieldCentric;
 import dev.nextftc.hardware.driving.MecanumDriverControlled;
 import dev.nextftc.hardware.impl.MotorEx;
 
-@TeleOp(name = "NextFTC TeleOp Program Java")
+@TeleOp(name = "DefaultNextFTCTeleOp", group = "Testing")
 public class TeleOpTest extends NextFTCOpMode {
     public TeleOpTest() {
         addComponents(

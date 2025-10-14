@@ -23,7 +23,7 @@ import com.pedropathing.geometry.Pose;
 
 
 @Configurable
-@TeleOp(name = "DriveTest", group = "Testing")
+@TeleOp(name = "PedroDriveTest", group = "Testing")
 public class DriveTest extends NextFTCOpMode {
     {
         addComponents(
