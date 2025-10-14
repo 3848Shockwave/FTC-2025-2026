@@ -43,8 +43,8 @@ public class DriveTest extends NextFTCOpMode {
 
     @Override
     public void onInit() {
-        follower().setStartingPose(startPose); // this is how pedropathing does it normally i guess
-        follower().update();
+//        follower().setStartingPose(startPose); // this is how pedropathing does it normally i guess
+//        follower().update();
 
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
 
@@ -59,7 +59,7 @@ public class DriveTest extends NextFTCOpMode {
     public void onStartButtonPressed() {
         follower().startTeleopDrive();
         DriverControlledCommand driverControlled = new PedroDriverControlled(
-                Gamepads.gamepad1().leftStickY(),
+                Gamepads.gamepad1().leftStickY().negate(),
                 Gamepads.gamepad1().leftStickX(),
                 Gamepads.gamepad1().rightStickX(),
                 false
