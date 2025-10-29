@@ -1,10 +1,10 @@
 package org.firstinspires.ftc.teamcode.OpModes;
-import static org.firstinspires.ftc.teamcode.pedroPathing.Tuning.follower;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 import org.firstinspires.ftc.teamcode.Subsystems.Drive;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.pedroPathing.Tuning;
 
 import dev.nextftc.core.commands.Command;
 
@@ -26,7 +26,6 @@ import com.pedropathing.paths.PathChain;
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 
 
-
 //check https://nextftc.dev/guide/opmodes/autonomous
 //check https://pedropathing.com/docs/pathing/examples/auto
 
@@ -38,10 +37,10 @@ public class AutonomousProgram extends NextFTCOpMode {
 
     private final Pose startPose = new Pose(28.5, 128, Math.toRadians(180)); // Start Pose of our robot.
     private final Pose scorePose = new Pose(60, 85, Math.toRadians(135)); // Scoring Pose of our robot. It is facing the goal at a 135 degree angle.
-    private final Pose moveTest1Pose = new Pose(60, 85, Math.toRadians(135));
+    private final Pose moveTest1Pose = new Pose(50, 100, Math.toRadians(180));
 
 
-    public void buidPaths(){
+    public void buildPaths(){
 
         /* This is our scorePreload path. We are using a BezierLine, which is a straight line. */
         scorePreload = new Path(new BezierLine(startPose, scorePose));
@@ -49,7 +48,7 @@ public class AutonomousProgram extends NextFTCOpMode {
 
         /* This is our moveTest1 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         moveTest1 = follower().pathBuilder()
-                .addPath(new BezierLine(scorePose,moveTest1Pose))
+                .addPath(new BezierLine(scorePose, moveTest1Pose))
                 .setLinearHeadingInterpolation(scorePose.getHeading(), moveTest1Pose.getHeading())
                 .build();
 
@@ -68,38 +67,22 @@ public class AutonomousProgram extends NextFTCOpMode {
         sequentialGroup - runs commands one after another
         parallelGroup - runs commands at the same time
      */
-    private Command automousRoutine(){
+    private Command autonomousRoutine(){
         return new SequentialGroup(
-            new FollowPath(moveTest1)
+                new FollowPath(scorePreload),
+                new FollowPath(moveTest1)
         );
     }
-
-
-
-
-
-
 
     @Override
     public void onInit(){
         follower().setStartingPose(startPose);
-        buidPaths(); // important or the the method FollowPath will reference moveTest1 as null
+        buildPaths(); // important or the the method FollowPath will reference moveTest1 as null
 
     }
 
     @Override
     public void onStartButtonPressed() {
-        automousRoutine().schedule();
-//
-//        Path moveToScore = new Path(
-//                new BezierLine(startPose, scorePose)
-//        );
-//        follower().followPath(moveToScore);
+        autonomousRoutine().schedule();
     }
-
-    @Override
-    public void onUpdate() {
-        follower().update();
-    }
-
 }
