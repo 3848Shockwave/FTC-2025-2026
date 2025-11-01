@@ -1,0 +1,204 @@
+    package org.firstinspires.ftc.teamcode.Subsystems;
+
+
+    import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.distancePerImpulseForRotation;
+    import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.distanceperImulseForLunch;
+    import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.flyWheelDiameter;
+    import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.gravityAccalerationValue;
+    import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.motorShaftRadiusForLuncher;
+    import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.rotationDiameter;
+
+    import dev.nextftc.control.ControlSystem;
+
+    import org.firstinspires.ftc.robotcore.external.Telemetry;
+    import org.firstinspires.ftc.teamcode.Tests.AprilTagWebCam;
+    import org.firstinspires.ftc.vision.VisionPortal;
+    import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
+    import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
+
+    import java.util.ArrayList;
+    import java.util.List;
+
+    import dev.nextftc.control.KineticState;
+    import dev.nextftc.core.subsystems.Subsystem;
+    import dev.nextftc.hardware.impl.MotorEx;
+
+    public class Turret implements Subsystem {
+    //declare for every subsystem
+    public static final Turret INSTANCE = new Turret();
+    private Turret() { }
+
+
+    //all the hardware goes here
+    private final MotorEx lunchMotor= new MotorEx("lunchMotor").brakeMode();
+    /*
+    luncher angle(horizontal): 65  degrees
+
+    Gear Ratio	19.2:1
+    Encoder Resolution	537.7 PPR at the Output Shaft
+
+     */
+    private final MotorEx rotateMotor= new MotorEx("rotateMotor").brakeMode();
+    /*
+    13.7 : 1 Ratio, 435 RPM
+    Encoder Resolution	384.5 PPR at the Output Shaft
+
+    sku:5203-2402-0014 https://www.gobilda.com/5202-series-yellow-jacket-planetary-gear-motor-13-7-1-ratio-24mm-length-6mm-d-shaft-435-rpm-36mm-gearbox-3-3-5v-encoder/
+
+    24:135 (gear ratio for the turning plate)
+    217.572 mm --> diameter for the plate --> plate Circumference:68.3523 cm
+
+    Total Gear Ratio:
+    13.7 * 135/24 = 77.0625
+
+    total counts per plate revolution:
+    77.0625 * 384.5 = 29630.53125 counts/plate rev
+
+    __distance moved per encoder count__
+    =68.3523/29630.53125 = 0.0023068267
+     */
+    private ControlSystem controlSystemTurret;
+    private ControlSystem controlSystemRotate;
+
+
+    AprilTagWebCam aprilTagWebCam = new AprilTagWebCam();
+
+    private AprilTagProcessor aprilTagProcessor;
+    private VisionPortal visionPortal;
+    private List<AprilTagDetection> detectedTags = new ArrayList<>();
+    private Telemetry telemetry;
+
+
+
+
+
+
+    /*
+
+    for webcam to work, copy from AprilTagWebCam.java
+
+     */
+    public List<AprilTagDetection> getDetectedTags(){
+        return detectedTags;
+    }
+    public void displayDetectionTelemetry(AprilTagDetection detectedId) {
+        if (detectedId == null) {
+            return;
+        }
+        if (detectedId.metadata != null) {
+            telemetry.addLine(String.format("\n==== (ID %d) %s", detectedId.id, detectedId.metadata.name));
+            if (detectedId.ftcPose != null) {
+                telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (cm)", detectedId.ftcPose.x, detectedId.ftcPose.y, detectedId.ftcPose.z));
+                telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detectedId.ftcPose.pitch, detectedId.ftcPose.roll, detectedId.ftcPose.yaw));
+                telemetry.addLine(String.format("RBE %6.1f %6.1f %6.1f  (cm, deg, deg)", detectedId.ftcPose.range, detectedId.ftcPose.bearing, detectedId.ftcPose.elevation));
+            } else {
+                telemetry.addLine("FTC Pose data not available");
+            }
+        } else {
+            telemetry.addLine(String.format("\n==== (ID %d) Unknown", detectedId.id));
+            telemetry.addLine(String.format("Center %6.0f %6.0f   (pixels)", detectedId.center.x, detectedId.center.y));
+        }
+        // Add "key" information to telemetry
+        telemetry.addLine("\nkey:\nXYZ = X (Right), Y (Forward), Z (Up) dist.");
+        telemetry.addLine("PRY = Pitch, Roll & Yaw (XYZ Rotation)");
+        telemetry.addLine("RBE = Range, Bearing & Elevation");
+    }
+
+
+    public AprilTagDetection getTagBySpecificID(int id){
+        for(AprilTagDetection tag : detectedTags) {
+            if (tag.id == id) {
+                return tag;
+            }
+        }
+        return null;
+    }
+
+
+
+    public double calculatePosition(){
+        if(!detectedTags.isEmpty()) {
+            double angle = detectedTags.get(21).ftcPose.bearing;
+            double arcLength = angle * Math.PI *rotationDiameter/360;
+
+            // DPE (Distance Per Encoder count) = 0.0023068267 cm/encoder count
+            // This converts the arc length in cm to encoder counts for motor movement
+            return arcLength / distancePerImpulseForRotation;
+        }else{
+            return Math.PI*rotationDiameter/distancePerImpulseForRotation; //impulse needed to make a full rotation
+        }
+    }
+    /*
+    h0: the height of the launcher
+    v0: initial speed of the ball
+    theta: the angle of the launcher (relative to the ground)
+    d: the distance from the launcher to the target
+    h1: the height of the target
+    g: the acceleration due to gravity = 9.8 m/s^2
+
+    formula (physical idea situation):
+    v_0 = \sqrt{\frac{gd^2}{2 cos^2(\theta)(d\space tan(\theta)+h_0-h)}}
+
+    diameter of fly wheel: 96 mm
+    motor shaft diameter is: 8mm -> 4 mm radius
+
+    outLayerSpeed: the speed of the out layer of fly wheel = initial speed of ball
+    motorSpeed: the speed of the motor in cm/s
+    formula: v_{rim} = v \frac{R}{r_{motor}}
+
+     */
+    public double calculateLunchStrength(){
+        double distance = detectedTags.get(21).ftcPose.range;
+        double heightDifference = detectedTags.get(21).ftcPose.z;
+        double tanTheta = Math.tan(Math.toRadians(detectedTags.get(0).ftcPose.bearing));
+        double cosTheta = Math.cos(Math.toRadians(detectedTags.get(0).ftcPose.bearing));
+        double efficientCoefficient = 0.8;
+
+
+        double initialSpeedNeeded = Math.sqrt(gravityAccalerationValue*Math.pow(distance,2)/(2*Math.pow(cosTheta,2)*(distance*tanTheta+ heightDifference)))/efficientCoefficient;
+        return initialSpeedNeeded*flyWheelDiameter/motorShaftRadiusForLuncher/distanceperImulseForLunch;
+    }
+
+        public void launch() {
+            if (!detectedTags.isEmpty()) {
+                double strength = calculateLunchStrength();
+                lunchMotor.setPower(controlSystemTurret.calculate(
+                        new KineticState(0, strength)
+                ));
+            }
+        }
+
+        public void initialize() {
+        // initialization logic (runs on init)
+        controlSystemTurret = ControlSystem.builder()
+                .posPid(0.001, 0.6, 0.0009)
+                .basicFF(0.00043)
+                .build();
+
+        controlSystemRotate = ControlSystem.builder()
+                .posPid(0.005, 0.5, 0.72)
+                .basicFF(0.2)
+                .build();
+    }
+
+
+
+
+    public void periodic() {
+        // periodic logic (runs every loop)
+        double turretPosition = calculatePosition();
+        controlSystemRotate.setGoal(new KineticState(calculatePosition()));
+        double x = detectedTags.get(0).ftcPose.x;
+
+
+            rotateMotor.setPower(
+                    controlSystemRotate.calculate(
+                            new KineticState(rotateMotor.getCurrentPosition())
+                    )
+            );//end of tracking logi
+
+        }
+
+}
+
+

@@ -5,6 +5,12 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
 import dev.nextftc.ftc.NextFTCOpMode;
 
+
+/*
+need to test:
+    1. whether the angle of april tag will affect the x value
+    2. whether the data is absolute value or it will go negative
+ */
 @Autonomous
 public class WebCamTest extends NextFTCOpMode {
 
@@ -25,5 +31,14 @@ public class WebCamTest extends NextFTCOpMode {
         telemetry.addData("id21 String", id21 != null ? id21.toString() : "No tag detected");
         telemetry.update();
     }
+
+    /*
+    XYZ: means the distance from camera to the object
+
+    PRY: stands for pitch, roll, and yaw
+
+    RBE: is range(center of your camera to center of your tag), bearing(angle of deflection away from the object),
+    and elevation(how far up you are pasted off that)
+     */
 
 }

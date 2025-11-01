@@ -29,6 +29,12 @@ import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 //check https://nextftc.dev/guide/opmodes/autonomous
 //check https://pedropathing.com/docs/pathing/examples/auto
 
+
+/*
+    1.nin auto there always have 2 purple 1 green, no matter the pattern
+    2.load all 3 at once and check the inner 2 balls
+    
+ */
 @Autonomous(name = "NextFTC Autonomous Program Java")
 public class AutonomousProgram extends NextFTCOpMode {
     private Path scorePreload;
@@ -83,6 +89,8 @@ public class AutonomousProgram extends NextFTCOpMode {
 
     @Override
     public void onStartButtonPressed() {
+        // Draw the paths on Panels before starting the routine
+        Tuning.draw();
         autonomousRoutine().schedule();
     }
 }

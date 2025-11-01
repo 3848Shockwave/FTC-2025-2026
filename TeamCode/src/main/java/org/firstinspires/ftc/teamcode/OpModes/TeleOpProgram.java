@@ -13,7 +13,10 @@ import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
 import dev.nextftc.hardware.driving.DriverControlledCommand;
 import org.firstinspires.ftc.teamcode.Subsystems.Drive;
+import org.firstinspires.ftc.teamcode.Subsystems.Turret;
+import org.firstinspires.ftc.teamcode.Tests.AprilTagWebCam;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;//most important one to import
 @TeleOp(name = "TeleOp Program", group = "Production")
