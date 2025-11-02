@@ -1,6 +1,7 @@
     package org.firstinspires.ftc.teamcode.Subsystems;
 
 
+    import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap;
     import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.distancePerImpulseForRotation;
     import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.distanceperImulseForLunch;
     import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.flyWheelDiameter;
@@ -8,9 +9,14 @@
     import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.motorShaftRadiusForLuncher;
     import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.rotationDiameter;
 
+    import android.util.Size;
+
     import dev.nextftc.control.ControlSystem;
 
     import org.firstinspires.ftc.robotcore.external.Telemetry;
+    import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+    import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+    import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
     import org.firstinspires.ftc.teamcode.Tests.AprilTagWebCam;
     import org.firstinspires.ftc.vision.VisionPortal;
     import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
@@ -179,6 +185,23 @@
                 .posPid(0.005, 0.5, 0.72)
                 .basicFF(0.2)
                 .build();
+
+        aprilTagWebCam.onInit(hardwareMap, telemetry);
+
+            this.telemetry = telemetry;
+            aprilTagProcessor = new AprilTagProcessor.Builder()
+                    .setDrawTagID(true)
+                    .setDrawTagOutline(true)
+                    .setDrawAxes(true)
+                    .setDrawCubeProjection(true)
+                    .setOutputUnits(DistanceUnit.CM, AngleUnit.DEGREES)
+                    .build();
+
+            visionPortal = new VisionPortal.Builder()
+                    .setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"))
+                    .setCameraResolution(new Size(640, 480))
+                    .addProcessor(aprilTagProcessor)
+                    .build();
     }
 
 
@@ -186,6 +209,11 @@
 
     public void periodic() {
         // periodic logic (runs every loop)
+
+        aprilTagWebCam.onUpdate();
+        detectedTags = aprilTagWebCam.getDetectedTags();
+
+
         double turretPosition = calculatePosition();
         controlSystemRotate.setGoal(new KineticState(calculatePosition()));
         double x = detectedTags.get(0).ftcPose.x;
