@@ -4,6 +4,7 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
@@ -27,33 +28,34 @@ public class ColorTest extends NextFTCOpMode {
         );
 
     }
-
+    enum Color {
+        NONE,
+        GREEN,
+        PURPLE
+    }
     private TelemetryManager telemetryManager;
 
-    NormalizedColorSensor colorSensor;
+    ColorSensor colorSensor;
 
 
 
     @Override public void onInit() {
 
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
-        colorSensor = hardwareMap.get(NormalizedColorSensor.class, "colorSensor");
-
-
+        colorSensor = hardwareMap.get(ColorSensor.class, "colorSensor");
     }
     @Override public void onWaitForStart() { }
     @Override public void onStartButtonPressed() {
         //motorEx.setPower(0.75);
-        NormalizedRGBA color = colorSensor.getNormalizedColors();
-        telemetryManager.addData("Red", color.red);
-        telemetryManager.addData("Green", color.green);
-        telemetryManager.addData("Blue", color.blue);
+        telemetryManager.addData("Red", colorSensor.red());
+        telemetryManager.addData("Green", colorSensor.green());
+        telemetryManager.addData("Blue", colorSensor.blue());
     }
     @Override public void onUpdate() {
-        NormalizedRGBA color = colorSensor.getNormalizedColors();
-        telemetryManager.addData("Red", color.red);
-        telemetryManager.addData("Green", color.green);
-        telemetryManager.addData("Blue", color.blue);
+
+        telemetryManager.addData("Red", colorSensor.red());
+        telemetryManager.addData("Green", colorSensor.green());
+        telemetryManager.addData("Blue", colorSensor.blue());
 
         telemetryManager.update();
 
