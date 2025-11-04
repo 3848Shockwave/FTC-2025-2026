@@ -30,6 +30,8 @@ public class LearnToColor extends NextFTCOpMode {
     }
     private int tolerance = 0;
     private Color[] colorArray = {Color.EMPTY, Color.EMPTY, Color.EMPTY};
+    private int purpNum = 0;
+    private int greenNum = 0;
     {
         addComponents(
                 BulkReadComponent.INSTANCE,
@@ -70,17 +72,20 @@ public class LearnToColor extends NextFTCOpMode {
         telemetryManager.update();
 
         //check for green, need to add and statement for minus tolerance
-          if (colorSensorL1.green() >= 4800 + tolerance || colorSensorL1.green() >= 4800 - tolerance ){
+          if (colorSensorL1.green() >= greenNum + tolerance || colorSensorL1.green() >= greenNum - tolerance ){
 
                 colorArray[0] = Color.GREEN;
             }
-          // else if L2
+          else if (colorSensorL2.green() >= greenNum + tolerance || colorSensorL2.green() >= greenNum - tolerance ){
 
-        //check for purple
-            if ((colorSensorL1.green() < 4800 + tolerance || colorSensorL1.green() < Math.abs(4800 - tolerance)) && (colorSensorL1.green() > 2600 + tolerance || colorSensorL1.green() > Math.abs(2600 - tolerance))){
-                colorArray[0] = Color.GREEN;
+            colorArray[0] = Color.GREEN;
+        }
+          else if ((colorSensorL1.green() < greenNum + tolerance || colorSensorL1.green() < Math.abs(greenNum - tolerance)) && (colorSensorL1.green() > purpNum + tolerance || colorSensorL1.green() > Math.abs(purpNum - tolerance))){
+                colorArray[0] = Color.PURPLE;
             }
-            //else if R2
+          else if ((colorSensorL2.green() < greenNum + tolerance || colorSensorL2.green() < Math.abs(greenNum - tolerance)) && (colorSensorL2.green() > purpNum + tolerance || colorSensorL2.green() > Math.abs(purpNum - tolerance))){
+              colorArray[0] = Color.PURPLE;
+          }
 
         
     }
