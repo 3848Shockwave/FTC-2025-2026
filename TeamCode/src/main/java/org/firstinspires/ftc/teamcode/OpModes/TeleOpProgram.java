@@ -34,7 +34,6 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     public TeleOpProgram(){
         addComponents(
-                new SubsystemComponent(Drive.INSTANCE),
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
                 new PedroComponent(Constants::createFollower)
@@ -74,11 +73,11 @@ public class TeleOpProgram extends NextFTCOpMode {
 
 
 //        intake.setPower(1);
-        Drive driveSubsystem = Drive.INSTANCE;
+
         follower().startTeleopDrive();
         DriverControlledCommand driverControlled = new PedroDriverControlled(
-                Gamepads.gamepad1().leftStickY().negate(),
-                Gamepads.gamepad1().leftStickX().negate(),
+                Gamepads.gamepad1().leftStickY(),
+                Gamepads.gamepad1().leftStickX(),
                 Gamepads.gamepad1().rightStickX(),
                 false
         );

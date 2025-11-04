@@ -30,8 +30,8 @@ public class DriveTest extends NextFTCOpMode {
     @Override public void onWaitForStart() { }
     @Override public void onStartButtonPressed() {
         DriverControlledCommand driverControlled = new PedroDriverControlled(
-                Gamepads.gamepad1().leftStickY(),
-                Gamepads.gamepad1().leftStickX(),
+                Gamepads.gamepad1().leftStickY().negate(),
+                Gamepads.gamepad1().leftStickX().negate(),
                 Gamepads.gamepad1().rightStickX(),
                 false
         );
