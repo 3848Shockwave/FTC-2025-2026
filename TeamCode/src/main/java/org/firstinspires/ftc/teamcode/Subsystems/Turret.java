@@ -26,13 +26,25 @@
     import java.util.List;
 
     import dev.nextftc.control.KineticState;
+    import dev.nextftc.core.commands.utility.LambdaCommand;
     import dev.nextftc.core.subsystems.Subsystem;
+    import dev.nextftc.hardware.controllable.RunToVelocity;
     import dev.nextftc.hardware.impl.MotorEx;
+
+    import dev.nextftc.core.commands.Command;
+
+
+
+
+
 
     public class Turret implements Subsystem {
     //declare for every subsystem
     public static final Turret INSTANCE = new Turret();
     private Turret() { }
+
+
+
 
 
     //all the hardware goes here
@@ -63,8 +75,15 @@
     __distance moved per encoder count__
     =68.3523/29630.53125 = 0.0023068267
      */
-    private ControlSystem controlSystemTurret;
-    private ControlSystem controlSystemRotate;
+    private final ControlSystem controlSystemTurret = ControlSystem.builder()
+                .posPid(0.001, 0.6, 0.0009)
+                .basicFF(0.00043)
+                .build();
+    private final ControlSystem controlSystemRotate  = ControlSystem.builder()
+                .posPid(0.005, 0.5, 0.72)
+                .basicFF(0.2)
+                .build();
+        ;
 
 
     AprilTagWebCam aprilTagWebCam = new AprilTagWebCam();
@@ -122,6 +141,9 @@
 
 
 
+
+
+
     public double calculatePosition(){
         if(!detectedTags.isEmpty()) {
             double angle = detectedTags.get(21).ftcPose.bearing;
@@ -155,58 +177,72 @@
      */
     public double calculateLunchStrength(){
         double distance = detectedTags.get(21).ftcPose.range;
-        double heightDifference = detectedTags.get(21).ftcPose.z;
-        double tanTheta = Math.tan(Math.toRadians(detectedTags.get(0).ftcPose.bearing));
-        double cosTheta = Math.cos(Math.toRadians(detectedTags.get(0).ftcPose.bearing));
-        double efficientCoefficient = 0.8;
+        double heightDifference = detectedTags.get(21).ftcPose.z + 5;
+        double tanTheta = Math.tan(Math.toRadians(detectedTags.get(21).ftcPose.bearing));
+        double cosTheta = Math.cos(Math.toRadians(detectedTags.get(21).ftcPose.bearing));
+        double efficientCoefficient = 0.9;
 
 
         double initialSpeedNeeded = Math.sqrt(gravityAccalerationValue*Math.pow(distance,2)/(2*Math.pow(cosTheta,2)*(distance*tanTheta+ heightDifference)))/efficientCoefficient;
         return initialSpeedNeeded*flyWheelDiameter/motorShaftRadiusForLuncher/distanceperImulseForLunch;
     }
 
-        public void launch() {
-            if (!detectedTags.isEmpty()) {
-                double strength = calculateLunchStrength();
-                lunchMotor.setPower(controlSystemTurret.calculate(
-                        new KineticState(0, strength)
-                ));
-            }
+
+//        public void launch() {
+//            if (!detectedTags.isEmpty()) {
+//                double strength = calculateLunchStrength();
+//                lunchMotor.setPower(controlSystemTurret.calculate(
+//                        new KineticState(0, strength)
+//                ));
+//            }
+//        }
+
+        /*
+        the side of a tile is 61, and the "castle" is 45 degree within a tile
+         */
+        public double calculateXPosition(){
+         double x = detectedTags.get(21).ftcPose.x;
+         return 30.5 + x; //suppose the coordinate system in in cm
         }
 
+        public double calculteYPosition(){
+         double y = detectedTags.get(21).ftcPose.y;
+         return 366 - 30.5 - y; //suppose the coordinate system in in cm
+        }
+
+        public double getSpeedNeeded(){
+            double velocity = calculateLunchStrength();
+            return controlSystemTurret.calculate(
+                    new KineticState(0,velocity)
+            );
+        }
+
+
+
+        @Override
         public void initialize() {
         // initialization logic (runs on init)
-        controlSystemTurret = ControlSystem.builder()
-                .posPid(0.001, 0.6, 0.0009)
-                .basicFF(0.00043)
-                .build();
+            aprilTagWebCam.onInit(hardwareMap, telemetry);
 
-        controlSystemRotate = ControlSystem.builder()
-                .posPid(0.005, 0.5, 0.72)
-                .basicFF(0.2)
-                .build();
-
-        aprilTagWebCam.onInit(hardwareMap, telemetry);
-
-            this.telemetry = telemetry;
             aprilTagProcessor = new AprilTagProcessor.Builder()
-                    .setDrawTagID(true)
-                    .setDrawTagOutline(true)
-                    .setDrawAxes(true)
-                    .setDrawCubeProjection(true)
-                    .setOutputUnits(DistanceUnit.CM, AngleUnit.DEGREES)
-                    .build();
+                        .setDrawTagID(true)
+                        .setDrawTagOutline(true)
+                        .setDrawAxes(true)
+                        .setDrawCubeProjection(true)
+                        .setOutputUnits(DistanceUnit.CM, AngleUnit.DEGREES)
+                        .build();
 
             visionPortal = new VisionPortal.Builder()
-                    .setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"))
-                    .setCameraResolution(new Size(640, 480))
-                    .addProcessor(aprilTagProcessor)
-                    .build();
+                        .setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"))
+                        .setCameraResolution(new Size(640, 480))
+                        .addProcessor(aprilTagProcessor)
+                        .build();
+
     }
 
 
 
-
+        @Override
     public void periodic() {
         // periodic logic (runs every loop)
 
@@ -216,7 +252,7 @@
 
         double turretPosition = calculatePosition();
         controlSystemRotate.setGoal(new KineticState(calculatePosition()));
-        double x = detectedTags.get(0).ftcPose.x;
+        double x = detectedTags.get(21).ftcPose.x;
 
 
             rotateMotor.setPower(

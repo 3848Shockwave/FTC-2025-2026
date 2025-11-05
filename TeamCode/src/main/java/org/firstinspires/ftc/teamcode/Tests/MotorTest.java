@@ -15,7 +15,7 @@ public class MotorTest extends NextFTCOpMode {
         addComponents(/* vararg components */);
 
     }
-    private final MotorEx motorEx = new MotorEx("LaunchMotor");
+    private final MotorEx motorEx = new MotorEx("Intake");
 
     private boolean motorToggle = false;
 
@@ -44,7 +44,7 @@ public class MotorTest extends NextFTCOpMode {
     }
     @Override public void onWaitForStart() { }
     @Override public void onStartButtonPressed() {
-        //motorEx.setPower(0.75);
+        motorEx.setPower(1);
     }
     @Override public void onUpdate() {
         BindingManager.update();

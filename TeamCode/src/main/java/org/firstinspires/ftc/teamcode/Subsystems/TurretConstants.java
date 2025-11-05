@@ -30,7 +30,7 @@ public class TurretConstants {
     /*
     19.2:1 Ratio, 312 RPM
      */
-    public static final double distanceperImulseForLunch = 0.0560894;
+    public static final double distanceperImulseForLunch = 0.00292132;
 
 
 

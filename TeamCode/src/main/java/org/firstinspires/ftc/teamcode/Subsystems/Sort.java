@@ -11,6 +11,7 @@ import dev.nextftc.control.ControlSystem;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.subsystems.Subsystem;
 import dev.nextftc.hardware.controllable.RunToPosition;
+import dev.nextftc.hardware.controllable.RunToVelocity;
 import dev.nextftc.hardware.impl.MotorEx;
 import dev.nextftc.hardware.impl.ServoEx;
 import dev.nextftc.hardware.positionable.SetPositions;
@@ -18,7 +19,7 @@ import dev.nextftc.hardware.positionable.SetPositions;
 public class Sort implements Subsystem {
     public static final Sort INSTANCE = new Sort();
     private Sort() { }
-    private final MotorEx turningPlate = new MotorEx("turningPlate");
+    private final MotorEx turningPlate = new MotorEx("turningPlate").brakeMode();
     // 5203-2402-0051, 50.9:1, 8mm(D) shaft, 117rpm, 1,425.1 PPR, 1:2 gear ratio. --> 72637.59 impulses per rotation
     //however, with the gear structure, the palate make a full turn every 145075.18 impulses, since there are 3 circle
     //every position should take exactly 48358 pulse
@@ -38,13 +39,12 @@ public class Sort implements Subsystem {
 
 
 
-    private final Command pushBall = new SetPositions(servoLeft.to(1), servoRight.to(1)).requires(this);
-    private final Command backPosition = new SetPositions(servoLeft.to(0), servoRight.to(0)).requires(this);
+    public final Command pushBall = new SetPositions(servoLeft.to(1), servoRight.to(1)).requires(this);
+    public final Command backPosition = new SetPositions(servoLeft.to(0), servoRight.to(0)).requires(this);
 
 
-    private final Command pushBallAndBack = pushBall.then(backPosition);
-    private final Command nextBall = new RunToPosition(controlSystem, 48358).requires(this).named("nextBall");
-
+    public final Command pushBallAndBack = pushBall.then(backPosition);
+    public final Command nextBall = new RunToPosition(controlSystem, 48358).requires(this).named("nextBall");
 
 
     private String detectLeftColor() {

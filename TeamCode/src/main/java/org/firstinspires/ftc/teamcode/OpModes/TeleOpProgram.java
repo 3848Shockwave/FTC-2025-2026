@@ -17,23 +17,23 @@ import dev.nextftc.ftc.components.BulkReadComponent;
 import dev.nextftc.hardware.driving.DriverControlledCommand;
 import dev.nextftc.hardware.impl.MotorEx;
 
-import org.firstinspires.ftc.teamcode.Subsystems.Drive;
 import org.firstinspires.ftc.teamcode.Subsystems.Turret;
-import org.firstinspires.ftc.teamcode.Tests.AprilTagWebCam;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
+
 
 import static dev.nextftc.bindings.Bindings.button;
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;//most important one to import
+
 @TeleOp(name = "TeleOp Program", group = "Production")
 public class TeleOpProgram extends NextFTCOpMode {
-    private final Pose startPose = new Pose(28.5, 128, Math.toRadians(180)); // Start Pose of our robot.
+//    private final Pose startPose = new Pose(28.5, 128, Math.toRadians(180)); // Start Pose of our robot.
 
     MotorEx intake = new MotorEx("intake").brakeMode();
 
 
     public TeleOpProgram(){
         addComponents(
+                new SubsystemComponent(Turret.INSTANCE),
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
                 new PedroComponent(Constants::createFollower)
@@ -66,6 +66,17 @@ public class TeleOpProgram extends NextFTCOpMode {
                 intake.setPower(0);
             }
         });
+
+        Button x_button = button(() -> gamepad1.x).whenBecomesTrue(()->
+        {
+            double speed = Turret.INSTANCE.getSpeedNeeded();
+            motorToggle = !motorToggle;
+            if (motorToggle) {
+                intake.setPower(speed);
+            } else {
+                intake.setPower(0);
+            }
+        });
     }
 
     @Override
@@ -76,12 +87,13 @@ public class TeleOpProgram extends NextFTCOpMode {
 
         follower().startTeleopDrive();
         DriverControlledCommand driverControlled = new PedroDriverControlled(
-                Gamepads.gamepad1().leftStickY(),
-                Gamepads.gamepad1().leftStickX(),
+                Gamepads.gamepad1().leftStickY().negate(),
+                Gamepads.gamepad1().leftStickX().negate(),
                 Gamepads.gamepad1().rightStickX(),
                 false
         );
         driverControlled.schedule();
+
     }
 
 }
