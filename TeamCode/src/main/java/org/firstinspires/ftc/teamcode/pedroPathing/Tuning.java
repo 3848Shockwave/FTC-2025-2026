@@ -528,7 +528,7 @@ class LateralVelocityTuner extends OpMode {
  */
 class ForwardZeroPowerAccelerationTuner extends OpMode {
     private final ArrayList<Double> accelerations = new ArrayList<>();
-    public static double VELOCITY = 10;
+    public static double VELOCITY = 80;
 
     private double previousVelocity;
     private long previousTimeNano;
@@ -574,19 +574,23 @@ class ForwardZeroPowerAccelerationTuner extends OpMode {
         }
 
         follower.update();
+
         draw();
 
         Vector heading = new Vector(1.0, follower.getPose().getHeading());
+        telemetryM.addData("vel: ", follower.getVelocity().dot(heading));
         if (!end) {
             if (!stopping) {
                 if (follower.getVelocity().dot(heading) > VELOCITY) {
                     previousVelocity = follower.getVelocity().dot(heading);
+
                     previousTimeNano = System.nanoTime();
                     stopping = true;
                     follower.setTeleOpDrive(0,0,0,true);
                 }
             } else {
                 double currentVelocity = follower.getVelocity().dot(heading);
+
                 accelerations.add((currentVelocity - previousVelocity) / ((System.nanoTime() - previousTimeNano) / Math.pow(10.0, 9)));
                 previousVelocity = currentVelocity;
                 previousTimeNano = System.nanoTime();
@@ -632,7 +636,7 @@ class ForwardZeroPowerAccelerationTuner extends OpMode {
  */
 class LateralZeroPowerAccelerationTuner extends OpMode {
     private final ArrayList<Double> accelerations = new ArrayList<>();
-    public static double VELOCITY = 30;
+    public static double VELOCITY = 60;
     private double previousVelocity;
     private long previousTimeNano;
     private boolean stopping;

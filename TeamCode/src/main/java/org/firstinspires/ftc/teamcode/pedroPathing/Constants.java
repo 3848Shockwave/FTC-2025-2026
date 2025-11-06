@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.pedroPathing;
 
+import com.pedropathing.control.FilteredPIDFCoefficients;
+import com.pedropathing.control.PIDFCoefficients;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.FollowerConstants;
 import com.pedropathing.ftc.FollowerBuilder;
@@ -14,7 +16,13 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
-            .mass(10.0) //kg
+            .mass(12.5) //kg
+            .forwardZeroPowerAcceleration(-35.0)
+            .lateralZeroPowerAcceleration(-64.0)
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.1, 0.0001, 0.005, 0))
+            .headingPIDFCoefficients(new PIDFCoefficients(1.0, 0.0,0.0,0.1))
+            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.025, 0.0, 0.00001, 0.6, 0.01))
+            .centripetalScaling(0.0005)
             ;
 
     public static MecanumConstants driveConstants = new MecanumConstants()
@@ -23,16 +31,16 @@ public class Constants {
             .rightRearMotorName("back_right")
             .leftRearMotorName("back_left")
             .leftFrontMotorName("front_left")
-            .leftFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
-            .leftRearMotorDirection(DcMotorSimple.Direction.FORWARD)
-            .rightFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
-            .rightRearMotorDirection(DcMotorSimple.Direction.REVERSE)
+            .leftFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
+            .leftRearMotorDirection(DcMotorSimple.Direction.REVERSE)
+            .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
+            .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
             .useBrakeModeInTeleOp(true)
-            .xVelocity(77.43)
-            .yVelocity(60.69)
+            .xVelocity(85.4)
+            .yVelocity(65.4)
             ;
 
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
+    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1.25, 1);
 
     public static PinpointConstants localizerConstants = new PinpointConstants()
             .forwardPodY(0.0)//inches for now?
