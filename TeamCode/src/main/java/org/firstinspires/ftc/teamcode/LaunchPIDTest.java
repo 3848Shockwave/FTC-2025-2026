@@ -67,10 +67,7 @@ public class LaunchPIDTest extends NextFTCOpMode {
     @Override public void onUpdate() {
 
         BindingManager.update();
-        controller = dev.nextftc.control.ControlSystem.builder()
-                .velPid(kp, ki, kd)
-                .basicFF(ff)
-                .build();
+
 
         if (!motorToggle) {
             controller.setGoal(new KineticState(0.0,0.0,0.0));
