@@ -33,10 +33,7 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     MotorEx intake = new MotorEx("intake").brakeMode();
 
-    private double kp = 0.0;
-    private double kd = 0.0;
-    private double ki = 0.0;
-    private double kf = 0.0;
+
 
 
     public TeleOpProgram(){
@@ -50,6 +47,11 @@ public class TeleOpProgram extends NextFTCOpMode {
 
 
     private boolean motorToggle = false;
+
+    private static double kp = 0.0;
+    private static double kd = 0.0;
+    private static double ki = 0.0;
+    private static double kf = 0.0;
 
     @Override
     public void onInit() {

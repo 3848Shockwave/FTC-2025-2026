@@ -269,7 +269,7 @@
 
 
             double turretPosition = calculatePosition();
-            controlSystemRotate.setGoal(new KineticState(calculatePosition(), 1));
+            controlSystemRotate.setGoal(new KineticState(calculatePosition(), 50));
             if (!detectedTags.isEmpty()) {
                 double x = aprilTagWebCam.getTagBySpecificID(21).ftcPose.x;
 
