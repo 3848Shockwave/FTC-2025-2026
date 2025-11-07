@@ -1,7 +1,6 @@
     package org.firstinspires.ftc.teamcode.Subsystems;
 
 
-    import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap;
     import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.distancePerImpulseForRotation;
     import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.distanceperImulseForLunch;
     import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.flyWheelDiameter;
@@ -11,16 +10,21 @@
 
     import android.util.Size;
 
+    import com.qualcomm.robotcore.hardware.HardwareMap;
+
     import dev.nextftc.control.ControlSystem;
+    import dev.nextftc.ftc.ActiveOpMode;
+    import dev.nextftc.ftc.NextFTCOpMode;
 
     import org.firstinspires.ftc.robotcore.external.Telemetry;
     import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
     import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
     import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+    import org.firstinspires.ftc.teamcode.OpModes.TeleOpProgram;
     import org.firstinspires.ftc.teamcode.Tests.AprilTagWebCam;
-    import org.firstinspires.ftc.vision.VisionPortal;
+
     import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
-    import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
+
 
     import java.util.ArrayList;
     import java.util.List;
@@ -75,21 +79,24 @@
     __distance moved per encoder count__
     =68.3523/29630.53125 = 0.0023068267
      */
+
+        double kp = 0;
+        double ki = 0;
+        double kd = 0;
+        double kf = 0;
     private final ControlSystem controlSystemTurret = ControlSystem.builder()
                 .posPid(0.001, 0.6, 0.0009)
                 .basicFF(0.00043)
                 .build();
-    private final ControlSystem controlSystemRotate  = ControlSystem.builder()
-                .posPid(0.005, 0.5, 0.72)
-                .basicFF(0.2)
+    private ControlSystem controlSystemRotate  = ControlSystem.builder()
+                .posPid(0, 0, 0)
+                .basicFF(0)
                 .build();
         ;
 
 
     AprilTagWebCam aprilTagWebCam = new AprilTagWebCam();
 
-    private AprilTagProcessor aprilTagProcessor;
-    private VisionPortal visionPortal;
     private List<AprilTagDetection> detectedTags = new ArrayList<>();
     private Telemetry telemetry;
 
@@ -146,14 +153,15 @@
 
     public double calculatePosition(){
         if(!detectedTags.isEmpty()) {
-            double angle = detectedTags.get(21).ftcPose.bearing;
+            double angle = aprilTagWebCam.getTagBySpecificID(21).ftcPose.bearing;
             double arcLength = angle * Math.PI *rotationDiameter/360;
 
             // DPE (Distance Per Encoder count) = 0.0023068267 cm/encoder count
             // This converts the arc length in cm to encoder counts for motor movement
             return arcLength / distancePerImpulseForRotation;
         }else{
-            return Math.PI*rotationDiameter/distancePerImpulseForRotation; //impulse needed to make a full rotation
+            //return Math.PI*rotationDiameter/distancePerImpulseForRotation; //impulse needed to make a full rotation
+            return 0;
         }
     }
     /*
@@ -176,8 +184,8 @@
 
      */
     public double calculateLunchStrength(){
-        double distance = detectedTags.get(21).ftcPose.range;
-        double heightDifference = detectedTags.get(21).ftcPose.z + 5;
+        double distance = aprilTagWebCam.getTagBySpecificID(21).ftcPose.range;
+        double heightDifference = aprilTagWebCam.getTagBySpecificID(21).ftcPose.z + 5;
         double tanTheta = Math.tan(Math.toRadians(detectedTags.get(21).ftcPose.bearing));
         double cosTheta = Math.cos(Math.toRadians(detectedTags.get(21).ftcPose.bearing));
         double efficientCoefficient = 0.9;
@@ -201,12 +209,12 @@
         the side of a tile is 61, and the "castle" is 45 degree within a tile
          */
         public double calculateXPosition(){
-         double x = detectedTags.get(21).ftcPose.x;
+         double x = aprilTagWebCam.getTagBySpecificID(21).ftcPose.x;
          return 30.5 + x; //suppose the coordinate system in in cm
         }
 
         public double calculteYPosition(){
-         double y = detectedTags.get(21).ftcPose.y;
+         double y = aprilTagWebCam.getTagBySpecificID(21).ftcPose.y;
          return 366 - 30.5 - y; //suppose the coordinate system in in cm
         }
 
@@ -222,44 +230,69 @@
         @Override
         public void initialize() {
         // initialization logic (runs on init)
-            aprilTagWebCam.onInit(hardwareMap, telemetry);
+            aprilTagWebCam.onInit(ActiveOpMode.hardwareMap(), ActiveOpMode.telemetry());
+            aprilTagWebCam.onUpdate();
+            detectedTags = aprilTagWebCam.getDetectedTags();
+            rotateMotor.setPower(0);
+            lunchMotor.setPower(0);
 
-            aprilTagProcessor = new AprilTagProcessor.Builder()
-                        .setDrawTagID(true)
-                        .setDrawTagOutline(true)
-                        .setDrawAxes(true)
-                        .setDrawCubeProjection(true)
-                        .setOutputUnits(DistanceUnit.CM, AngleUnit.DEGREES)
-                        .build();
 
-            visionPortal = new VisionPortal.Builder()
-                        .setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"))
-                        .setCameraResolution(new Size(640, 480))
-                        .addProcessor(aprilTagProcessor)
-                        .build();
+
 
     }
 
 
 
+        // post-start logic (runs once when start is pressed)
+
         @Override
-    public void periodic() {
+        public void periodic() {
+            // remove after tuning, no need to rebuild control system every loop
+            controlSystemRotate = ControlSystem.builder()
+                    .posPid(kp, ki, kd)
+                    .basicFF(kf)
+                    .build();
+            if (!ActiveOpMode.isStarted()){
+                aprilTagWebCam.onUpdate();
+                detectedTags = aprilTagWebCam.getDetectedTags();
+                // add detected tags to telemetry
+                rotateMotor.setPower(0);
+                lunchMotor.setPower(0);
+                return;
+            }
+
         // periodic logic (runs every loop)
 
-        aprilTagWebCam.onUpdate();
-        detectedTags = aprilTagWebCam.getDetectedTags();
+
+            aprilTagWebCam.onUpdate();
+            detectedTags = aprilTagWebCam.getDetectedTags();
 
 
-        double turretPosition = calculatePosition();
-        controlSystemRotate.setGoal(new KineticState(calculatePosition()));
-        double x = detectedTags.get(21).ftcPose.x;
+            double turretPosition = calculatePosition();
+            controlSystemRotate.setGoal(new KineticState(calculatePosition(), 1));
+            if (!detectedTags.isEmpty()) {
+                double x = aprilTagWebCam.getTagBySpecificID(21).ftcPose.x;
+
+            }
+            else{
+                double x = 0;
+            }
+
+            double power = controlSystemRotate.calculate(
+                    new KineticState(rotateMotor.getCurrentPosition())
+            );
+
+            //clamp power to limit during testing
+            if(power > 0.3){
+                power = 0.3;
+            }else if(power < -0.3){
+                power = -0.3;
+            }
+            rotateMotor.setPower(power);//end of tracking logic
 
 
-            rotateMotor.setPower(
-                    controlSystemRotate.calculate(
-                            new KineticState(rotateMotor.getCurrentPosition())
-                    )
-            );//end of tracking logi
+
+
 
         }
 
