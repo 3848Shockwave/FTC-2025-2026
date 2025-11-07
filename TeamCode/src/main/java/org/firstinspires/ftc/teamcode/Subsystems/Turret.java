@@ -23,6 +23,7 @@
     import org.firstinspires.ftc.teamcode.OpModes.TeleOpProgram;
     import org.firstinspires.ftc.teamcode.Tests.AprilTagWebCam;
 
+    import org.firstinspires.ftc.teamcode.Tests.LimelightProcessing;
     import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
 
@@ -84,18 +85,19 @@
         double ki = 0.03;
         double kd = 0;
         double kf = 0;
+        double maxPower = .1;
+      private  double lastPosition=0.0;
+      public final LimelightProcessing limelightProcessing = new LimelightProcessing();
     private final ControlSystem controlSystemTurret = ControlSystem.builder()
                 .posPid(0.001, 0.6, 0.0009)
                 .basicFF(0.00043)
                 .build();
     private ControlSystem controlSystemRotate  = ControlSystem.builder()
-                .posPid(0, 0, 0)
-                .basicFF(0)
+                .posPid(kp, ki, kd)
+                .basicFF(kf)
                 .build();
         ;
 
-
-    AprilTagWebCam aprilTagWebCam = new AprilTagWebCam();
 
     private List<AprilTagDetection> detectedTags = new ArrayList<>();
     private Telemetry telemetry;
@@ -105,6 +107,9 @@
 
     public double getRotateMotorPosition(){
         return rotateMotor.getCurrentPosition();
+    }
+    public double getLastPosition(){
+        return lastPosition;
     }
 
     /*
@@ -139,14 +144,7 @@
     }
 
 
-    public AprilTagDetection getTagBySpecificID(int id){
-        for(AprilTagDetection tag : detectedTags) {
-            if (tag.id == id) {
-                return tag;
-            }
-        }
-        return null;
-    }
+
 
 
 
@@ -154,13 +152,15 @@
 
 
     public double calculatePosition(){
-        if(!detectedTags.isEmpty()) {
-            double angle = aprilTagWebCam.getTagBySpecificID(21).ftcPose.bearing;
-            double arcLength = angle * Math.PI *rotationDiameter/360;
+        if(!limelightProcessing.processTargets().isEmpty()) {
+            double angle = limelightProcessing.getTargetInfoByID(21).getTargetX();
+
+            //double arcLength = angle * Math.PI *rotationDiameter/360;
 
             // DPE (Distance Per Encoder count) = 0.0023068267 cm/encoder count
             // This converts the arc length in cm to encoder counts for motor movement
-            return arcLength / distancePerImpulseForRotation;
+          //  return arcLength / distancePerImpulseForRotation;
+            return -angle/distancePerImpulseForRotation;
         }else{
             //return Math.PI*rotationDiameter/distancePerImpulseForRotation; //impulse needed to make a full rotation
             return 0;
@@ -186,8 +186,8 @@
 
      */
     public double calculateLunchStrength(){
-        double distance = aprilTagWebCam.getTagBySpecificID(21).ftcPose.range;
-        double heightDifference = aprilTagWebCam.getTagBySpecificID(21).ftcPose.z + 5;
+        double distance = 5;//aprilTagWebCam.getTagBySpecificID(21).ftcPose.range;
+        double heightDifference =limelightProcessing.getTargetInfoByID(21).getTargetY() + 5;
         double tanTheta = Math.tan(Math.toRadians(detectedTags.get(21).ftcPose.bearing));
         double cosTheta = Math.cos(Math.toRadians(detectedTags.get(21).ftcPose.bearing));
         double efficientCoefficient = 0.9;
@@ -210,13 +210,10 @@
         /*
         the side of a tile is 61, and the "castle" is 45 degree within a tile
          */
-        public double calculateXPosition(){
-         double x = aprilTagWebCam.getTagBySpecificID(21).ftcPose.x;
-         return 30.5 + x; //suppose the coordinate system in in cm
-        }
+
 
         public double calculteYPosition(){
-         double y = aprilTagWebCam.getTagBySpecificID(21).ftcPose.y;
+         double y = limelightProcessing.getTargetInfoByID(21).getTargetY();
          return 366 - 30.5 - y; //suppose the coordinate system in in cm
         }
 
@@ -232,12 +229,9 @@
         @Override
         public void initialize() {
         // initialization logic (runs on init)
-            aprilTagWebCam.onInit(ActiveOpMode.hardwareMap(), ActiveOpMode.telemetry());
-            aprilTagWebCam.onUpdate();
-            detectedTags = aprilTagWebCam.getDetectedTags();
             rotateMotor.setPower(0);
             lunchMotor.setPower(0);
-
+            limelightProcessing.initLimelight();
 
 
 
@@ -249,14 +243,14 @@
 
         @Override
         public void periodic() {
+            limelightProcessing.processTargets();
             // remove after tuning, no need to rebuild control system every loop
             controlSystemRotate = ControlSystem.builder()
                     .posPid(kp, ki, kd)
                     .basicFF(kf)
                     .build();
             if (!ActiveOpMode.isStarted()){
-                aprilTagWebCam.onUpdate();
-                detectedTags = aprilTagWebCam.getDetectedTags();
+                limelightProcessing.processTargets();
                 // add detected tags to telemetry
                 rotateMotor.setPower(0);
                 lunchMotor.setPower(0);
@@ -266,14 +260,22 @@
         // periodic logic (runs every loop)
 
 
-            aprilTagWebCam.onUpdate();
-            detectedTags = aprilTagWebCam.getDetectedTags();
 
 
-            double turretPosition = calculatePosition();
-            controlSystemRotate.setGoal(new KineticState(calculatePosition(), 50));
+
+
+            if(calculatePosition()!=0) {
+                double turretPosition=getRotateMotorPosition()+calculatePosition();
+                controlSystemRotate.setGoal(new KineticState(turretPosition, 50));
+                lastPosition=turretPosition;
+            }
+            else{
+                //controlSystemRotate.setGoal(new KineticState(lastPosition, 50));
+                controlSystemRotate.setGoal(new KineticState(0.0, 50));
+
+            }
             if (!detectedTags.isEmpty()) {
-                double x = aprilTagWebCam.getTagBySpecificID(21).ftcPose.x;
+                double x =limelightProcessing.getTargetInfoByID(21).getTargetX();
 
             }
             else{
@@ -285,10 +287,10 @@
             );
 
             //clamp power to limit during testing
-            if(power > 0.4){
-                power = 0.4;
-            }else if(power < -0.4){
-                power = -0.4;
+            if(power > maxPower){
+                power = maxPower;
+            }else if(power < -maxPower){
+                power = -maxPower;
             }
             rotateMotor.setPower(power);//end of tracking logic
 
@@ -298,11 +300,12 @@
 
         }
 
-        public void rebuildControlSystem(double p, double i, double d, double f){
+        public void rebuildControlSystem(double p, double i, double d, double f, double power){
             this.kp = p;
             this.ki = i;
             this.kd = d;
             this.kf = f;
+            this.maxPower = power;
         }
 
 }

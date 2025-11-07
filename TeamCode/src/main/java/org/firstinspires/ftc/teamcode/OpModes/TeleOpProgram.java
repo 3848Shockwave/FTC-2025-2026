@@ -21,6 +21,7 @@ import dev.nextftc.hardware.driving.DriverControlledCommand;
 import dev.nextftc.hardware.impl.MotorEx;
 
 import org.firstinspires.ftc.teamcode.Subsystems.Turret;
+import org.firstinspires.ftc.teamcode.Tests.LimelightProcessing;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 
@@ -54,11 +55,13 @@ public class TeleOpProgram extends NextFTCOpMode {
     private static double kd = 0.0;
     private static double ki = 0.0;
     private static double kf = 0.0;
+    private static double power = 0.1;
 
     private TelemetryManager telemetryManager;
 
     @Override
     public void onInit() {
+
 
         intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
@@ -92,6 +95,7 @@ public class TeleOpProgram extends NextFTCOpMode {
                 intake.setPower(0);
             }
         });
+        Turret.INSTANCE.limelightProcessing.getLimelightStatus();
     }
 
     @Override
@@ -115,15 +119,12 @@ public class TeleOpProgram extends NextFTCOpMode {
     public void onUpdate() {
         double turretPos = Turret.INSTANCE.getRotateMotorPosition();
         double turretWant = Turret.INSTANCE.calculatePosition();
-        Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf);
+        double getlast = Turret.INSTANCE.getLastPosition();
+        Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf,power);
         telemetryManager.addData("MotorPosition", turretPos);
         telemetryManager.addData("DesiredPosition", turretWant );
-        if (!Turret.INSTANCE.getDetectedTags().isEmpty()) {
-            telemetryManager.addData("apriltagB", Turret.INSTANCE.getTagBySpecificID(21).ftcPose.bearing);
-            telemetryManager.addData("apriltagX", Turret.INSTANCE.getTagBySpecificID(21).ftcPose.x);
-            telemetryManager.addData("apriltagY", Turret.INSTANCE.getTagBySpecificID(21).ftcPose.y);
-            telemetryManager.addData("apriltagZ", Turret.INSTANCE.getTagBySpecificID(21).ftcPose.z);
-        }
+        telemetryManager.addData("lastDesired",getlast);
+        telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
         telemetryManager.update(telemetry);
 
     }
