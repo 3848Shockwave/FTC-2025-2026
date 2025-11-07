@@ -12,15 +12,22 @@ public class TurretConstants {
     217.572 mm --> diameter for the plate --> plate Circumference:68.3523 cm
 
     Total Gear Ratio:
-    13.7 * 135/24 = 77.0625
+    13.7 * 135/24 = 77.0625 ///NOTE: AUGIE CHANGED THIS TO NOT USE THIS, AS THE ENCODER IS AT OUPUT SHAFT
+
+    //135/24* 384.5 = 2162.8125
+    //68.3523/2162.8125 =0.03160343302
+
+
 
     total counts per plate revolution:
     77.0625 * 384.5 = 29630.53125 counts/plate rev
+    //2162.8125
 
     __distance moved per encoder count__
     =68.3523/29630.53125 = 0.0023068267
  */
-    public static final double distancePerImpulseForRotation = 0.0023068267;//cm
+    public static final double distancePerImpulseForRotation = 0.03160343302;
+            //0.0023068267;//cm
     public static final double rotationDiameter = 217.572;
     public static final double rotateMotorPPR = 384.5;
     public static final double TGearRatioRotation = 77.0625;

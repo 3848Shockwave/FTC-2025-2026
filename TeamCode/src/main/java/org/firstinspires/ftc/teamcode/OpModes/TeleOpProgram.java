@@ -3,6 +3,8 @@ package org.firstinspires.ftc.teamcode.OpModes;
 import static org.firstinspires.ftc.teamcode.pedroPathing.Tuning.follower;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.bylazar.telemetry.PanelsTelemetry;
+import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -53,10 +55,13 @@ public class TeleOpProgram extends NextFTCOpMode {
     private static double ki = 0.0;
     private static double kf = 0.0;
 
+    private TelemetryManager telemetryManager;
+
     @Override
     public void onInit() {
-        intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
+        intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
         Button a_button = button(() -> gamepad1.a).whenBecomesTrue(() ->
         {
             motorToggle = !motorToggle;
@@ -108,8 +113,18 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
+        double turretPos = Turret.INSTANCE.getRotateMotorPosition();
+        double turretWant = Turret.INSTANCE.calculatePosition();
         Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf);
-        telemetry.update();
+        telemetryManager.addData("MotorPosition", turretPos);
+        telemetryManager.addData("DesiredPosition", turretWant );
+        if (!Turret.INSTANCE.getDetectedTags().isEmpty()) {
+            telemetryManager.addData("apriltagB", Turret.INSTANCE.getTagBySpecificID(21).ftcPose.bearing);
+            telemetryManager.addData("apriltagX", Turret.INSTANCE.getTagBySpecificID(21).ftcPose.x);
+            telemetryManager.addData("apriltagY", Turret.INSTANCE.getTagBySpecificID(21).ftcPose.y);
+            telemetryManager.addData("apriltagZ", Turret.INSTANCE.getTagBySpecificID(21).ftcPose.z);
+        }
+        telemetryManager.update(telemetry);
 
     }
 

@@ -80,8 +80,8 @@
     =68.3523/29630.53125 = 0.0023068267
      */
 
-        double kp = 0;
-        double ki = 0;
+        double kp = 0.001;
+        double ki = 0.03;
         double kd = 0;
         double kf = 0;
     private final ControlSystem controlSystemTurret = ControlSystem.builder()
@@ -103,7 +103,9 @@
 
 
 
-
+    public double getRotateMotorPosition(){
+        return rotateMotor.getCurrentPosition();
+    }
 
     /*
 
@@ -283,10 +285,10 @@
             );
 
             //clamp power to limit during testing
-            if(power > 0.3){
-                power = 0.3;
-            }else if(power < -0.3){
-                power = -0.3;
+            if(power > 0.4){
+                power = 0.4;
+            }else if(power < -0.4){
+                power = -0.4;
             }
             rotateMotor.setPower(power);//end of tracking logic
 
