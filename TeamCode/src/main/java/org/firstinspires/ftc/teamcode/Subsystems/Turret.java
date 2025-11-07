@@ -296,6 +296,13 @@
 
         }
 
+        public void rebuildControlSystem(double p, double i, double d, double f){
+            this.kp = p;
+            this.ki = i;
+            this.kd = d;
+            this.kf = f;
+        }
+
 }
 
 

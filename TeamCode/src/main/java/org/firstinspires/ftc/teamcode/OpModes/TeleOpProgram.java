@@ -24,12 +24,19 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 import static dev.nextftc.bindings.Bindings.button;
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;//most important one to import
+
+
 @Configurable
 @TeleOp(name = "TeleOp Program", group = "Production")
 public class TeleOpProgram extends NextFTCOpMode {
 //    private final Pose startPose = new Pose(28.5, 128, Math.toRadians(180)); // Start Pose of our robot.
 
     MotorEx intake = new MotorEx("intake").brakeMode();
+
+    private double kp = 0.0;
+    private double kd = 0.0;
+    private double ki = 0.0;
+    private double kf = 0.0;
 
 
     public TeleOpProgram(){
@@ -94,6 +101,13 @@ public class TeleOpProgram extends NextFTCOpMode {
                 false
         );
         driverControlled.schedule();
+
+    }
+
+    @Override
+    public void onUpdate() {
+        Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf);
+        telemetry.update();
 
     }
 
