@@ -1,11 +1,8 @@
 package org.firstinspires.ftc.teamcode.OpModes;
 
-import static org.firstinspires.ftc.teamcode.pedroPathing.Tuning.follower;
-
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
-import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
@@ -21,7 +18,6 @@ import dev.nextftc.hardware.driving.DriverControlledCommand;
 import dev.nextftc.hardware.impl.MotorEx;
 
 import org.firstinspires.ftc.teamcode.Subsystems.Turret;
-import org.firstinspires.ftc.teamcode.Tests.LimelightProcessing;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 
@@ -51,11 +47,11 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     private boolean motorToggle = false;
 
-    private static double kp = 0.0;
+    private static double kp = 0.001;
     private static double kd = 0.0;
-    private static double ki = 0.0;
+    private static double ki = 0.001;
     private static double kf = 0.0;
-    private static double power = 0.1;
+    private static double power = 0.7;
 
     private TelemetryManager telemetryManager;
 
@@ -118,12 +114,12 @@ public class TeleOpProgram extends NextFTCOpMode {
     @Override
     public void onUpdate() {
         double turretPos = Turret.INSTANCE.getRotateMotorPosition();
-        double turretWant = Turret.INSTANCE.calculatePosition();
-        double getlast = Turret.INSTANCE.getLastPosition();
+        double turretWant = Turret.INSTANCE.getRotateMotorPosition()+Turret.INSTANCE.calculatePosition();
+
         Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf,power);
         telemetryManager.addData("MotorPosition", turretPos);
         telemetryManager.addData("DesiredPosition", turretWant );
-        telemetryManager.addData("lastDesired",getlast);
+
         telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
         telemetryManager.update(telemetry);
 

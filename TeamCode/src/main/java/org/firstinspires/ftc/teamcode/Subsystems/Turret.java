@@ -6,24 +6,13 @@
     import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.flyWheelDiameter;
     import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.gravityAccalerationValue;
     import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.motorShaftRadiusForLuncher;
-    import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.rotationDiameter;
-
-    import android.util.Size;
-
-    import com.qualcomm.robotcore.hardware.HardwareMap;
 
     import dev.nextftc.control.ControlSystem;
     import dev.nextftc.ftc.ActiveOpMode;
-    import dev.nextftc.ftc.NextFTCOpMode;
 
     import org.firstinspires.ftc.robotcore.external.Telemetry;
-    import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
-    import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-    import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-    import org.firstinspires.ftc.teamcode.OpModes.TeleOpProgram;
-    import org.firstinspires.ftc.teamcode.Tests.AprilTagWebCam;
 
-    import org.firstinspires.ftc.teamcode.Tests.LimelightProcessing;
+    import org.firstinspires.ftc.teamcode.Subsystems.Helpers.LimelightProcessing;
     import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
 
@@ -31,16 +20,8 @@
     import java.util.List;
 
     import dev.nextftc.control.KineticState;
-    import dev.nextftc.core.commands.utility.LambdaCommand;
     import dev.nextftc.core.subsystems.Subsystem;
-    import dev.nextftc.hardware.controllable.RunToVelocity;
     import dev.nextftc.hardware.impl.MotorEx;
-
-    import dev.nextftc.core.commands.Command;
-
-
-
-
 
 
     public class Turret implements Subsystem {
@@ -81,8 +62,8 @@
     =68.3523/29630.53125 = 0.0023068267
      */
 
-        double kp = 0.001;
-        double ki = 0.03;
+        double kp = 0.0001;
+        double ki = 0.001;
         double kd = 0;
         double kf = 0;
         double maxPower = .1;
@@ -117,31 +98,6 @@
     for webcam to work, copy from AprilTagWebCam.java
 
      */
-    public List<AprilTagDetection> getDetectedTags(){
-        return detectedTags;
-    }
-    public void displayDetectionTelemetry(AprilTagDetection detectedId) {
-        if (detectedId == null) {
-            return;
-        }
-        if (detectedId.metadata != null) {
-            telemetry.addLine(String.format("\n==== (ID %d) %s", detectedId.id, detectedId.metadata.name));
-            if (detectedId.ftcPose != null) {
-                telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (cm)", detectedId.ftcPose.x, detectedId.ftcPose.y, detectedId.ftcPose.z));
-                telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detectedId.ftcPose.pitch, detectedId.ftcPose.roll, detectedId.ftcPose.yaw));
-                telemetry.addLine(String.format("RBE %6.1f %6.1f %6.1f  (cm, deg, deg)", detectedId.ftcPose.range, detectedId.ftcPose.bearing, detectedId.ftcPose.elevation));
-            } else {
-                telemetry.addLine("FTC Pose data not available");
-            }
-        } else {
-            telemetry.addLine(String.format("\n==== (ID %d) Unknown", detectedId.id));
-            telemetry.addLine(String.format("Center %6.0f %6.0f   (pixels)", detectedId.center.x, detectedId.center.y));
-        }
-        // Add "key" information to telemetry
-        telemetry.addLine("\nkey:\nXYZ = X (Right), Y (Forward), Z (Up) dist.");
-        telemetry.addLine("PRY = Pitch, Roll & Yaw (XYZ Rotation)");
-        telemetry.addLine("RBE = Range, Bearing & Elevation");
-    }
 
 
 
@@ -154,8 +110,6 @@
     public double calculatePosition(){
         if(!limelightProcessing.processTargets().isEmpty()) {
             double angle = limelightProcessing.getTargetInfoByID(21).getTargetX();
-
-            //double arcLength = angle * Math.PI *rotationDiameter/360;
 
             // DPE (Distance Per Encoder count) = 0.0023068267 cm/encoder count
             // This converts the arc length in cm to encoder counts for motor movement
@@ -265,7 +219,7 @@
 
 
             if(calculatePosition()!=0) {
-                double turretPosition=getRotateMotorPosition()+calculatePosition();
+                double turretPosition=rotateMotor.getCurrentPosition()+calculatePosition();
                 controlSystemRotate.setGoal(new KineticState(turretPosition, 50));
                 lastPosition=turretPosition;
             }
