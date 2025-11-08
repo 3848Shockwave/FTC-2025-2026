@@ -4,6 +4,7 @@ import static org.firstinspires.ftc.teamcode.pedroPathing.Tuning.follower;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
@@ -17,7 +18,9 @@ import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
 import dev.nextftc.hardware.driving.DriverControlledCommand;
 import dev.nextftc.hardware.impl.MotorEx;
+import dev.nextftc.hardware.impl.ServoEx;
 
+import org.firstinspires.ftc.teamcode.Subsystems.Sort;
 import org.firstinspires.ftc.teamcode.Subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
@@ -34,11 +37,9 @@ public class TeleOpProgram extends NextFTCOpMode {
     MotorEx intake = new MotorEx("intake").brakeMode();
 
 
-
-
     public TeleOpProgram(){
         addComponents(
-                new SubsystemComponent(Turret.INSTANCE),
+                new SubsystemComponent(Sort.INSTANCE),
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
                 new PedroComponent(Constants::createFollower)
@@ -77,23 +78,26 @@ public class TeleOpProgram extends NextFTCOpMode {
             }
         });
 
-        Button x_button = button(() -> gamepad1.x).whenBecomesTrue(()->
-        {
-            double speed = Turret.INSTANCE.getSpeedNeeded();
-            motorToggle = !motorToggle;
-            if (motorToggle) {
-                intake.setPower(speed);
-            } else {
-                intake.setPower(0);
-            }
-        });
+//        Button x_button = button(() -> gamepad1.x).whenBecomesTrue(()->
+//        {
+//            double speed = Turret.INSTANCE.getSpeedNeeded();
+//            motorToggle = !motorToggle;
+//            if (motorToggle) {
+//                intake.setPower(speed);
+//            } else {
+//                intake.setPower(0);
+//            }
+//        });
+
     }
 
     @Override
     public void onStartButtonPressed(){
 
+        Gamepads.gamepad1().leftBumper().whenBecomesTrue(
+                Sort.INSTANCE.pushBallAndBack
+        );
 
-//        intake.setPower(1);
 
         follower().startTeleopDrive();
         DriverControlledCommand driverControlled = new PedroDriverControlled(

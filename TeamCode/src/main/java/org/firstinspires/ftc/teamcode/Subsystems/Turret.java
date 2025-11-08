@@ -2,25 +2,19 @@
 
 
     import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.distancePerImpulseForRotation;
-    import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.distanceperImulseForLunch;
-    import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.flyWheelDiameter;
-    import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.gravityAccalerationValue;
-    import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.motorShaftRadiusForLuncher;
     import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.rotationDiameter;
 
-    import android.util.Size;
 
-    import com.qualcomm.robotcore.hardware.HardwareMap;
+    import com.qualcomm.hardware.limelightvision.LLResult;
+    import com.qualcomm.hardware.limelightvision.LLResultTypes;
+    import com.qualcomm.hardware.limelightvision.Limelight3A;
+    import com.qualcomm.hardware.limelightvision.LLStatus;
 
     import dev.nextftc.control.ControlSystem;
     import dev.nextftc.ftc.ActiveOpMode;
-    import dev.nextftc.ftc.NextFTCOpMode;
 
     import org.firstinspires.ftc.robotcore.external.Telemetry;
-    import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
-    import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-    import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-    import org.firstinspires.ftc.teamcode.OpModes.TeleOpProgram;
+    import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
     import org.firstinspires.ftc.teamcode.Tests.AprilTagWebCam;
 
     import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
@@ -30,15 +24,8 @@
     import java.util.List;
 
     import dev.nextftc.control.KineticState;
-    import dev.nextftc.core.commands.utility.LambdaCommand;
     import dev.nextftc.core.subsystems.Subsystem;
-    import dev.nextftc.hardware.controllable.RunToVelocity;
     import dev.nextftc.hardware.impl.MotorEx;
-
-    import dev.nextftc.core.commands.Command;
-
-
-
 
 
 
@@ -92,78 +79,43 @@
                 .posPid(0, 0, 0)
                 .basicFF(0)
                 .build();
-        ;
 
 
-    AprilTagWebCam aprilTagWebCam = new AprilTagWebCam();
-
-    private List<AprilTagDetection> detectedTags = new ArrayList<>();
-    private Telemetry telemetry;
-
-
-
+        public void rebuildControlSystem(double p, double i, double d, double f){
+            this.kp = p;
+            this.ki = i;
+            this.kd = d;
+            this.kf = f;
 
 
-
-    /*
-
-    for webcam to work, copy from AprilTagWebCam.java
-
-     */
-    public List<AprilTagDetection> getDetectedTags(){
-        return detectedTags;
-    }
-    public void displayDetectionTelemetry(AprilTagDetection detectedId) {
-        if (detectedId == null) {
-            return;
         }
-        if (detectedId.metadata != null) {
-            telemetry.addLine(String.format("\n==== (ID %d) %s", detectedId.id, detectedId.metadata.name));
-            if (detectedId.ftcPose != null) {
-                telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (cm)", detectedId.ftcPose.x, detectedId.ftcPose.y, detectedId.ftcPose.z));
-                telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detectedId.ftcPose.pitch, detectedId.ftcPose.roll, detectedId.ftcPose.yaw));
-                telemetry.addLine(String.format("RBE %6.1f %6.1f %6.1f  (cm, deg, deg)", detectedId.ftcPose.range, detectedId.ftcPose.bearing, detectedId.ftcPose.elevation));
-            } else {
-                telemetry.addLine("FTC Pose data not available");
-            }
-        } else {
-            telemetry.addLine(String.format("\n==== (ID %d) Unknown", detectedId.id));
-            telemetry.addLine(String.format("Center %6.0f %6.0f   (pixels)", detectedId.center.x, detectedId.center.y));
-        }
-        // Add "key" information to telemetry
-        telemetry.addLine("\nkey:\nXYZ = X (Right), Y (Forward), Z (Up) dist.");
-        telemetry.addLine("PRY = Pitch, Roll & Yaw (XYZ Rotation)");
-        telemetry.addLine("RBE = Range, Bearing & Elevation");
-    }
 
-
-    public AprilTagDetection getTagBySpecificID(int id){
-        for(AprilTagDetection tag : detectedTags) {
-            if (tag.id == id) {
-                return tag;
-            }
-        }
-        return null;
-    }
+        private Limelight3A limelight;
+        private LLResult latestResult;
+        private Pose3D botpose;
 
 
 
 
 
 
-    public double calculatePosition(){
-        if(!detectedTags.isEmpty()) {
-            double angle = aprilTagWebCam.getTagBySpecificID(21).ftcPose.bearing;
-            double arcLength = angle * Math.PI *rotationDiameter/360;
 
-            // DPE (Distance Per Encoder count) = 0.0023068267 cm/encoder count
-            // This converts the arc length in cm to encoder counts for motor movement
-            return arcLength / distancePerImpulseForRotation;
-        }else{
-            //return Math.PI*rotationDiameter/distancePerImpulseForRotation; //impulse needed to make a full rotation
-            return 0;
-        }
-    }
+
+//    public double calculatePosition(){
+//        if(!detectedTags.isEmpty()) {
+//            double angle = aprilTagWebCam.getTagBySpecificID(21).ftcPose.bearing;
+//            double arcLength = angle * Math.PI *rotationDiameter/360;
+//
+//            // DPE (Distance Per Encoder count) = 0.0023068267 cm/encoder count
+//            // This converts the arc length in cm to encoder counts for motor movement
+//            return arcLength / distancePerImpulseForRotation;
+//        }else{
+//            //return Math.PI*rotationDiameter/distancePerImpulseForRotation; //impulse needed to make a full rotation
+//            return 0;
+//        }
+//    }
+
+
     /*
     h0: the height of the launcher
     v0: initial speed of the ball
@@ -183,61 +135,44 @@
     formula: v_{rim} = v \frac{R}{r_{motor}}
 
      */
-    public double calculateLunchStrength(){
-        double distance = aprilTagWebCam.getTagBySpecificID(21).ftcPose.range;
-        double heightDifference = aprilTagWebCam.getTagBySpecificID(21).ftcPose.z + 5;
-        double tanTheta = Math.tan(Math.toRadians(detectedTags.get(21).ftcPose.bearing));
-        double cosTheta = Math.cos(Math.toRadians(detectedTags.get(21).ftcPose.bearing));
-        double efficientCoefficient = 0.9;
 
-
-        double initialSpeedNeeded = Math.sqrt(gravityAccalerationValue*Math.pow(distance,2)/(2*Math.pow(cosTheta,2)*(distance*tanTheta+ heightDifference)))/efficientCoefficient;
-        return initialSpeedNeeded*flyWheelDiameter/motorShaftRadiusForLuncher/distanceperImulseForLunch;
-    }
-
-
-//        public void launch() {
-//            if (!detectedTags.isEmpty()) {
-//                double strength = calculateLunchStrength();
-//                lunchMotor.setPower(controlSystemTurret.calculate(
-//                        new KineticState(0, strength)
-//                ));
-//            }
+//    public double calculateLunchStrength(){
+//        double distance = aprilTagWebCam.getTagBySpecificID(21).ftcPose.range;
+//        double heightDifference = aprilTagWebCam.getTagBySpecificID(21).ftcPose.z + 5;
+//        double tanTheta = Math.tan(Math.toRadians(detectedTags.get(21).ftcPose.bearing));
+//        double cosTheta = Math.cos(Math.toRadians(detectedTags.get(21).ftcPose.bearing));
+//        double efficientCoefficient = 0.9;
+//
+//
+//        double initialSpeedNeeded = Math.sqrt(gravityAccalerationValue*Math.pow(distance,2)/(2*Math.pow(cosTheta,2)*(distance*tanTheta+ heightDifference)))/efficientCoefficient;
+//        return initialSpeedNeeded*flyWheelDiameter/motorShaftRadiusForLuncher/distanceperImulseForLunch;
+//    }
+//
+//
+//        public double getSpeedNeeded(){
+//            double velocity = calculateLunchStrength();
+//            return controlSystemTurret.calculate(
+//                    new KineticState(0,velocity)
+//            );
 //        }
-
-        /*
-        the side of a tile is 61, and the "castle" is 45 degree within a tile
-         */
-        public double calculateXPosition(){
-         double x = aprilTagWebCam.getTagBySpecificID(21).ftcPose.x;
-         return 30.5 + x; //suppose the coordinate system in in cm
-        }
-
-        public double calculteYPosition(){
-         double y = aprilTagWebCam.getTagBySpecificID(21).ftcPose.y;
-         return 366 - 30.5 - y; //suppose the coordinate system in in cm
-        }
-
-        public double getSpeedNeeded(){
-            double velocity = calculateLunchStrength();
-            return controlSystemTurret.calculate(
-                    new KineticState(0,velocity)
-            );
-        }
 
 
 
         @Override
         public void initialize() {
         // initialization logic (runs on init)
-            aprilTagWebCam.onInit(ActiveOpMode.hardwareMap(), ActiveOpMode.telemetry());
-            aprilTagWebCam.onUpdate();
-            detectedTags = aprilTagWebCam.getDetectedTags();
             rotateMotor.setPower(0);
             lunchMotor.setPower(0);
 
+            limelight = ActiveOpMode.hardwareMap().get(Limelight3A.class, "limelight");
+            limelight.pipelineSwitch(0);
+            limelight.start();
 
 
+            if (!ActiveOpMode.isStarted()) {
+                rotateMotor.setPower(0);
+                return;
+            }
 
     }
 
@@ -247,62 +182,42 @@
 
         @Override
         public void periodic() {
-            // remove after tuning, no need to rebuild control system every loop
-            controlSystemRotate = ControlSystem.builder()
-                    .posPid(kp, ki, kd)
-                    .basicFF(kf)
-                    .build();
-            if (!ActiveOpMode.isStarted()){
-                aprilTagWebCam.onUpdate();
-                detectedTags = aprilTagWebCam.getDetectedTags();
-                // add detected tags to telemetry
-                rotateMotor.setPower(0);
-                lunchMotor.setPower(0);
-                return;
+            //this will get the LLresult from the limelight every cycle
+            LLResult result = limelight.getLatestResult();
+
+            if (result != null && result.isValid()) {
+                //robot pose is the relative position from robot to the april tag
+                botpose = result.getBotpose();
+                //all the april tags from the limelight
+                List<LLResultTypes.FiducialResult> fiducials = result.getFiducialResults();
+
+
+                /*
+                get data we need;
+                bearing & range
+                 */
+                if (!fiducials.isEmpty()) {
+                    LLResultTypes.FiducialResult tag = fiducials.get(0);
+
+                    double bearingDeg = tag.getTargetXDegrees();
+
+                    /*
+                    Equal to the calculatePosition, and keep the april tag in the center
+                     */
+
+                    double targetPosition = bearingDeg / distancePerImpulseForRotation;
+                    controlSystemRotate.setGoal(new KineticState(targetPosition, 50));
+                    double turretPosition = targetPosition + rotateMotor.getCurrentPosition();
+
+                    double power = controlSystemRotate.calculate(
+                            new KineticState(turretPosition)
+                    );
+
+                    rotateMotor.setPower(power);
+                }
+
             }
-
-        // periodic logic (runs every loop)
-
-
-            aprilTagWebCam.onUpdate();
-            detectedTags = aprilTagWebCam.getDetectedTags();
-
-
-            double turretPosition = calculatePosition();
-            controlSystemRotate.setGoal(new KineticState(calculatePosition(), 50));
-            if (!detectedTags.isEmpty()) {
-                double x = aprilTagWebCam.getTagBySpecificID(21).ftcPose.x;
-
-            }
-            else{
-                double x = 0;
-            }
-
-            double power = controlSystemRotate.calculate(
-                    new KineticState(rotateMotor.getCurrentPosition())
-            );
-
-            //clamp power to limit during testing
-            if(power > 0.3){
-                power = 0.3;
-            }else if(power < -0.3){
-                power = -0.3;
-            }
-            rotateMotor.setPower(power);//end of tracking logic
-
-
-
-
-
         }
-
-        public void rebuildControlSystem(double p, double i, double d, double f){
-            this.kp = p;
-            this.ki = i;
-            this.kd = d;
-            this.kf = f;
-        }
-
-}
+    }
 
 
