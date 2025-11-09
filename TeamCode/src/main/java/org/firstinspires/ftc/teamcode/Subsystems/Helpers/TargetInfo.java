@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.Subsystems.Helpers;
 
 public class TargetInfo {
+    // This class stores information about a detected limelight target
     public double id;
     public double x;
     public double y;

@@ -13,44 +13,58 @@ import java.util.List;
 import dev.nextftc.ftc.ActiveOpMode;
 
 public class LimelightProcessing {
-    private Limelight3A limelight;
     HardwareMap hardwareMap;
     Telemetry telemetry;
     ArrayList<TargetInfo> targetsDetected = new ArrayList<>();
+    int currentPipeline = 0;
+    private Limelight3A limelight;
 
-    public void initLimelight() {
+    //Pipeline 0: AprilTag ID 21
+    public void initLimelight(int pipeline) {
         hardwareMap = ActiveOpMode.hardwareMap();
         telemetry = ActiveOpMode.telemetry();
         targetsDetected = new ArrayList<>();
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         telemetry.setMsTransmissionInterval(11);
-        limelight.pipelineSwitch(0);
+        limelight.pipelineSwitch(pipeline);
         limelight.start();
 
 
     }
-    public void getLimelightStatus(){
+
+    public void getLimelightStatus() {
         LLResult result = limelight.getLatestResult();
         if (result.isValid()) {
             telemetry.addData("Limelight Status: ", "Targets Detected");
-            telemetry.addData("Number of Targets: ", result.getFiducialResults().size());
+            telemetry.addData("current Pipeline: ", getCurrentPipeline());
             telemetry.update();
-        }
-        else{
+        } else {
             telemetry.addData("Limelight Status: ", "No Targets Detected");
             telemetry.update();
         }
     }
-    public ArrayList<TargetInfo> processTargets(){
-        LLResult result = limelight.getLatestResult();
 
+    public void setPipeline(int pipeline) {
+        limelight.pipelineSwitch(pipeline);
+        currentPipeline = pipeline;
+    }
+
+    public int getCurrentPipeline() {
+        return currentPipeline;
+    }
+
+    public ArrayList<TargetInfo> processTargets() {
+        LLResult result = limelight.getLatestResult();
         if (result.isValid()) {
             List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
+            ArrayList<Double> detectedIDs = new ArrayList<>();
+
             for (LLResultTypes.FiducialResult fr : fiducialResults) {
                 double id = fr.getFiducialId();
                 double x = fr.getTargetXDegrees();
                 double y = fr.getTargetYDegrees();
                 double area = fr.getTargetArea();
+                detectedIDs.add(id);
 
                 boolean updated = false;
                 for (TargetInfo t : targetsDetected) {
@@ -69,15 +83,15 @@ public class LimelightProcessing {
                 }
             }
 
-        }
-        else{
-            telemetry.addData("Limelight Status: ", "No Targets Detected");
-            telemetry.update();
+            // Remove targets that are no longer detected
+            targetsDetected.removeIf(target -> !detectedIDs.contains(target.getID()));
+        } else {
+            targetsDetected.clear(); // Clear all targets if no valid results
         }
         return targetsDetected;
     }
 
-    public TargetInfo getTargetInfoByID(double targetID){
+    public TargetInfo getTargetInfo(double targetID) {
         for (TargetInfo t : processTargets()) {
             if (t.getID() == targetID) {
                 return t;
@@ -85,34 +99,43 @@ public class LimelightProcessing {
         }
         return null; // Return null if no target with the specified ID is found
     }
-    public void stopLimelight(){
+
+    public TargetInfo getTargetInfo() {
+        if (!targetsDetected.isEmpty()) {
+            return targetsDetected.get(0); // Return the first target detected
+        }
+        return null; // Return null if no targets are detected
+    }
+
+    public void stopLimelight() {
         limelight.stop();
     }
-   public String limelightTelemetry() {
-               LLResult result = limelight.getLatestResult();
-               StringBuilder output = new StringBuilder();
 
-               if (result != null && result.isValid()) {
-                   output.append("Limelight Status: Targets Detected\n");
-                   output.append("Number of Targets: ").append(result.getFiducialResults().size()).append("\n");
+    public String limelightTelemetry() {
+        LLResult result = limelight.getLatestResult();
+        StringBuilder output = new StringBuilder();
 
-                   for (TargetInfo t : processTargets()) {
-                       for (java.lang.reflect.Field f : t.getClass().getDeclaredFields()) {
-                           f.setAccessible(true);
-                           try {
-                               Object val = f.get(t);
-                               output.append(f.getName()).append(": ").append(String.valueOf(val)).append("\n");
-                           } catch (IllegalAccessException e) {
-                               output.append(f.getName()).append(": access error").append("\n");
-                           }
-                       }
-                       output.append("---\n");
-                   }
-               } else {
-                   output.append("Limelight Status: No Targets Detected\n");
-               }
+        if (result != null && result.isValid()) {
+            output.append("Limelight Status: Targets Detected\n");
+            output.append("Number of Targets: ").append(result.getFiducialResults().size()).append("\n");
 
-               return output.toString();
-           }
+            for (TargetInfo t : processTargets()) {
+                for (java.lang.reflect.Field f : t.getClass().getDeclaredFields()) {
+                    f.setAccessible(true);
+                    try {
+                        Object val = f.get(t);
+                        output.append(f.getName()).append(": ").append(val).append("\n");
+                    } catch (IllegalAccessException e) {
+                        output.append(f.getName()).append(": access error").append("\n");
+                    }
+                }
+                output.append("---\n");
+            }
+        } else {
+            output.append("Limelight Status: No Targets Detected\n");
+        }
+
+        return output.toString();
+    }
 }
 

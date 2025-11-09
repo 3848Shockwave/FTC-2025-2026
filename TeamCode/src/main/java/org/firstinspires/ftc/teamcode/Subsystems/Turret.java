@@ -1,48 +1,40 @@
-    package org.firstinspires.ftc.teamcode.Subsystems;
+package org.firstinspires.ftc.teamcode.Subsystems;
 
 
-    import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.distancePerImpulseForRotation;
-    import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.distanceperImulseForLunch;
-    import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.flyWheelDiameter;
-    import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.gravityAccalerationValue;
-    import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.motorShaftRadiusForLuncher;
+import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.distancePerImpulseForRotation;
+import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.distanceperImulseForLunch;
+import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.flyWheelDiameter;
+import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.gravityAccalerationValue;
+import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.motorShaftRadiusForLuncher;
 
-    import dev.nextftc.control.ControlSystem;
-    import dev.nextftc.ftc.ActiveOpMode;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.Subsystems.Helpers.LimelightProcessing;
+import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
-    import org.firstinspires.ftc.robotcore.external.Telemetry;
+import java.util.ArrayList;
+import java.util.List;
 
-    import org.firstinspires.ftc.teamcode.Subsystems.Helpers.LimelightProcessing;
-    import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
-
-
-    import java.util.ArrayList;
-    import java.util.List;
-
-    import dev.nextftc.control.KineticState;
-    import dev.nextftc.core.subsystems.Subsystem;
-    import dev.nextftc.hardware.impl.MotorEx;
+import dev.nextftc.control.ControlSystem;
+import dev.nextftc.control.KineticState;
+import dev.nextftc.core.subsystems.Subsystem;
+import dev.nextftc.ftc.ActiveOpMode;
+import dev.nextftc.hardware.impl.MotorEx;
 
 
-    public class Turret implements Subsystem {
+public class Turret implements Subsystem {
     //declare for every subsystem
     public static final Turret INSTANCE = new Turret();
-    private Turret() { }
-
-
-
-
-
+    public final LimelightProcessing limelightProcessing = new LimelightProcessing(); //Creates limelight processing object
     //all the hardware goes here
-    private final MotorEx lunchMotor= new MotorEx("lunchMotor").brakeMode();
+    private final MotorEx lunchMotor = new MotorEx("lunchMotor").brakeMode();
     /*
-    luncher angle(horizontal): 65  degrees
+    launcher angle(horizontal): 65  degrees
 
     Gear Ratio	19.2:1
     Encoder Resolution	537.7 PPR at the Output Shaft
 
      */
-    private final MotorEx rotateMotor= new MotorEx("rotateMotor").brakeMode();
+    private final MotorEx rotateMotor = new MotorEx("rotateMotor").brakeMode();
     /*
     13.7 : 1 Ratio, 435 RPM
     Encoder Resolution	384.5 PPR at the Output Shaft
@@ -52,74 +44,52 @@
     24:135 (gear ratio for the turning plate)
     217.572 mm --> diameter for the plate --> plate Circumference:68.3523 cm
 
-    Total Gear Ratio:
-    13.7 * 135/24 = 77.0625
+    Total Gear Ratio from motor shaft to plate:
+    135/24 = 77.0625 Output shaft encoder, so no need to multiply by 13.7,
 
-    total counts per plate revolution:
-    77.0625 * 384.5 = 29630.53125 counts/plate rev
+    //Encoder ticks per plate rotation:
+    135/24* 384.5 = 2162.8125
 
     __distance moved per encoder count__
-    =68.3523/29630.53125 = 0.0023068267
+    =68.3523/2162.8125 = 0.03160343302
+    This represents the degrees that the output 135 tooth pulley moves per encoder tick
      */
-
-        double kp = 0.0001;
-        double ki = 0.001;
-        double kd = 0;
-        double kf = 0;
-        double maxPower = .1;
-      private  double lastPosition=0.0;
-      public final LimelightProcessing limelightProcessing = new LimelightProcessing();
     private final ControlSystem controlSystemTurret = ControlSystem.builder()
-                .posPid(0.001, 0.6, 0.0009)
-                .basicFF(0.00043)
-                .build();
-    private ControlSystem controlSystemRotate  = ControlSystem.builder()
-                .posPid(kp, ki, kd)
-                .basicFF(kf)
-                .build();
-        ;
-
-
-    private List<AprilTagDetection> detectedTags = new ArrayList<>();
+            .posPid(0.001, 0.6, 0.0009)
+            .basicFF(0.00043)
+            .build();
+    private final List<AprilTagDetection> detectedTags = new ArrayList<>();
+    double kp = 0.0001;
+    double ki = 0.001;
+    double kd = 0;
+    double kf = 0;
+    double maxPower = .1;
     private Telemetry telemetry;
+    private ControlSystem controlSystemRotate = ControlSystem.builder()
+            .posPid(kp, ki, kd)
+            .basicFF(kf)
+            .build();
 
+    private Turret() {
+    }
 
-
-
-    public double getRotateMotorPosition(){
+    public double getRotateMotorPosition() {
         return rotateMotor.getCurrentPosition();
     }
-    public double getLastPosition(){
-        return lastPosition;
-    }
-
-    /*
-
-    for webcam to work, copy from AprilTagWebCam.java
-
-     */
 
 
-
-
-
-
-
-
-
-    public double calculatePosition(){
-        if(!limelightProcessing.processTargets().isEmpty()) {
-            double angle = limelightProcessing.getTargetInfoByID(21).getTargetX();
-
-            // DPE (Distance Per Encoder count) = 0.0023068267 cm/encoder count
-            // This converts the arc length in cm to encoder counts for motor movement
-          //  return arcLength / distancePerImpulseForRotation;
-            return -angle/distancePerImpulseForRotation;
-        }else{
-            //return Math.PI*rotationDiameter/distancePerImpulseForRotation; //impulse needed to make a full rotation
-            return 0;
+    public double calculatePosition() {
+        if (!limelightProcessing.processTargets().isEmpty()) {
+            double angle = limelightProcessing.getTargetInfo(21).getTargetX();
+            //Simple calculation, using the distance from center given by limelight getTargetX, we then divide that by distance per encoder counts
+            // This gives us the amount of encoder counts needed to reach desired location.
+            // We negate the value because positive angle means target is to the right, so we need to rotate left (negative)
+            return -angle / distancePerImpulseForRotation;
+        } else {
+            return 0; //default, may change
         }
     }
+
     /*
     h0: the height of the launcher
     v0: initial speed of the ball
@@ -139,128 +109,131 @@
     formula: v_{rim} = v \frac{R}{r_{motor}}
 
      */
-    public double calculateLunchStrength(){
+    public double calculateLunchStrength() {
         double distance = 5;//aprilTagWebCam.getTagBySpecificID(21).ftcPose.range;
-        double heightDifference =limelightProcessing.getTargetInfoByID(21).getTargetY() + 5;
+        double heightDifference = limelightProcessing.getTargetInfo(21).getTargetY() + 5;
         double tanTheta = Math.tan(Math.toRadians(detectedTags.get(21).ftcPose.bearing));
         double cosTheta = Math.cos(Math.toRadians(detectedTags.get(21).ftcPose.bearing));
         double efficientCoefficient = 0.9;
 
 
-        double initialSpeedNeeded = Math.sqrt(gravityAccalerationValue*Math.pow(distance,2)/(2*Math.pow(cosTheta,2)*(distance*tanTheta+ heightDifference)))/efficientCoefficient;
-        return initialSpeedNeeded*flyWheelDiameter/motorShaftRadiusForLuncher/distanceperImulseForLunch;
+        double initialSpeedNeeded = Math.sqrt(gravityAccalerationValue * Math.pow(distance, 2) / (2 * Math.pow(cosTheta, 2) * (distance * tanTheta + heightDifference))) / efficientCoefficient;
+        return initialSpeedNeeded * flyWheelDiameter / motorShaftRadiusForLuncher / distanceperImulseForLunch;
     }
 
 
-//        public void launch() {
-//            if (!detectedTags.isEmpty()) {
-//                double strength = calculateLunchStrength();
-//                lunchMotor.setPower(controlSystemTurret.calculate(
-//                        new KineticState(0, strength)
-//                ));
-//            }
-//        }
+    public void launch() {
+        if (!detectedTags.isEmpty()) {
+            double strength = calculateLunchStrength();
+            lunchMotor.setPower(controlSystemTurret.calculate(
+                    new KineticState(0, strength)
+            ));
+        }
+    }
 
         /*
         the side of a tile is 61, and the "castle" is 45 degree within a tile
          */
 
 
-        public double calculteYPosition(){
-         double y = limelightProcessing.getTargetInfoByID(21).getTargetY();
-         return 366 - 30.5 - y; //suppose the coordinate system in in cm
-        }
+    public double calculateYPosition() {
+        double y = limelightProcessing.getTargetInfo(21).getTargetY();
+        return 366 - 30.5 - y; //suppose the coordinate system in in cm
+    }
 
-        public double getSpeedNeeded(){
-            double velocity = calculateLunchStrength();
-            return controlSystemTurret.calculate(
-                    new KineticState(0,velocity)
-            );
-        }
+    public double getSpeedNeeded() {
+        double velocity = calculateLunchStrength();
+        return controlSystemTurret.calculate(
+                new KineticState(0, velocity)
+        );
+    }
 
 
-
-        @Override
-        public void initialize() {
+    @Override
+    public void initialize() {
+        int defaultPipeline = 0; //set default pipeline
         // initialization logic (runs on init)
-            rotateMotor.setPower(0);
-            lunchMotor.setPower(0);
-            limelightProcessing.initLimelight();
-
+        rotateMotor.setPower(0);
+        // rotateMotor.getRawTicks() this could be interesting?
+        //set current position to 0
+        lunchMotor.setPower(0);
+        limelightProcessing.initLimelight(defaultPipeline); //initialize limelight processing
 
 
     }
 
+    public double verifyTurretMovement() {
+        double nextTurretPosition = rotateMotor.getCurrentPosition() + calculatePosition();
+        double minPosition = 0; // Starting/default encoder location
+        double maxPosition = 300 / distancePerImpulseForRotation; // Convert degrees to encoder counts
 
+        if (nextTurretPosition < minPosition) {
+            nextTurretPosition = maxPosition; // Wrap to the other side
+        } else if (nextTurretPosition > maxPosition) {
+            nextTurretPosition = minPosition; // Wrap to the other side
+        }
 
-        // post-start logic (runs once when start is pressed)
+        return nextTurretPosition;
+    }
 
-        @Override
-        public void periodic() {
+    // post-start logic (runs once when start is pressed)
+
+    @Override
+    public void periodic() { // periodic logic (runs every loop)
+        limelightProcessing.processTargets(); //reloads all limelight processing data
+        // remove after tuning, no need to rebuild control system every loop
+        controlSystemRotate = ControlSystem.builder()
+                .posPid(kp, ki, kd)
+                .basicFF(kf)
+                .build();
+        if (!ActiveOpMode.isStarted()) {
             limelightProcessing.processTargets();
-            // remove after tuning, no need to rebuild control system every loop
-            controlSystemRotate = ControlSystem.builder()
-                    .posPid(kp, ki, kd)
-                    .basicFF(kf)
-                    .build();
-            if (!ActiveOpMode.isStarted()){
-                limelightProcessing.processTargets();
-                // add detected tags to telemetry
-                rotateMotor.setPower(0);
-                lunchMotor.setPower(0);
-                return;
-            }
+            // add detected tags to telemetry
+            rotateMotor.setPower(0);
+            lunchMotor.setPower(0);
+            return;
+        }
 
         // periodic logic (runs every loop)
 
 
-
-
-
-
-            if(calculatePosition()!=0) {
-                double turretPosition=rotateMotor.getCurrentPosition()+calculatePosition();
-                controlSystemRotate.setGoal(new KineticState(turretPosition, 50));
-                lastPosition=turretPosition;
-            }
-            else{
-                //controlSystemRotate.setGoal(new KineticState(lastPosition, 50));
-                controlSystemRotate.setGoal(new KineticState(0.0, 50));
-
-            }
-            if (!detectedTags.isEmpty()) {
-                double x =limelightProcessing.getTargetInfoByID(21).getTargetX();
-
-            }
-            else{
-                double x = 0;
-            }
-
-            double power = controlSystemRotate.calculate(
-                    new KineticState(rotateMotor.getCurrentPosition())
-            );
-
-            //clamp power to limit during testing
-            if(power > maxPower){
-                power = maxPower;
-            }else if(power < -maxPower){
-                power = -maxPower;
-            }
-            rotateMotor.setPower(power);//end of tracking logic
-
-
-
-
+        if (calculatePosition() != 0) {
+            //  double turretPosition = rotateMotor.getCurrentPosition() + calculatePosition();
+            controlSystemRotate.setGoal(new KineticState(verifyTurretMovement(), 50));
+        } else {
+            //controlSystemRotate.setGoal(new KineticState(lastPosition, 50));
+            controlSystemRotate.setGoal(new KineticState(0.0, 50));
 
         }
+        if (!detectedTags.isEmpty()) {
+            double x = limelightProcessing.getTargetInfo(21).getTargetX();
 
-        public void rebuildControlSystem(double p, double i, double d, double f, double power){
-            this.kp = p;
-            this.ki = i;
-            this.kd = d;
-            this.kf = f;
-            this.maxPower = power;
+        } else {
+            double x = 0;
         }
+
+        double power = controlSystemRotate.calculate(
+                new KineticState(rotateMotor.getCurrentPosition())
+        );
+
+        //clamp power to limit during testing
+        if (power > maxPower) {
+            power = maxPower;
+        } else if (power < -maxPower) {
+            power = -maxPower;
+        }
+        rotateMotor.setPower(power);//end of tracking logic
+
+
+    }
+
+    public void rebuildControlSystem(double p, double i, double d, double f, double power) {
+        this.kp = p;
+        this.ki = i;
+        this.kd = d;
+        this.kf = f;
+        this.maxPower = power;
+    }
 
 }
 
