@@ -6,10 +6,13 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.ActiveOpMode;
 
 public class LimelightProcessing {
@@ -22,6 +25,7 @@ public class LimelightProcessing {
     //Pipeline 0: AprilTag ID 21
     public void initLimelight(int pipeline) {
         hardwareMap = ActiveOpMode.hardwareMap();
+        limelight.updateRobotOrientation(PedroComponent.follower().getHeading()); //This may be iffy, It needs to ge the yaw of the robot to do pose localization
         telemetry = ActiveOpMode.telemetry();
         targetsDetected = new ArrayList<>();
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
@@ -105,6 +109,16 @@ public class LimelightProcessing {
             return targetsDetected.get(0); // Return the first target detected
         }
         return null; // Return null if no targets are detected
+    }
+    public Pose3D getPose(){
+        Pose3D pose;
+        limelight.updateRobotOrientation(PedroComponent.follower().getHeading());
+       LLResult result = limelight.getLatestResult();
+       if (!result.isValid()) {
+        pose = null;
+       }
+       pose = limelight.getLatestResult().getBotpose_MT2();
+        return pose;
     }
 
     public void stopLimelight() {
