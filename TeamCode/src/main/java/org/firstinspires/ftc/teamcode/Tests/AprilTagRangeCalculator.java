@@ -7,7 +7,7 @@ import org.firstinspires.ftc.teamcode.Subsystems.Helpers.LimelightProcessing;
 
 import dev.nextftc.ftc.NextFTCOpMode;
 
-@TeleOp(name = "DriveTest", group = "Testing")
+@TeleOp(name = "AprilTagRangeCalculator", group = "Testing")
 public class AprilTagRangeCalculator extends NextFTCOpMode {
     // Calculator for AprilTag distance based on area readings
     // brogan pratt video needed to calculate scale factor: https://www.youtube.com/watch?v=Ap1lBywv00M
