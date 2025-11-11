@@ -26,6 +26,7 @@ public class TurretConstants {
     public static final double rotateMotorPPR = 384.5;
     public static final double TGearRatioRotation = 77.0625;
 
+    public static final double ticksPerDegreeOfRotation = 6.0078125;
 
 
     /*

@@ -4,6 +4,7 @@ public class TargetInfo {
     // This class stores information about a detected limelight target
     private double id;
     private double x;
+    private double lastX;
     private double y;
     private double area;
     private double distance;
@@ -17,6 +18,9 @@ public class TargetInfo {
     }
     public double getTargetX(){
         return x;
+    }
+    public double getTargetLastX(){
+        return lastX;
     }
     public double getTargetY(){
         return y;
@@ -33,8 +37,9 @@ public class TargetInfo {
         return id;
     }
 
-    public void setX(double x){
-        this.x = x;
+    public void setX(double newX){
+        lastX = x;
+        x = newX;
     }
     public void setY(double y){
         this.y = y;

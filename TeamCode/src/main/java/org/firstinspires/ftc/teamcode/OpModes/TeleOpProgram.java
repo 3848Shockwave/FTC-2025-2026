@@ -47,18 +47,18 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     private boolean motorToggle = false;
 
-    private static double kp = 0.001;
-    private static double kd = 0.0;
-    private static double ki = 0.001;
+    private static double kp = 0.004;
+    private static double kd = 0.0001;
+    private static double ki = 0.004;
     private static double kf = 0.0;
-    private static double power = 0.7;
+    private static double power = 1.0;
 
     private TelemetryManager telemetryManager;
 
     @Override
     public void onInit() {
 
-
+        Turret.INSTANCE.resetRotateMotorPosition();
         intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
         Button a_button = button(() -> gamepad1.a).whenBecomesTrue(() ->
@@ -91,6 +91,9 @@ public class TeleOpProgram extends NextFTCOpMode {
                 intake.setPower(0);
             }
         });
+       if(gamepad1.yWasPressed()){
+           Turret.INSTANCE.resetRotateMotorPosition();
+       }
         Turret.INSTANCE.limelightProcessing.getLimelightStatus();
     }
 
@@ -118,8 +121,8 @@ public class TeleOpProgram extends NextFTCOpMode {
 
         Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf,power);
         telemetryManager.addData("MotorPosition", turretPos);
-        telemetryManager.addData("DesiredPosition", turretWant );
-
+        telemetryManager.addData("NextPosition", Turret.INSTANCE.getNextTurretPosition() );
+        telemetryManager.addData("loop", Turret.INSTANCE.loopingPosition );
         telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
         telemetryManager.update(telemetry);
 
