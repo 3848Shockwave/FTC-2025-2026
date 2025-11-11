@@ -183,7 +183,7 @@ public class Turret implements Subsystem {
     public void periodic() {
         double minPosition = 30 * ticksPerDegreeOfRotation; // Starting/default encoder location
         double maxPosition = 330 * ticksPerDegreeOfRotation; // Convert degrees to encoder counts
-        if(((getRotateMotorPosition()==minPosition+10||getRotateMotorPosition()==minPosition-10)||(getRotateMotorPosition()==maxPosition+10||getRotateMotorPosition()==maxPosition-10))&&loopingPosition){
+        if(((getRotateMotorPosition()<=minPosition+10&&getRotateMotorPosition()>=minPosition-10)||(getRotateMotorPosition()<=maxPosition+10&&getRotateMotorPosition()>=maxPosition-10))&&loopingPosition){
             loopingPosition=false;
         }
         nextTurretPosition = rotateMotor.getCurrentPosition() + calculatePosition();
