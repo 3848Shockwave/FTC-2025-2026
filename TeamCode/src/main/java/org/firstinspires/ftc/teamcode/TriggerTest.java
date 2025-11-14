@@ -15,36 +15,32 @@ import static dev.nextftc.bindings.Bindings.*;
 
 
 @Configurable
-@TeleOp(name = "MotorTest", group = "Testing")
-public class MotorTest extends NextFTCOpMode {
+@TeleOp(name = "TriggerTest", group = "Testing")
+public class TriggerTest extends NextFTCOpMode {
     {
         addComponents(/* vararg components */);
 
     }
-    private final MotorEx motorEx = new MotorEx("LaunchMotor");
+
 
     private TelemetryManager telemetryManager;
+    private Range trigger_range;
 
-    private boolean motorToggle = false;
-    private static float power = 0.75f;
 
     @Override public void onInit() {
-        motorEx.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+
 
         Button right_trigger = range(() -> gamepad1.right_trigger)
                 .greaterThan(0.5)
-                .whenBecomesTrue(this::doSomething)
-                ;
+                .whenBecomesTrue(() -> {
+                    telemetryManager.addData("hello", "world");
+                });
 
-        Button a_button = button(() -> gamepad1.a).whenBecomesTrue(() ->
-        {
-            motorToggle = !motorToggle;
-            if (motorToggle) {
-                motorEx.setPower(power);
-            } else {
-                motorEx.setPower(0);
-            }
-        });
+        // add value to print out range of trigger
+
+        trigger_range = range(() -> gamepad1.right_trigger);
+
+
 
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
 
@@ -56,11 +52,9 @@ public class MotorTest extends NextFTCOpMode {
     }
     @Override public void onUpdate() {
         BindingManager.update();
-        telemetry.addData("MotorPower", motorEx.getPower());
-        telemetry.addData("MotorVelocity", motorEx.getVelocity());
+        telemetryManager.addData("TriggerValue", trigger_range.get());
+        telemetryManager.update(telemetry);
 
-        telemetryManager.addData("MotorVelocity", motorEx.getVelocity());
-        telemetryManager.update();
     }
     @Override public void onStop() {
         BindingManager.reset();
