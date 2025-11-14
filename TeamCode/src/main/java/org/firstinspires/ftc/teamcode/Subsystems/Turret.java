@@ -59,7 +59,9 @@ public class Turret implements Subsystem {
             .basicFF(0.00043)
             .build();
     private final List<AprilTagDetection> detectedTags = new ArrayList<>();
-    public boolean loopingPosition = false;
+
+    double minPosition = 0 * ticksPerDegreeOfRotation; // Starting/default encoder location
+    double maxPosition = 360 * ticksPerDegreeOfRotation; // Convert degrees to encoder counts
     double kp = 0.0001;
     double ki = 0.001;
     double kd = 0;
@@ -177,32 +179,6 @@ public class Turret implements Subsystem {
 
     @Override
     public void periodic() {
-        double minPosition = 30 * ticksPerDegreeOfRotation; // Starting/default encoder location
-        double maxPosition = 330 * ticksPerDegreeOfRotation; // Convert degrees to encoder counts
-        if (((getRotateMotorPosition() <= minPosition + 10 && getRotateMotorPosition() >= minPosition - 10) || (getRotateMotorPosition() <= maxPosition + 10 && getRotateMotorPosition() >= maxPosition - 10)) && loopingPosition) {
-            loopingPosition = false;
-        }
-        nextTurretPosition = rotateMotor.getCurrentPosition() + calculatePosition();
-
-        // periodic logic (runs every loop)
-        if (!loopingPosition) {
-            limelightProcessing.processTargets();
-            if (nextTurretPosition < minPosition) {
-                nextTurretPosition = maxPosition;
-                loopingPosition = true;
-                controlSystemRotate.setGoal(new KineticState(nextTurretPosition, 50));
-                // Wrap to the other side
-            } else if (nextTurretPosition > maxPosition) {
-                nextTurretPosition = minPosition; // Wrap to the other side
-                loopingPosition = true;
-                controlSystemRotate.setGoal(new KineticState(nextTurretPosition, 50));
-            } else {
-                controlSystemRotate.setGoal(new KineticState(nextTurretPosition, 50));
-            }
-        }
-        //reloads all limelight processing data
-
-
         // remove after tuning, no need to rebuild control system every loop
         controlSystemRotate = ControlSystem.builder()
                 .posPid(kp, ki, kd)
@@ -215,6 +191,22 @@ public class Turret implements Subsystem {
             lunchMotor.setPower(0);
             return;
         }
+
+        limelightProcessing.processTargets();
+        nextTurretPosition = rotateMotor.getCurrentPosition() + calculatePosition();
+
+        // periodic logic (runs every loop)
+            if(nextTurretPosition<=maxPosition&&nextTurretPosition>=minPosition){
+                controlSystemRotate.setGoal(new KineticState(nextTurretPosition,50));
+        }
+            else {
+                controlSystemRotate.setGoal(new KineticState(rotateMotor.getCurrentPosition(),50));
+            }
+        //reloads all limelight processing data
+
+
+
+
 
 
         double power = controlSystemRotate.calculate(
