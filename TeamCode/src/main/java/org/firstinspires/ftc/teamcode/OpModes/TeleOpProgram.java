@@ -6,6 +6,7 @@ import com.bylazar.telemetry.TelemetryManager;
 
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
 
 import dev.nextftc.bindings.Button;
 import dev.nextftc.core.components.BindingsComponent;
@@ -18,6 +19,7 @@ import dev.nextftc.ftc.components.BulkReadComponent;
 import dev.nextftc.hardware.driving.DriverControlledCommand;
 import dev.nextftc.hardware.impl.MotorEx;
 
+import org.firstinspires.ftc.teamcode.Subsystems.Sort;
 import org.firstinspires.ftc.teamcode.Subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
@@ -38,6 +40,7 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     public TeleOpProgram(){
         addComponents(
+                new SubsystemComponent(Sort.INSTANCE),
                 new SubsystemComponent(Turret.INSTANCE),
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
@@ -58,7 +61,6 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     @Override
     public void onInit() {
-
         Turret.INSTANCE.resetRotateMotorPosition();
         intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
@@ -122,6 +124,7 @@ public class TeleOpProgram extends NextFTCOpMode {
         telemetryManager.addData("MotorPosition", turretPos);
         telemetryManager.addData("NextPosition", Turret.INSTANCE.getNextTurretPosition() );
         telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
+        telemetryManager.addData("LimitSwitch Status", Sort.INSTANCE.getSpinLimitSwitchStatus());
         telemetryManager.update(telemetry);
 
     }
