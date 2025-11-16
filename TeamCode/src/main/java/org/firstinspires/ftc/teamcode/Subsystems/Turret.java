@@ -60,8 +60,8 @@ public class Turret implements Subsystem {
             .build();
     private final List<AprilTagDetection> detectedTags = new ArrayList<>();
 
-    double minPosition = 0 * ticksPerDegreeOfRotation; // Starting/default encoder location
-    double maxPosition = 360 * ticksPerDegreeOfRotation; // Convert degrees to encoder counts
+    double minPosition = 800;//0 * ticksPerDegreeOfRotation; // Starting/default encoder location
+    double maxPosition = 1650 ;//360 * ticksPerDegreeOfRotation; // Convert degrees to encoder counts
     double kp = 0.0001;
     double ki = 0.001;
     double kd = 0;
@@ -199,6 +199,12 @@ public class Turret implements Subsystem {
             if(nextTurretPosition<=maxPosition&&nextTurretPosition>=minPosition){
                 controlSystemRotate.setGoal(new KineticState(nextTurretPosition,50));
         }
+            else if(rotateMotor.getCurrentPosition()<minPosition){
+                controlSystemRotate.setGoal(new KineticState(minPosition,50));
+        }
+            else  if(rotateMotor.getCurrentPosition()>maxPosition){
+                controlSystemRotate.setGoal(new KineticState(maxPosition,50));
+            }
             else {
                 controlSystemRotate.setGoal(new KineticState(rotateMotor.getCurrentPosition(),50));
             }

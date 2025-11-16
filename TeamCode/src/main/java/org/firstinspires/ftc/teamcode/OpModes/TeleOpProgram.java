@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.OpModes;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
+
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
@@ -48,9 +49,9 @@ public class TeleOpProgram extends NextFTCOpMode {
     private boolean motorToggle = false;
 
     private static double kp = 0.004;
-    private static double kd = 0.0001;
+    private static double kd = 0.00026;
     private static double ki = 0.004;
-    private static double kf = 0.0;
+    private static double kf = 0.0000275;
     private static double power = 1.0;
 
     private TelemetryManager telemetryManager;
@@ -91,9 +92,7 @@ public class TeleOpProgram extends NextFTCOpMode {
                 intake.setPower(0);
             }
         });
-       if(gamepad1.yWasPressed()){
-           Turret.INSTANCE.resetRotateMotorPosition();
-       }
+        Button y_button = button(() -> gamepad1.y).whenBecomesTrue(Turret.INSTANCE::resetRotateMotorPosition);
         Turret.INSTANCE.limelightProcessing.getLimelightStatus();
     }
 
@@ -122,7 +121,6 @@ public class TeleOpProgram extends NextFTCOpMode {
         Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf,power);
         telemetryManager.addData("MotorPosition", turretPos);
         telemetryManager.addData("NextPosition", Turret.INSTANCE.getNextTurretPosition() );
-        telemetryManager.addData("loop", Turret.INSTANCE.loopingPosition );
         telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
         telemetryManager.update(telemetry);
 
