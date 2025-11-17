@@ -95,6 +95,7 @@ public class TeleOpProgram extends NextFTCOpMode {
             }
         });
         Button y_button = button(() -> gamepad1.y).whenBecomesTrue(Turret.INSTANCE::resetRotateMotorPosition);
+        Button left_bumper = button(() -> gamepad1.left_bumper).whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
         Turret.INSTANCE.limelightProcessing.getLimelightStatus();
     }
 
@@ -108,7 +109,7 @@ public class TeleOpProgram extends NextFTCOpMode {
         DriverControlledCommand driverControlled = new PedroDriverControlled(
                 Gamepads.gamepad1().leftStickY().negate(),
                 Gamepads.gamepad1().leftStickX().negate(),
-                Gamepads.gamepad1().rightStickX(),
+                Gamepads.gamepad1().rightStickX().negate(),
                 false
         );
         driverControlled.schedule();
