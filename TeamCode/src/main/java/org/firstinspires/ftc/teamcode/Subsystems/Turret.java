@@ -24,6 +24,11 @@ import dev.nextftc.hardware.impl.MotorEx;
 public class Turret implements Subsystem {
     //declare for every subsystem
     public static final Turret INSTANCE = new Turret();
+    private static double kp = 0.004;
+    private static double kd = 0.00026;
+    private static double ki = 0.004;
+    private static double kf = 0.0000275;
+    private static double maxPower = 1.0;
     public final LimelightProcessing limelightProcessing = new LimelightProcessing(); //Creates limelight processing object
     //all the hardware goes here
     private final MotorEx lunchMotor = new MotorEx("lunchMotor").brakeMode();
@@ -59,19 +64,13 @@ public class Turret implements Subsystem {
             .basicFF(0.00043)
             .build();
     private final List<AprilTagDetection> detectedTags = new ArrayList<>();
-
     double minPosition = 800;//0 * ticksPerDegreeOfRotation; // Starting/default encoder location
-    double maxPosition = 1650 ;//360 * ticksPerDegreeOfRotation; // Convert degrees to encoder counts
-    private static double kp = 0.004;
-    private static double kd = 0.00026;
-    private static double ki = 0.004;
-    private static double kf = 0.0000275;
-    private static double maxPower = 1.0;
+    double maxPosition = 1650;//360 * ticksPerDegreeOfRotation; // Convert degrees to encoder counts
     // post-start logic (runs once when start is pressed)
     KineticState tolerance = new KineticState(10);
     private double nextTurretPosition;
     private Telemetry telemetry;
-    private ControlSystem controlSystemRotate = ControlSystem.builder()
+    private final ControlSystem controlSystemRotate = ControlSystem.builder()
             .posPid(kp, ki, kd)
             .basicFF(kf)
             .build();
@@ -196,23 +195,16 @@ public class Turret implements Subsystem {
         nextTurretPosition = rotateMotor.getCurrentPosition() + calculatePosition();
 
         // periodic logic (runs every loop)
-            if(nextTurretPosition<=maxPosition&&nextTurretPosition>=minPosition){
-                controlSystemRotate.setGoal(new KineticState(nextTurretPosition,50));
+        if (nextTurretPosition <= maxPosition && nextTurretPosition >= minPosition) {
+            controlSystemRotate.setGoal(new KineticState(nextTurretPosition, 50));
+        } else if (rotateMotor.getCurrentPosition() < minPosition) {
+            controlSystemRotate.setGoal(new KineticState(minPosition, 50));
+        } else if (rotateMotor.getCurrentPosition() > maxPosition) {
+            controlSystemRotate.setGoal(new KineticState(maxPosition, 50));
+        } else {
+            controlSystemRotate.setGoal(new KineticState(rotateMotor.getCurrentPosition(), 50));
         }
-            else if(rotateMotor.getCurrentPosition()<minPosition){
-                controlSystemRotate.setGoal(new KineticState(minPosition,50));
-        }
-            else  if(rotateMotor.getCurrentPosition()>maxPosition){
-                controlSystemRotate.setGoal(new KineticState(maxPosition,50));
-            }
-            else {
-                controlSystemRotate.setGoal(new KineticState(rotateMotor.getCurrentPosition(),50));
-            }
         //reloads all limelight processing data
-
-
-
-
 
 
         double power = controlSystemRotate.calculate(
@@ -231,11 +223,11 @@ public class Turret implements Subsystem {
     }
 
     public void rebuildControlSystem(double p, double i, double d, double f, double power) {
-        this.kp = p;
-        this.ki = i;
-        this.kd = d;
-        this.kf = f;
-        this.maxPower = power;
+        kp = p;
+        ki = i;
+        kd = d;
+        kf = f;
+        maxPower = power;
     }
 
 }

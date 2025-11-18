@@ -7,70 +7,60 @@ import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ifElseCommand;
 
 import dev.nextftc.control.ControlSystem;
 import dev.nextftc.control.KineticState;
 import dev.nextftc.core.commands.Command;
-import org.firstinspires.ftc.teamcode.Subsystems.Helpers.*;
-
-import dev.nextftc.core.commands.utility.InstantCommand;
+import dev.nextftc.core.commands.utility.LambdaCommand;
 import dev.nextftc.core.subsystems.Subsystem;
 import dev.nextftc.ftc.ActiveOpMode;
-import dev.nextftc.hardware.controllable.RunToPosition;
-import dev.nextftc.hardware.controllable.RunToState;
 import dev.nextftc.hardware.impl.MotorEx;
 import dev.nextftc.hardware.impl.ServoEx;
 import dev.nextftc.hardware.positionable.SetPositions;
 
 public class Sort implements Subsystem {
     public static final Sort INSTANCE = new Sort();
-    HardwareMap hardwareMap;
-    Telemetry telemetry;
-    DigitalChannel limitSwitch ;
-
-    private Sort() { }
     private final MotorEx turningPlate = new MotorEx("spindexMotor").brakeMode();
     //1,425.1 at output, 2:1 gear ratio, thus 2850.2 at motor shaft
-    private final double ticksPerSlot = 2850.2/3;
-    private double kp = 0;
-   private double ki = 0.00;
-    private double kd = 0;
-   private double kf = 0;
-    private ControlSystem controlSystemSpindex = ControlSystem.builder()
-            .posPid(1, 0.0, 0.0000)
-            .basicFF(0.0000)
-            .build();
+    private final double ticksPerSlot = 2850.2 / 3;
+    public Command pushBall = null;
+    public Command backPosition = null;
+    public ifElseCommand pushBallAndBack = null;
+    public Command cycleLeft = null;
+    public Command cycleRight = null;
+    HardwareMap hardwareMap;
+    Telemetry telemetry;
+    DigitalChannel limitSwitch;
+    ServoEx servoLeft;
 
     // 5203-2402-0051, 50.9:1, 8mm(D) shaft, 117rpm, 1,425.1 PPR, 1:2 gear ratio. --> 72637.59 impulses per rotation
     //however, with the gear structure, the palate make a full turn every 145075.18 impulses, since there are 3 circle
     //every position should take exactly 48358 pulse
-
-
-    ServoEx servoLeft ;
-     ServoEx servoRight;
-
+    ServoEx servoRight;
     NormalizedColorSensor colorSensorLeft1;
     NormalizedColorSensor colorSensorLeft2;
     NormalizedColorSensor colorSensorRight1;
     NormalizedColorSensor colorSensorRight2;
+    private double kp = 0;
+    private double ki = 0.00;
+    private double kd = 0;
+    private double kf = 0;
+    private final ControlSystem controlSystemSpindex = ControlSystem.builder()
+            .posPid(1, 0.0, 0.0000)
+            .basicFF(0.0000)
+            .build();
     private ControlSystem controlSystem;
-
-
     private TelemetryManager telemetryManager;
-    public Command pushBall=null;
-    public Command backPosition=null;
-    public ifElseCommand pushBallAndBack =null;
-    public Command cycleLeft = null;
-    public Command cycleRight = null;
-
-    private double targetPosition =0;
-
-
+    private double targetPosition = 0;
     private double powerToMove;
 
 
+    private Sort() {
+    }
 
-   //  public final Command nextBall = new RunToPosition(controlSystem, 48358).requires(this).named("nextBall");
+
+    //  public final Command nextBall = new RunToPosition(controlSystem, 48358).requires(this).named("nextBall");
 
 
 //    private String detectLeftColor() {
@@ -81,18 +71,20 @@ public class Sort implements Subsystem {
 //        return color;
 //    }
 
-    public double getCurrentPosition(){
+    public double getCurrentPosition() {
         return turningPlate.getCurrentPosition();
     }
-    public double getTargetPosition(){
+
+    public double getTargetPosition() {
         return targetPosition;
     }
-    public double getPowerToMove(){
+
+    public double getPowerToMove() {
         return powerToMove;
     }
 
     public boolean getSpinLimitSwitchStatus() {
-        boolean isPressed =limitSwitch.getState(); // Assuming active low
+        boolean isPressed = limitSwitch.getState(); // Assuming active low
         return isPressed;
     }
 
@@ -129,63 +121,71 @@ public class Sort implements Subsystem {
 //    }
 
 
-
-
-
-
-
-
-    public void cycleLeftPosition(){
-        double goalPosition = turningPlate.getCurrentPosition() - ticksPerSlot;
-        targetPosition= goalPosition;
-        controlSystemSpindex.setGoal(new KineticState(goalPosition,50));
-        powerToMove= controlSystemSpindex.calculate(
-                new KineticState(turningPlate.getCurrentPosition())
-        );
-    }
-    public void cycleRightPosition(){
-        double goalPosition = turningPlate.getCurrentPosition() + ticksPerSlot;
-        targetPosition= goalPosition;
-        controlSystemSpindex.setGoal(new KineticState(goalPosition,50));
-        powerToMove= controlSystemSpindex.calculate(
-                new KineticState(turningPlate.getCurrentPosition())
-        );
-    }
-
     @Override
     public void initialize() {
         hardwareMap = ActiveOpMode.hardwareMap();
         telemetry = ActiveOpMode.telemetry();
         limitSwitch = hardwareMap.get(DigitalChannel.class, "spinLimitSwitch");
-        Servo sLeft = hardwareMap.get(Servo.class,"servoLeft");
-        servoLeft= new ServoEx(sLeft);
-        Servo sRight = hardwareMap.get(Servo.class,"servoRight");
-        servoRight= new ServoEx(sRight);
+        Servo sLeft = hardwareMap.get(Servo.class, "servoLeft");
+        servoLeft = new ServoEx(sLeft);
+        Servo sRight = hardwareMap.get(Servo.class, "servoRight");
+        servoRight = new ServoEx(sRight);
+
+
         pushBall = new SetPositions(
                 servoLeft.to(-1.0),
                 servoRight.to(1.0)
         ).requires(this);
+
+
         backPosition = new SetPositions(
                 servoLeft.to(1.0),
-               servoRight.to(-1.0)
+                servoRight.to(-1.0)
         ).requires(this);
-        Command pushBack =  pushBall.thenWait(0.45).then(backPosition);
+
+        cycleLeft = new LambdaCommand()
+                .setStart(() -> {
+                    double goalPosition = turningPlate.getCurrentPosition() - ticksPerSlot;
+                    targetPosition = goalPosition;
+                    controlSystemSpindex.setGoal(new KineticState(goalPosition, 50));
+
+                })
+                .setUpdate(() -> {
+                    powerToMove = controlSystemSpindex.calculate(
+                            new KineticState(turningPlate.getCurrentPosition())
+                    );
+                    turningPlate.setPower(powerToMove);
+                }).requires(this).named("cycleLeft");
+
+        cycleRight = new LambdaCommand()
+                .setStart(() -> {
+                    double goalPosition = turningPlate.getCurrentPosition() + ticksPerSlot;
+                    targetPosition = goalPosition;
+                    controlSystemSpindex.setGoal(new KineticState(goalPosition, 50));
+
+                })
+                .setUpdate(() -> {
+                    powerToMove = controlSystemSpindex.calculate(
+                            new KineticState(turningPlate.getCurrentPosition())
+                    );
+                    turningPlate.setPower(powerToMove);
+                }).requires(this).named("cycleRight");
+
         pushBallAndBack = new ifElseCommand(
                 () -> limitSwitch.getState(),
-               new SetPositions(
-                       servoLeft.to(-1.0),
-                       servoRight.to(1.0)
-               ).thenWait(0.45).then(new SetPositions(
-                       servoLeft.to(1.0),
-                       servoRight.to(-1.0)
-               ))
+                new SetPositions(
+                        servoLeft.to(-1.0),
+                        servoRight.to(1.0)
+                ).thenWait(0.45).then(new SetPositions(
+                        servoLeft.to(1.0),
+                        servoRight.to(-1.0)
+                ))
         );
-        cycleLeft = new InstantCommand(this::cycleLeftPosition);
-        cycleRight = new InstantCommand(this::cycleRightPosition);
+
 
         limitSwitch.setMode(DigitalChannel.Mode.INPUT);
         limitSwitch.setState(false);
-      //   initialization logic (runs on init)
+        //   initialization logic (runs on init)
 //        controlSystem = controlSystem.builder()
 //                .posPid(0.01,0.6,0.009)
 //                .basicFF(0.0005)
@@ -201,7 +201,6 @@ public class Sort implements Subsystem {
     @Override
     public void periodic() {
 
-        turningPlate.setPower(powerToMove);
 
 //        String leftColor = detectLeftColor();
 //        String rightColor = detectRightColor();
@@ -215,6 +214,7 @@ public class Sort implements Subsystem {
 //        telemetryManager.addData("Green", color.green);
 //        telemetryManager.addData("Blue", color.blue);
     }
+
     public void rebuildControlSystem(double p, double i, double d, double f) {
         this.kp = p;
         this.ki = i;
