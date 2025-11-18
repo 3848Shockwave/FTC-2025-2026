@@ -62,11 +62,11 @@ public class Turret implements Subsystem {
 
     double minPosition = 800;//0 * ticksPerDegreeOfRotation; // Starting/default encoder location
     double maxPosition = 1650 ;//360 * ticksPerDegreeOfRotation; // Convert degrees to encoder counts
-    double kp = 0.0001;
-    double ki = 0.001;
-    double kd = 0;
-    double kf = 0;
-    double maxPower = .1;
+    private static double kp = 0.004;
+    private static double kd = 0.00026;
+    private static double ki = 0.004;
+    private static double kf = 0.0000275;
+    private static double maxPower = 1.0;
     // post-start logic (runs once when start is pressed)
     KineticState tolerance = new KineticState(10);
     private double nextTurretPosition;
@@ -180,10 +180,10 @@ public class Turret implements Subsystem {
     @Override
     public void periodic() {
         // remove after tuning, no need to rebuild control system every loop
-        controlSystemRotate = ControlSystem.builder()
-                .posPid(kp, ki, kd)
-                .basicFF(kf)
-                .build();
+//        controlSystemRotate = ControlSystem.builder()
+//                .posPid(kp, ki, kd)
+//                .basicFF(kf)
+//                .build();
         if (!ActiveOpMode.isStarted()) {
             limelightProcessing.processTargets();
             // add detected tags to telemetry

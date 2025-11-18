@@ -51,10 +51,10 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     private boolean motorToggle = false;
 
-    private static double kp = 0.004;
-    private static double kd = 0.00026;
-    private static double ki = 0.004;
-    private static double kf = 0.0000275;
+    private static double kp = 0.000;
+    private static double kd = 0.000;
+    private static double ki = 0.00;
+    private static double kf = 0.0000;
     private static double power = 1.0;
 
     private TelemetryManager telemetryManager;
@@ -95,7 +95,9 @@ public class TeleOpProgram extends NextFTCOpMode {
             }
         });
         Button y_button = button(() -> gamepad1.y).whenBecomesTrue(Turret.INSTANCE::resetRotateMotorPosition);
-        Button left_bumper = button(() -> gamepad1.left_bumper).whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
+        Button dpad_up = button(() -> gamepad1.dpad_up).whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
+        Button left_bumper = button(() -> gamepad1.left_bumper).whenBecomesTrue(Sort.INSTANCE.cycleLeft);
+        Button right_bumper = button(() -> gamepad1.right_bumper).whenBecomesTrue(Sort.INSTANCE.cycleRight);
         Turret.INSTANCE.limelightProcessing.getLimelightStatus();
     }
 
@@ -121,9 +123,11 @@ public class TeleOpProgram extends NextFTCOpMode {
         double turretPos = Turret.INSTANCE.getRotateMotorPosition();
         double turretWant = Turret.INSTANCE.getRotateMotorPosition()+Turret.INSTANCE.calculatePosition();
 
-        Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf,power);
-        telemetryManager.addData("MotorPosition", turretPos);
-        telemetryManager.addData("NextPosition", Turret.INSTANCE.getNextTurretPosition() );
+        //Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf,power);
+        Sort.INSTANCE.rebuildControlSystem(kp,ki,kd,kf);
+        telemetryManager.addData("MotorPosition", Sort.INSTANCE.getCurrentPosition());
+        telemetryManager.addData("NextPosition", Sort.INSTANCE.getTargetPosition() );
+        telemetryManager.addData("Power",Sort.INSTANCE.getPowerToMove());
         telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
         telemetryManager.addData("LimitSwitch Status", Sort.INSTANCE.getSpinLimitSwitchStatus());
         telemetryManager.update(telemetry);
