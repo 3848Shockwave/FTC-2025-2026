@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.Subsystems;
 
+import androidx.core.widget.TintableCheckedTextView;
+
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -29,6 +31,7 @@ public class Sort implements Subsystem {
     public ifElseCommand pushBallAndBack = null;
     public Command cycleLeft = null;
     public Command cycleRight = null;
+    boolean stopCommand = false;
     HardwareMap hardwareMap;
     Telemetry telemetry;
     DigitalChannel limitSwitch;
@@ -155,7 +158,13 @@ public class Sort implements Subsystem {
                             new KineticState(turningPlate.getCurrentPosition())
                     );
                     turningPlate.setPower(powerToMove);
-                }).requires(this).named("cycleLeft");
+                })
+                .setIsDone(() -> Math.abs(turningPlate.getCurrentPosition() - targetPosition) < 2                                                                                                   )
+                .setStop(interrupted -> {
+                    turningPlate.setPower(0);
+                })
+                .requires(this)
+                .named("cycleLeft");
 
         cycleRight = new LambdaCommand()
                 .setStart(() -> {
@@ -169,7 +178,13 @@ public class Sort implements Subsystem {
                             new KineticState(turningPlate.getCurrentPosition())
                     );
                     turningPlate.setPower(powerToMove);
-                }).requires(this).named("cycleRight");
+                })
+                .setIsDone(() -> Math.abs(turningPlate.getCurrentPosition() - targetPosition) < 2)
+                .setStop(interrupted -> {
+                    turningPlate.setPower(0);
+                })
+                .requires(this)
+                .named("cycleRight");
 
         pushBallAndBack = new ifElseCommand(
                 () -> limitSwitch.getState(),
