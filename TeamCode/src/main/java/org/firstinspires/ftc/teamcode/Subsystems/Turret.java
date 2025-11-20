@@ -136,6 +136,9 @@ public class Turret implements Subsystem {
         double initialSpeedNeeded = Math.sqrt(gravityAccalerationValue * Math.pow(distance, 2) / (2 * Math.pow(cosTheta, 2) * (distance * tanTheta + heightDifference))) / efficientCoefficient;
         return initialSpeedNeeded * flyWheelDiameter / motorShaftRadiusForLuncher / distanceperImulseForLunch;
     }
+    public void setLaunchMotorSpeed(double power){
+        lunchMotor.setPower(power);
+    }
 
         /*
         the side of a tile is 61, and the "castle" is 45 degree within a tile

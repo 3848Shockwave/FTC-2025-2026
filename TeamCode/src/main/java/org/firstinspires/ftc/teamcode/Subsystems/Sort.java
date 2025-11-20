@@ -45,12 +45,13 @@ public class Sort implements Subsystem {
     NormalizedColorSensor colorSensorLeft2;
     NormalizedColorSensor colorSensorRight1;
     NormalizedColorSensor colorSensorRight2;
-    private double kp = 0;
+    private double kp = 1;
     private double ki = 0.00;
     private double kd = 0;
     private double kf = 0;
-    private final ControlSystem controlSystemSpindex = ControlSystem.builder()
-            .posPid(1, 0.0, 0.0000)
+    double maxPower =0;
+    private ControlSystem controlSystemSpindex = ControlSystem.builder()
+            .posPid(0, 0.0, 0.0000)
             .basicFF(0.0000)
             .build();
     private ControlSystem controlSystem;
@@ -89,6 +90,9 @@ public class Sort implements Subsystem {
     public boolean getSpinLimitSwitchStatus() {
         boolean isPressed = limitSwitch.getState(); // Assuming active low
         return isPressed;
+    }
+    public void resetSpindexPosition() {
+        turningPlate.setCurrentPosition(0.0);
     }
 
     // Method to detecprivate String detectRightColor() {
@@ -148,18 +152,29 @@ public class Sort implements Subsystem {
 
         cycleLeft = new LambdaCommand()
                 .setStart(() -> {
-                    double goalPosition = turningPlate.getCurrentPosition() - ticksPerSlot;
+                    controlSystemSpindex = ControlSystem.builder()
+                            .posPid(kp, ki, kd)
+                            .basicFF(kf)
+                            .build();
+                    double goalPosition = targetPosition - ticksPerSlot;
                     targetPosition = goalPosition;
                     controlSystemSpindex.setGoal(new KineticState(goalPosition, 50));
 
                 })
                 .setUpdate(() -> {
+
                     powerToMove = controlSystemSpindex.calculate(
                             new KineticState(turningPlate.getCurrentPosition())
                     );
+                    if (powerToMove > maxPower) {
+                        powerToMove = maxPower;
+                    } else if (powerToMove < -maxPower) {
+                        powerToMove = -maxPower;
+                    }
                     turningPlate.setPower(powerToMove);
+
                 })
-                .setIsDone(() -> Math.abs(turningPlate.getCurrentPosition() - targetPosition) < 2                                                                                                   )
+                .setIsDone(() -> Math.abs(turningPlate.getCurrentPosition() - targetPosition) < 10                                                                                                   )
                 .setStop(interrupted -> {
                     turningPlate.setPower(0);
                 })
@@ -168,7 +183,11 @@ public class Sort implements Subsystem {
 
         cycleRight = new LambdaCommand()
                 .setStart(() -> {
-                    double goalPosition = turningPlate.getCurrentPosition() + ticksPerSlot;
+                    controlSystemSpindex = ControlSystem.builder()
+                            .posPid(kp, ki, kd)
+                            .basicFF(kf)
+                            .build();
+                    double goalPosition = targetPosition + ticksPerSlot;
                     targetPosition = goalPosition;
                     controlSystemSpindex.setGoal(new KineticState(goalPosition, 50));
 
@@ -177,9 +196,14 @@ public class Sort implements Subsystem {
                     powerToMove = controlSystemSpindex.calculate(
                             new KineticState(turningPlate.getCurrentPosition())
                     );
+                    if (powerToMove > maxPower) {
+                        powerToMove = maxPower;
+                    } else if (powerToMove < -maxPower) {
+                        powerToMove = -maxPower;
+                    }
                     turningPlate.setPower(powerToMove);
                 })
-                .setIsDone(() -> Math.abs(turningPlate.getCurrentPosition() - targetPosition) < 2)
+                .setIsDone(() -> Math.abs(turningPlate.getCurrentPosition() - targetPosition) < 10)
                 .setStop(interrupted -> {
                     turningPlate.setPower(0);
                 })
@@ -197,7 +221,8 @@ public class Sort implements Subsystem {
                 ))
         );
 
-
+        targetPosition = 0;
+        turningPlate.setCurrentPosition(0.0);
         limitSwitch.setMode(DigitalChannel.Mode.INPUT);
         limitSwitch.setState(false);
         //   initialization logic (runs on init)
@@ -230,11 +255,12 @@ public class Sort implements Subsystem {
 //        telemetryManager.addData("Blue", color.blue);
     }
 
-    public void rebuildControlSystem(double p, double i, double d, double f) {
-        this.kp = p;
-        this.ki = i;
-        this.kd = d;
-        this.kf = f;
+    public void rebuildControlSystem(double p, double i, double d, double f, double power) {
+        kp = p;
+        ki = i;
+        kd = d;
+        kf = f;
+        maxPower = power;
     }
 
 }

@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.Tests;
 
+import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -21,7 +22,7 @@ public class AprilTagRangeCalculator extends NextFTCOpMode {
 
     @Override
     public void onInit() {
-
+        telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
         limelightProcessing.initLimelight(pipeline);
         telemetryManager.addData("Status", "Initialized Limelight");
     }
@@ -35,21 +36,25 @@ public class AprilTagRangeCalculator extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
-        if (recording) {
-            limelightProcessing.processTargets();
-            double currentArea = limelightProcessing.getTargetInfo().getArea();
-            if (currentArea > maxArea) {
-                maxArea = currentArea;
+
+
+                limelightProcessing.processTargets();
+                if (limelightProcessing.getTargetInfo() != null) {
+                double currentArea = limelightProcessing.getTargetInfo().getArea();
+                if (currentArea > maxArea) {
+                    maxArea = currentArea;
+                }
+                if (currentArea < minArea) {
+                    minArea = currentArea;
+                }
+                averageArea = (averageArea + currentArea) / 2;
+                telemetryManager.addData("TargetX", limelightProcessing.getTargetInfo().getTargetX());
+                telemetryManager.addData("Current Area", currentArea);
+                telemetryManager.addData("Average Area", averageArea);
+                telemetryManager.addData("Min Area", minArea);
+                telemetryManager.addData("Max Area", maxArea);
+                telemetryManager.update(telemetry);
             }
-            if (currentArea < minArea) {
-                minArea = currentArea;
-            }
-            averageArea = (averageArea + currentArea) / 2;
-            telemetryManager.addData("Current Area", currentArea);
-            telemetryManager.addData("Average Area", averageArea);
-            telemetryManager.addData("Min Area", minArea);
-            telemetryManager.addData("Max Area", maxArea);
-            telemetryManager.update(telemetry);
-        }
+
     }
 }
