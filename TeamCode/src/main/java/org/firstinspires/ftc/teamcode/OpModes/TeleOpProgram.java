@@ -20,6 +20,7 @@ import dev.nextftc.hardware.driving.DriverControlledCommand;
 import dev.nextftc.hardware.impl.MotorEx;
 import dev.nextftc.hardware.impl.ServoEx;
 
+import org.firstinspires.ftc.teamcode.Subsystems.Drive;
 import org.firstinspires.ftc.teamcode.Subsystems.Sort;
 import org.firstinspires.ftc.teamcode.Subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
@@ -39,7 +40,7 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     public TeleOpProgram(){
         addComponents(
-                new SubsystemComponent(Sort.INSTANCE),
+                new SubsystemComponent(Drive.INSTANCE),
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
                 new PedroComponent(Constants::createFollower)
@@ -48,11 +49,6 @@ public class TeleOpProgram extends NextFTCOpMode {
 
 
     private boolean motorToggle = false;
-
-    private static double kp = 0.0;
-    private static double kd = 0.0;
-    private static double ki = 0.0;
-    private static double kf = 0.0;
 
     @Override
     public void onInit() {
@@ -94,16 +90,11 @@ public class TeleOpProgram extends NextFTCOpMode {
     @Override
     public void onStartButtonPressed(){
 
-        Gamepads.gamepad1().leftBumper().whenBecomesTrue(
-                Sort.INSTANCE.pushBallAndBack
-        );
-
-
         follower().startTeleopDrive();
         DriverControlledCommand driverControlled = new PedroDriverControlled(
                 Gamepads.gamepad1().leftStickY().negate(),
                 Gamepads.gamepad1().leftStickX().negate(),
-                Gamepads.gamepad1().rightStickX(),
+                Gamepads.gamepad1().rightStickX().negate(),
                 false
         );
         driverControlled.schedule();
@@ -112,7 +103,6 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
-        Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf);
         telemetry.update();
 
     }

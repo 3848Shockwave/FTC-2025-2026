@@ -15,6 +15,7 @@
 
     import org.firstinspires.ftc.robotcore.external.Telemetry;
     import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
+    import org.firstinspires.ftc.teamcode.Subsystems.Helpers.LimelightProcessing;
     import org.firstinspires.ftc.teamcode.Tests.AprilTagWebCam;
 
     import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
@@ -32,6 +33,12 @@
     public class Turret implements Subsystem {
     //declare for every subsystem
     public static final Turret INSTANCE = new Turret();
+        private static double kp = 0.004;
+        private static double kd = 0.00026;
+        private static double ki = 0.004;
+        private static double kf = 0.0000275;
+        private static double maxPower = 1.0;
+        public final LimelightProcessing limelightProcessing = new LimelightProcessing(); //Creates limelight processing object
     private Turret() { }
 
 
@@ -66,15 +73,10 @@
     __distance moved per encoder count__
     =68.3523/29630.53125 = 0.0023068267
      */
-
-        double kp = 0;
-        double ki = 0;
-        double kd = 0;
-        double kf = 0;
     private final ControlSystem controlSystemTurret = ControlSystem.builder()
-                .posPid(0.001, 0.6, 0.0009)
-                .basicFF(0.00043)
-                .build();
+            .posPid(0.001, 0.6, 0.0009)
+            .basicFF(0.00043)
+            .build();
     private ControlSystem controlSystemRotate  = ControlSystem.builder()
                 .posPid(0, 0, 0)
                 .basicFF(0)
