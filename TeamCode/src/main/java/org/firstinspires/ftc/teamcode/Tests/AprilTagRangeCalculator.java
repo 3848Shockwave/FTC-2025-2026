@@ -12,7 +12,7 @@ import dev.nextftc.ftc.NextFTCOpMode;
 public class AprilTagRangeCalculator extends NextFTCOpMode {
     // Calculator for AprilTag distance based on area readings
     // brogan pratt video needed to calculate scale factor: https://www.youtube.com/watch?v=Ap1lBywv00M
-    int pipeline = 0;// Set the desired pipeline here
+    int pipeline = 3;// Set the desired pipeline here
     boolean recording = false;
     double averageArea = 0;
     double minArea = 0;

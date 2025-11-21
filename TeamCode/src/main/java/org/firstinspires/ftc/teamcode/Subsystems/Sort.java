@@ -8,9 +8,12 @@ import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ifElseCommand;
+
+import java.time.Duration;
 
 import dev.nextftc.control.ControlSystem;
 import dev.nextftc.control.KineticState;
@@ -26,7 +29,7 @@ public class Sort implements Subsystem {
     public static final Sort INSTANCE = new Sort();
     private final MotorEx turningPlate = new MotorEx("spindexMotor").brakeMode();
     //1,425.1 at output, 2:1 gear ratio, thus 2850.2 at motor shaft
-    private final double ticksPerSlot = 2850.2 / 3;
+    private final double ticksPerSlot = (2850.2) / 3;
     public Command pushBall = null;
     public Command backPosition = null;
     public ifElseCommand pushBallAndBack = null;
@@ -37,6 +40,7 @@ public class Sort implements Subsystem {
     public Command shootGreen = null;
     public Command shootPurp = null;
     boolean stopCommand = false;
+
     HardwareMap hardwareMap;
     Telemetry telemetry;
     DigitalChannel limitSwitch;
@@ -57,13 +61,14 @@ public class Sort implements Subsystem {
     private int tolerance = 0;
     private Color[] colorArray = {Color.EMPTY, Color.EMPTY, Color.EMPTY};
     private double kp = 0;
-    private double ki = 0.00;
+    private double ki = 0;
     private double kd = 0;
     private double kf = 0;
-    double maxPower =0;
+    double maxPower =.35;
+    private ElapsedTime timer = new ElapsedTime();
     private ControlSystem controlSystemSpindex = ControlSystem.builder()
-            .posPid(0, 0.0, 0.0000)
-            .basicFF(0.0000)
+            .posPid(kp,ki,kd)
+            .basicFF(kf)
             .build();
     private ControlSystem controlSystem;
     private TelemetryManager telemetryManager;
@@ -71,35 +76,9 @@ public class Sort implements Subsystem {
     private double powerToMove;
 
 
-    private Sort() {
-        int greenNumL = (colorSensorL1.green() + colorSensorL2.green()) / 2;
-        int blueNumL = (colorSensorL1.blue() + colorSensorL2.blue()) / 2;
-        int greenNumR = (colorSensorR1.green() + colorSensorR2.green()) / 2;
-        int blueNumR = (colorSensorR1.blue() + colorSensorR2.blue()) / 2;
-
-        if (greenNumR > 100 &&  blueNumR > 100){
-            if (greenNumR > blueNumR){
-                colorArray[0] = Color.GREEN;
-            }
-            else{
-                colorArray[0] = Color.PURPLE;
-            }
-        }
-        else{
-            colorArray[0] = Color.EMPTY;
-        }
-        if(greenNumL > 100 && blueNumL > 100) {
-            if (greenNumL > blueNumL) {
-                colorArray[1] = Color.GREEN;
-            } else {
-                colorArray[1] = Color.PURPLE;
-            }
-        }
-        else{
-            colorArray[1] = Color.EMPTY;
-        }
-
+    private  Sort() {
     }
+
 
     //  public final Command nextBall = new RunToPosition(controlSystem, 48358).requires(this).named("nextBall");
 
@@ -128,6 +107,10 @@ public class Sort implements Subsystem {
         boolean isPressed = limitSwitch.getState(); // Assuming active low
         return isPressed;
     }
+
+   public String getColorArray() {
+       return colorArray[0] + ", " + colorArray[1] + ", " + colorArray[2];
+   }
     public void resetSpindexPosition() {
         turningPlate.setCurrentPosition(0.0);
     }
@@ -163,7 +146,35 @@ public class Sort implements Subsystem {
 //            return "UNKNOWN";
 //        }
 //    }
+    public void checkColors() {
+        int greenNumL = (colorSensorL1.green() + colorSensorL2.green()) / 2;
+        int blueNumL = (colorSensorL1.blue() + colorSensorL2.blue()) / 2;
+        int greenNumR = (colorSensorR1.green() + colorSensorR2.green()) / 2;
+        int blueNumR = (colorSensorR1.blue() + colorSensorR2.blue()) / 2;
 
+        if (greenNumR > 100 &&  blueNumR > 100){
+            if (greenNumR > blueNumR){
+                colorArray[0] = Color.GREEN;
+            }
+            else{
+                colorArray[0] = Color.PURPLE;
+            }
+        }
+        else{
+            colorArray[0] = Color.EMPTY;
+        }
+        if(greenNumL > 100 && blueNumL > 100) {
+            if (greenNumL > blueNumL) {
+                colorArray[1] = Color.GREEN;
+            } else {
+                colorArray[1] = Color.PURPLE;
+            }
+        }
+        else{
+            colorArray[1] = Color.EMPTY;
+        }
+
+    }
 
     @Override
     public void initialize() {
@@ -174,7 +185,6 @@ public class Sort implements Subsystem {
         servoLeft = new ServoEx(sLeft);
         Servo sRight = hardwareMap.get(Servo.class, "servoRight");
         servoRight = new ServoEx(sRight);
-
         colorSensorL1 = hardwareMap.get(ColorSensor.class, "colorSensorL1");
         colorSensorL2 = hardwareMap.get(ColorSensor.class, "colorSensorL2");
         colorSensorR1 = hardwareMap.get(ColorSensor.class, "colorSensorR1");
@@ -195,46 +205,53 @@ public class Sort implements Subsystem {
 
         cycleLeft = new LambdaCommand()
                 .setStart(() -> {
+
+                    timer.reset();
+                    timer.startTime();
                     controlSystemSpindex = ControlSystem.builder()
-                            .posPid(kp, ki, kd)
-                            .basicFF(kf)
+                            .posPid(.015, ki, kd)
+                            .basicFF(-.007)
                             .build();
                     double goalPosition = targetPosition - ticksPerSlot;
                     targetPosition = goalPosition;
-                    controlSystemSpindex.setGoal(new KineticState(goalPosition, 50));
+                    controlSystemSpindex.setGoal(new KineticState(goalPosition, 20));
                     colorArray[0] = colorArray[2];
                     colorArray[1] = colorArray[0];
                     colorArray[2] = colorArray[1];
                 })
                 .setUpdate(() -> {
 
+
                     powerToMove = controlSystemSpindex.calculate(
-                            new KineticState(turningPlate.getCurrentPosition())
+                            new KineticState(turningPlate.getCurrentPosition(), turningPlate.getVelocity())
                     );
                     if (powerToMove > maxPower) {
                         powerToMove = maxPower;
                     } else if (powerToMove < -maxPower) {
                         powerToMove = -maxPower;
                     }
-                    turningPlate.setPower(powerToMove);
+                       turningPlate.setPower(powerToMove);
 
                 })
-                .setIsDone(() -> Math.abs(turningPlate.getCurrentPosition() - targetPosition) < 10 ||limitSwitch.getState()                                                                                               )
+                .setIsDone(() ->  limitSwitch.getState()&&(controlSystemSpindex.isWithinTolerance(new KineticState(1)))                                                                                             )
                 .setStop(interrupted -> {
                     turningPlate.setPower(0);
+                    timer.reset();
                 })
                 .requires(this)
                 .named("cycleLeft");
 
         cycleRight = new LambdaCommand()
                 .setStart(() -> {
+                    timer.reset();
+                    timer.startTime();
                     controlSystemSpindex = ControlSystem.builder()
-                            .posPid(kp, ki, kd)
-                            .basicFF(kf)
+                            .posPid(.01, ki, kd)
+                            .basicFF(.02275)
                             .build();
                     double goalPosition = targetPosition + ticksPerSlot;
                     targetPosition = goalPosition;
-                    controlSystemSpindex.setGoal(new KineticState(goalPosition, 50));
+                    controlSystemSpindex.setGoal(new KineticState(goalPosition, 20));
                     colorArray[0] = colorArray[1];
                     colorArray[1] = colorArray[2];
                     colorArray[2] = colorArray[0];
@@ -242,7 +259,7 @@ public class Sort implements Subsystem {
                 })
                 .setUpdate(() -> {
                     powerToMove = controlSystemSpindex.calculate(
-                            new KineticState(turningPlate.getCurrentPosition())
+                            new KineticState(turningPlate.getCurrentPosition(), turningPlate.getVelocity())
                     );
                     if (powerToMove > maxPower) {
                         powerToMove = maxPower;
@@ -251,9 +268,10 @@ public class Sort implements Subsystem {
                     }
                     turningPlate.setPower(powerToMove);
                 })
-                .setIsDone(() -> Math.abs(turningPlate.getCurrentPosition() - targetPosition) < 10||limitSwitch.getState())
+                .setIsDone(() -> limitSwitch.getState()&&(controlSystemSpindex.isWithinTolerance(new KineticState(1))))
                 .setStop(interrupted -> {
                     turningPlate.setPower(0);
+                    timer.reset();
                 })
                 .requires(this)
                 .named("cycleRight");
@@ -280,13 +298,6 @@ public class Sort implements Subsystem {
 
                 })
                 .setUpdate(()->{
-
-
-
-
-                        })
-                .setIsDone(()->{
-                    return null;
                         })
                 .setStop(interrupted->{
 
@@ -305,42 +316,30 @@ public class Sort implements Subsystem {
                 .setUpdate(()->{
 
                 })
-                .setIsDone(()->{
-                    return null;
-                })
-                .setStop(interrupted->{
-
-                }).setName("loadpurp").requires(this);
+                .setName("loadpurp").requires(this);
 
         shootGreen = new LambdaCommand()
                 .setStart(()->{
                     if (colorArray[2] == Color.GREEN){
                         pushBallAndBack.run();
-                        Turret.INSTANCE.launch();
-                    }
 
+                    }
                 }).setName("shootgreen").requires(this);
 
         shootPurp = new LambdaCommand()
                 .setStart(()->{
                     if (colorArray[0] == Color.PURPLE) {
                         pushBallAndBack.run();
-                        Turret.INSTANCE.launch();
+
                     }
                     else if (colorArray[1] == Color.GREEN){
                         cycleRight.run();
                     }
-
                 })
                 .setUpdate(()->{
 
                 })
-                .setIsDone(()->{
-                    return null;
-                })
-                .setStop(interrupted->{
-
-                }).setName("shootpurp").requires(this);
+                .setName("shootpurp").requires(this);
 
 //        Button rightTriggerLoad = range(() -> ActiveOpMode.gamepad1().right_trigger)
 //                .greaterThan(0.3)
@@ -390,29 +389,13 @@ public class Sort implements Subsystem {
 //                .posPid(0.01,0.6,0.009)
 //                .basicFF(0.0005)
 //                .build();
-//
-//        colorSensorLeft1 = hardwareMap.get(NormalizedColorSensor.class, "colorSensorLeft1");
-//        colorSensorLeft2 = hardwareMap.get(NormalizedColorSensor.class, "colorSensorLeft2");
-//        colorSensorRight1 = hardwareMap.get(NormalizedColorSensor.class, "colorSensorRight1");
-//        colorSensorRight2 = hardwareMap.get(NormalizedColorSensor.class, "colorSensorRight2");
+
 
     }
 
     @Override
     public void periodic() {
-
-
-//        String leftColor = detectLeftColor();
-//        String rightColor = detectRightColor();
-//
-//        telemetryManager.addData("Left Color", leftColor);
-//        telemetryManager.addData("Right Color", rightColor);
-//
-//        // Keep the original telemetry for debugging
-//        NormalizedRGBA color = colorSensorLeft2.getNormalizedColors();
-//        telemetryManager.addData("Red", color.red);
-//        telemetryManager.addData("Green", color.green);
-//        telemetryManager.addData("Blue", color.blue);
+        checkColors();
     }
 
     public void rebuildControlSystem(double p, double i, double d, double f, double power) {
