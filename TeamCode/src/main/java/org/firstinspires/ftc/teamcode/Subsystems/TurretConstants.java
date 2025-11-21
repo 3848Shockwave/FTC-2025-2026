@@ -11,20 +11,22 @@ public class TurretConstants {
     24:135 (gear ratio for the turning plate)
     217.572 mm --> diameter for the plate --> plate Circumference:68.3523 cm
 
-    Total Gear Ratio:
-    13.7 * 135/24 = 77.0625
+    Total Gear Ratio from motor shaft to plate:
+    135/24 = 77.0625 Output shaft encoder, so no need to multiply by 13.7,
 
-    total counts per plate revolution:
-    77.0625 * 384.5 = 29630.53125 counts/plate rev
+    //Encoder ticks per plate rotation:
+    135/24* 384.5 = 2162.8125
 
     __distance moved per encoder count__
-    =68.3523/29630.53125 = 0.0023068267
+    =68.3523/2162.8125 = 0.03160343302
+    This represents the degrees that the output 135 tooth pulley moves per encoder tick
  */
-    public static final double distancePerImpulseForRotation = 0.0023068267;//cm
+    public static final double distancePerImpulseForRotation = 0.03160343302;
     public static final double rotationDiameter = 217.572;
     public static final double rotateMotorPPR = 384.5;
     public static final double TGearRatioRotation = 77.0625;
 
+    public static final double ticksPerDegreeOfRotation = 6.0078125;
 
 
     /*
