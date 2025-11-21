@@ -154,7 +154,9 @@ public class Sort implements Subsystem {
                     double goalPosition = turningPlate.getCurrentPosition() - ticksPerSlot;
                     targetPosition = goalPosition;
                     controlSystemSpindex.setGoal(new KineticState(goalPosition, 50));
-
+                    colorArray[0] = colorArray[2];
+                    colorArray[1] = colorArray[0];
+                    colorArray[2] = colorArray[1];
                 })
                 .setUpdate(() -> {
                       powerToMove = controlSystemSpindex.calculate(
@@ -174,6 +176,9 @@ public class Sort implements Subsystem {
                     double goalPosition = turningPlate.getCurrentPosition() + ticksPerSlot;
                     targetPosition = goalPosition;
                     controlSystemSpindex.setGoal(new KineticState(goalPosition, 50));
+                    colorArray[0] = colorArray[1];
+                    colorArray[1] = colorArray[2];
+                    colorArray[2] = colorArray[0];
 
                 })
                 .setUpdate(() -> {
@@ -209,18 +214,6 @@ public class Sort implements Subsystem {
                         cycleRight.run();
                         }
 
-                })
-                .setUpdate(()->{
-
-
-
-
-                        })
-                .setIsDone(()->{
-                    return null;
-                        })
-                .setStop(interrupted->{
-
                 }).setName("loadgreen").requires(this);
 
         loadPurp = new LambdaCommand()
@@ -232,49 +225,23 @@ public class Sort implements Subsystem {
                         cycleRight.run();
                     }
 
-                })
-                .setUpdate(()->{
-
-                })
-                .setIsDone(()->{
-                    return null;
-                })
-                .setStop(interrupted->{
-
                 }).setName("loadpurp").requires(this);
 
         shootGreen = new LambdaCommand()
                 .setStart(()->{
-
-
-                })
-                .setUpdate(()->{
-
-                })
-                .setIsDone(()->{
-                    return null;
-                })
-                .setStop(interrupted->{
+                    if (colorArray[2] == Color.GREEN){
+                        pushBallAndBack.run();
+                        Turret.INSTANCE.launch();
+                    }
 
                 }).setName("shootgreen").requires(this);
 
         shootPurp = new LambdaCommand()
                 .setStart(()->{
-                    if (colorArray[0] == Color.GREEN) {
-                        cycleLeft.run();
+                    if (colorArray[0] == Color.PURPLE) {
+                        pushBallAndBack.run();
+                        Turret.INSTANCE.launch();
                     }
-                    else if (colorArray[1] == Color.GREEN){
-                        cycleRight.run();
-                    }
-
-                })
-                .setUpdate(()->{
-
-                })
-                .setIsDone(()->{
-                    return null;
-                })
-                .setStop(interrupted->{
 
                 }).setName("shootpurp").requires(this);
 
