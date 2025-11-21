@@ -22,6 +22,13 @@ import dev.nextftc.hardware.impl.MotorEx;
 
 
 public class Turret implements Subsystem {
+
+    public enum Side {
+        BLUE,
+        RED
+    }
+
+    private Side side;
     //declare for every subsystem
     public static final Turret INSTANCE = new Turret();
     private static double kp = 0.004;
@@ -126,6 +133,14 @@ public class Turret implements Subsystem {
 
      */
     public double calculateLunchStrength() {
+        int targetID = 0;
+        if(side == Side.BLUE){
+            limelightProcessing.setPipeline(3);
+            targetID = 21;
+        }else if(side == Side.RED){
+            limelightProcessing.setPipeline(4);
+            targetID = 20;
+        }
        limelightProcessing.processTargets();
        double distance = limelightProcessing.getTargetInfo().getDistance();
        return 1032.61498*Math.pow(1.000167,distance);//in cm
@@ -157,6 +172,31 @@ public class Turret implements Subsystem {
         return controlSystemTurret.calculate(
                 new KineticState(0, velocity)
         );
+    }
+
+    public Sort.Color[] getColorArray() {
+        if(limelightProcessing.getTargetInfo(21) == null){
+            limelightProcessing.setPipeline(1);
+            if(limelightProcessing.getTargetInfo(22) ==null) {
+                limelightProcessing.setPipeline(2);
+                if (limelightProcessing.getTargetInfo(23) != null) {
+                    return new Sort.Color[]{Sort.Color.PURPLE, Sort.Color.PURPLE, Sort.Color.GREEN};
+                }
+            }else{
+                return new Sort.Color[]{Sort.Color.PURPLE, Sort.Color.GREEN, Sort.Color.PURPLE};
+            }
+        }else{
+            return new Sort.Color[]{Sort.Color.GREEN, Sort.Color.PURPLE, Sort.Color.PURPLE};
+        }
+        return null;
+    }
+
+    public void setSide(String input){
+        if (input.equals("red")) {
+            side = Side.RED;
+        }else if (input.equals("blue")){
+            side = Side.BLUE;
+        }
     }
 
     @Override
