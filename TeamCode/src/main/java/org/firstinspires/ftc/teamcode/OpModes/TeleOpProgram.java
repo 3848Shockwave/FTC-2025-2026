@@ -25,6 +25,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 
 import static dev.nextftc.bindings.Bindings.button;
+import static dev.nextftc.bindings.Bindings.range;
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;//most important one to import
 
 
@@ -94,10 +95,28 @@ public class TeleOpProgram extends NextFTCOpMode {
                 Turret.INSTANCE.setLaunchMotorSpeed(0.0);
             }
         });
-        Button y_button = button(() -> gamepad1.y).whenBecomesTrue(Sort.INSTANCE::resetSpindexPosition);
-        Button dpad_up = button(() -> gamepad1.dpad_up).whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
-        Button left_bumper = button(() -> gamepad1.left_bumper).whenBecomesTrue(Sort.INSTANCE.cycleLeft);
-        Button right_bumper = button(() -> gamepad1.right_bumper).whenBecomesTrue(Sort.INSTANCE.cycleRight);
+        Button y_button = button(() -> gamepad1.y)
+                .whenBecomesTrue(Turret.INSTANCE::resetRotateMotorPosition);
+
+        Button dpad_up = button(() -> gamepad1.dpad_up)
+                .whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
+
+        Button left_bumper = button(() -> gamepad1.left_bumper)
+                .whenBecomesTrue(Sort.INSTANCE.cycleLeft);
+
+        Button right_bumper = button(() -> gamepad1.right_bumper)
+                .whenBecomesTrue(Sort.INSTANCE.cycleRight);
+
+        Button right_trigger = range(() -> gamepad1.right_trigger)
+                .greaterThan(0.2)
+                .whenBecomesTrue(Sort.INSTANCE.loadGreen)
+                .whenBecomesFalse(Sort.INSTANCE.shootGreen);
+
+        Button left_trigger = range(() -> gamepad1.left_trigger)
+                .greaterThan(0.2)
+                .whenBecomesTrue(Sort.INSTANCE.loadPurp)
+                .whenBecomesFalse(Sort.INSTANCE.shootPurp);
+
         Turret.INSTANCE.limelightProcessing.getLimelightStatus();
     }
 

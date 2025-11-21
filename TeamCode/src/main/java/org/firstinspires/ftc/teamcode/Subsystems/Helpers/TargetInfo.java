@@ -8,7 +8,7 @@ public class TargetInfo {
     private double y;
     private double area;
     private double distance;
-    private double scale = 0; // TO BE CALCULATED https://www.youtube.com/watch?v=Ap1lBywv00M brogan pratt video needed
+     // TO BE CALCULATED https://www.youtube.com/watch?v=Ap1lBywv00M brogan pratt video needed
 
     public TargetInfo(double id,double yaw, double pitch, double area) {
         this.x = yaw;
@@ -30,7 +30,7 @@ public class TargetInfo {
     }
 
     public double getDistance(){
-        distance = scale / area;
+       distance= 162.9528 *Math.pow(area,-1.85914);
         return distance;
     }
     public double getID() {

@@ -126,15 +126,9 @@ public class Turret implements Subsystem {
 
      */
     public double calculateLunchStrength() {
-        double distance = 5;//aprilTagWebCam.getTagBySpecificID(21).ftcPose.range;
-        double heightDifference = limelightProcessing.getTargetInfo(21).getTargetY() + 5;
-        double tanTheta = Math.tan(Math.toRadians(detectedTags.get(21).ftcPose.bearing));
-        double cosTheta = Math.cos(Math.toRadians(detectedTags.get(21).ftcPose.bearing));
-        double efficientCoefficient = 0.9;
-
-
-        double initialSpeedNeeded = Math.sqrt(gravityAccalerationValue * Math.pow(distance, 2) / (2 * Math.pow(cosTheta, 2) * (distance * tanTheta + heightDifference))) / efficientCoefficient;
-        return initialSpeedNeeded * flyWheelDiameter / motorShaftRadiusForLuncher / distanceperImulseForLunch;
+       limelightProcessing.processTargets();
+       double distance = limelightProcessing.getTargetInfo().getDistance();
+       return 1032.61498*Math.pow(1.000167,distance);//in cm
     }
     public void setLaunchMotorSpeed(double power){
         lunchMotor.setPower(power);
