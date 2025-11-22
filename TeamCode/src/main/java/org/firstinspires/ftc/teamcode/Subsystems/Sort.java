@@ -60,16 +60,10 @@ public class Sort implements Subsystem {
     }
     private int tolerance = 0;
     private Color[] colorArray = {Color.EMPTY, Color.EMPTY, Color.EMPTY};
-    private double kp = 0;
-    private double ki = 0;
-    private double kd = 0;
-    private double kf = 0;
-    double maxPower =.35;
+
+    double maxPower =.6;
     private ElapsedTime timer = new ElapsedTime();
-    private ControlSystem controlSystemSpindex = ControlSystem.builder()
-            .posPid(kp,ki,kd)
-            .basicFF(kf)
-            .build();
+    private ControlSystem controlSystemSpindex = null;
     private ControlSystem controlSystem;
     private TelemetryManager telemetryManager;
     private double targetPosition = 0;
@@ -209,8 +203,8 @@ public class Sort implements Subsystem {
                     timer.reset();
                     timer.startTime();
                     controlSystemSpindex = ControlSystem.builder()
-                            .posPid(.015, ki, kd)
-                            .basicFF(-.007)
+                            .posPid(0.005, 0, 0)
+                            .basicFF(-0.01)
                             .build();
                     double goalPosition = targetPosition - ticksPerSlot;
                     targetPosition = goalPosition;
@@ -233,7 +227,7 @@ public class Sort implements Subsystem {
                        turningPlate.setPower(powerToMove);
 
                 })
-                .setIsDone(() ->  limitSwitch.getState()&&(controlSystemSpindex.isWithinTolerance(new KineticState(1)))                                                                                             )
+                .setIsDone(() ->  limitSwitch.getState()&&(controlSystemSpindex.isWithinTolerance(new KineticState(3)))                                                                                             )
                 .setStop(interrupted -> {
                     turningPlate.setPower(0);
                     timer.reset();
@@ -243,11 +237,10 @@ public class Sort implements Subsystem {
 
         cycleRight = new LambdaCommand()
                 .setStart(() -> {
-                    timer.reset();
-                    timer.startTime();
+
                     controlSystemSpindex = ControlSystem.builder()
-                            .posPid(.01, ki, kd)
-                            .basicFF(.02275)
+                            .posPid(0.005, 0, 0)
+                            .basicFF(0.015)
                             .build();
                     double goalPosition = targetPosition + ticksPerSlot;
                     targetPosition = goalPosition;
@@ -259,7 +252,7 @@ public class Sort implements Subsystem {
                 })
                 .setUpdate(() -> {
                     powerToMove = controlSystemSpindex.calculate(
-                            new KineticState(turningPlate.getCurrentPosition(), turningPlate.getVelocity())
+                            turningPlate.getState()
                     );
                     if (powerToMove > maxPower) {
                         powerToMove = maxPower;
@@ -268,7 +261,7 @@ public class Sort implements Subsystem {
                     }
                     turningPlate.setPower(powerToMove);
                 })
-                .setIsDone(() -> limitSwitch.getState()&&(controlSystemSpindex.isWithinTolerance(new KineticState(1))))
+                .setIsDone(() -> (controlSystemSpindex.isWithinTolerance(new KineticState(1))))
                 .setStop(interrupted -> {
                     turningPlate.setPower(0);
                     timer.reset();
@@ -398,12 +391,12 @@ public class Sort implements Subsystem {
         checkColors();
     }
 
-    public void rebuildControlSystem(double p, double i, double d, double f, double power) {
-        kp = p;
-        ki = i;
-        kd = d;
-        kf = f;
-        maxPower = power;
-    }
+//    public void rebuildControlSystem(double p, double i, double d, double f, double power) {
+//        kp = p;
+//        ki = i;
+//        kd = d;
+//        kf = f;
+//        maxPower = power;
+//    }
 
 }

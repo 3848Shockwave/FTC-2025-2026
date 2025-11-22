@@ -33,17 +33,18 @@ public class Turret implements Subsystem {
     private Side side;
     //declare for every subsystem
     public static final Turret INSTANCE = new Turret();
-    private static double kp = 0.004;
-    private static double kd = 0.00026;
-    private static double ki = 0.004;
-    private static double kf = 0.0000275;
-    private static double maxPower = 1.0;
+    private static double Rkp = 0.004;
+    private static double Rkd = 0.00026;
+    private static double Rki = 0.004;
+    private static double Rkf = 0.0000275;
+    private static double maxPower =.3;
+
 
     private static double Lvelocity = 0.0;
-    private static double Lkp = 0.001;
-    private static double Lki = 0.6;
-    private static double Lkd = 0.0009;
-    private static double Lkf = 0.00043;
+    private static double Lkp =0.007;
+    private static double Lki =  .07;
+    private static double Lkd =  .004026;
+    private static double Lkf = 0.0005;
 
     public final LimelightProcessing limelightProcessing = new LimelightProcessing(); //Creates limelight processing object
     //all the hardware goes here
@@ -76,28 +77,28 @@ public class Turret implements Subsystem {
     =68.3523/2162.8125 = 0.03160343302
     This represents the degrees that the output 135 tooth pulley moves per encoder tick
      */
-    private final ControlSystem controlSystemTurret = ControlSystem.builder()
-            .velPid(Lkp, Lki, Lkd)
-            .basicFF(Lkf)
-            .build();
+    private ControlSystem controlSystemTurret = null;
+    private ControlSystem controlSystemRotate =null ;
     private final List<AprilTagDetection> detectedTags = new ArrayList<>();
-    double minPosition = -500;//0 * ticksPerDegreeOfRotation; // Starting/default encoder location
-    double maxPosition = 500;//360 * ticksPerDegreeOfRotation; // Convert degrees to encoder counts
+    double minPosition = 0;//0 * ticksPerDegreeOfRotation; // Starting/default encoder location
+    double maxPosition = 1000;//360 * ticksPerDegreeOfRotation; // Convert degrees to encoder counts
     // post-start logic (runs once when start is pressed)
-    KineticState tolerance = new KineticState(10);
+
     private double nextTurretPosition;
     private Telemetry telemetry;
     private int launcherTargetID = 0;
-    private final ControlSystem controlSystemRotate = ControlSystem.builder()
-            .posPid(kp, ki, kd)
-            .basicFF(kf)
-            .build();
+    private double CurrentturretVelocity;
+
 
     private Turret() {
     }
 
     public double getRotateMotorPosition() {
         return rotateMotor.getCurrentPosition();
+    }
+
+    public double getTurretVelocity(){
+        return lunchMotor.getVelocity();
     }
 
     public void resetRotateMotorPosition() {
@@ -149,11 +150,11 @@ public class Turret implements Subsystem {
        limelightProcessing.processTargets();
        if (!limelightProcessing.processTargets().isEmpty()) {
            double distance = limelightProcessing.getTargetInfo().getDistance();
-           Lvelocity= 1032.61498 * Math.pow(1.00167, distance);//in cm
+           Lvelocity= 219.6943 * Math.pow(distance,0.361185);//in cm
            controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
        }
        else{
-           Lvelocity= 1500;
+           Lvelocity= 700;
            controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
        }
     }
@@ -209,6 +210,14 @@ public class Turret implements Subsystem {
 
     @Override
     public void initialize() {
+        controlSystemRotate = ControlSystem.builder()
+                .posPid(Rkp, Rki, Rkd)
+                .basicFF(Rkf)
+                .build();
+        controlSystemTurret = ControlSystem.builder()
+                .velPid(Lkp, Lki, Lkd)
+                .basicFF(Lkf)
+                .build();
         lunchMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         rotateMotor.setCurrentPosition(0.0);
         int defaultPipeline = 0; //set default pipeline
@@ -224,11 +233,17 @@ public class Turret implements Subsystem {
 
     @Override
     public void periodic() {
+        controlSystemRotate = ControlSystem.builder()
+                .posPid(Rkp, Rki, Rkd)
+                .basicFF(Rkf)
+                .build();
+
+        controlSystemTurret = ControlSystem.builder()
+                    .velPid(Lkp, Lki, Lkd)
+                    .basicFF(Lkf)
+                    .build();
+
         // remove after tuning, no need to rebuild control system every loop
-//        controlSystemRotate = ControlSystem.builder()
-//                .posPid(kp, ki, kd)
-//                .basicFF(kf)
-//                .build();
         if (!ActiveOpMode.isStarted()) {
             limelightProcessing.processTargets();
             // add detected tags to telemetry
@@ -239,7 +254,9 @@ public class Turret implements Subsystem {
 
         limelightProcessing.processTargets();
         calculateLaunchStrength();
+
         nextTurretPosition = rotateMotor.getCurrentPosition() + calculatePosition();
+
         ActiveOpMode.telemetry().addData("RunningLoop","");
         // periodic logic (runs every loop)
         if (nextTurretPosition <= maxPosition && nextTurretPosition >= minPosition) {
@@ -255,15 +272,20 @@ public class Turret implements Subsystem {
 
 
         double power = controlSystemRotate.calculate(
-                new KineticState(rotateMotor.getCurrentPosition())
+                new KineticState(rotateMotor.getCurrentPosition(), rotateMotor.getVelocity())
         );
-        double Lpower = controlSystemTurret.calculate(lunchMotor.getState());
 
+        double Lpower = controlSystemTurret.calculate(new KineticState(lunchMotor.getCurrentPosition(),lunchMotor.getVelocity()));
+        ActiveOpMode.telemetry().addData("Calculated Power",controlSystemTurret.calculate(lunchMotor.getState()));
+        ActiveOpMode.telemetry().addData("LaunchMotorState", lunchMotor.getState().component2());
         ActiveOpMode.telemetry().addData("PowerRotate",power);
         ActiveOpMode.telemetry().addData("Power Turret",Lpower);
         ActiveOpMode.telemetry().addData("calcLVelocity", Lvelocity);
-        ActiveOpMode.telemetry().addData("distance in CM", limelightProcessing.getTargetInfo().getDistance());
-
+        if(!limelightProcessing.processTargets().isEmpty()) {
+            ActiveOpMode.telemetry().addData("distance in CM", limelightProcessing.getTargetInfo().getDistance());
+        }
+        ActiveOpMode.telemetry().addData("Goal Velocity", controlSystemTurret.getGoal().component2());
+        lunchMotor.getVelocity();
         //clamp power to limit during testing
         rotateMotor.setPower(power);
         lunchMotor.setPower(Lpower);
@@ -271,14 +293,15 @@ public class Turret implements Subsystem {
 
 
     }
-
     public void rebuildControlSystem(double p, double i, double d, double f, double power) {
-        kp = p;
-        ki = i;
-        kd = d;
-        kf = f;
+        Rkp = p;
+        Rki = i;
+        Rkd = d;
+        Rkf = f;
         maxPower = power;
     }
+
+
 
 }
 

@@ -13,6 +13,7 @@ import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.extensions.pedro.PedroDriverControlled;
+import dev.nextftc.ftc.ActiveOpMode;
 import dev.nextftc.ftc.Gamepads;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
@@ -39,6 +40,9 @@ public class TeleOpProgram extends NextFTCOpMode {
 
 
 
+
+    private static double power = 1.0;
+
     public TeleOpProgram(){
         addComponents(
                 new SubsystemComponent(Sort.INSTANCE),
@@ -53,21 +57,31 @@ public class TeleOpProgram extends NextFTCOpMode {
     private boolean motorToggle = false;
     private boolean launchToggle = false;
 
-    private static double kp = 0.000;
-    private static double kd = 0.000;
-    private static double ki = 0.00;
-    private static double kf = 0.0000;
-    private static double power = 1.0;
 
     private TelemetryManager telemetryManager;
 
     @Override
     public void onInit() {
+
         Turret.INSTANCE.resetRotateMotorPosition();
         intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
-        Turret.INSTANCE.setSide("blue");
+        telemetryManager.addData("Select Alliance","");
+        telemetryManager.update(telemetry);
+        if(ActiveOpMode.opModeInInit()) {
+            Button x_button = button(() -> gamepad1.x).whenBecomesTrue(() ->{
+                Turret.INSTANCE.setSide("blue");
+                telemetryManager.addData("Blue Alliance","");
+                telemetryManager.update(telemetry);
+            });
 
+            Button b_button = button(() -> gamepad1.b).whenBecomesTrue(() ->
+            {
+                Turret.INSTANCE.setSide("red");
+                telemetryManager.addData("Red Alliance","");
+                telemetryManager.update(telemetry);
+            });
+        }
        // Turret.INSTANCE.limelightProcessing.getLimelightStatus();
     }
 
@@ -128,6 +142,7 @@ public class TeleOpProgram extends NextFTCOpMode {
 //        intake.setPower(1);
 
         follower().startTeleopDrive();
+
         DriverControlledCommand driverControlled = new PedroDriverControlled(
                 Gamepads.gamepad1().leftStickY().negate(),
                 Gamepads.gamepad1().leftStickX().negate(),
@@ -136,16 +151,18 @@ public class TeleOpProgram extends NextFTCOpMode {
         );
         driverControlled.schedule();
 
+
     }
 
     @Override
     public void onUpdate() {
         double turretPos = Turret.INSTANCE.getRotateMotorPosition();
         double turretWant = Turret.INSTANCE.getRotateMotorPosition()+Turret.INSTANCE.calculatePosition();
-
+       // Turret.INSTANCE.setSetVelocity(newVelocity);
         //Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf,power);
-        //Sort.INSTANCE.rebuildControlSystem(kp,ki,kd,kf,power);
+       // Sort.INSTANCE.rebuildControlSystem(kp,ki,kd,kf,power);
         telemetryManager.addData("SpindexMotorPosition", Sort.INSTANCE.getCurrentPosition());
+
         telemetryManager.addData("turretMotorPosition", turretPos);
         telemetryManager.addData("SpinNextPosition", Sort.INSTANCE.getTargetPosition() );
         telemetryManager.addData("TurretNextPosition", turretWant );
@@ -154,6 +171,8 @@ public class TeleOpProgram extends NextFTCOpMode {
         telemetryManager.addData("Pipeline", Turret.INSTANCE.limelightProcessing.getCurrentPipeline());
         telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
         telemetryManager.addData("LimitSwitch Status", Sort.INSTANCE.getSpinLimitSwitchStatus());
+        telemetryManager.addData("turretVelocity",Turret.INSTANCE.getTurretVelocity());
+       // telemetryManager.addData("desiredVelocity",newVelocity);
         telemetryManager.update(telemetry);
 
     }
