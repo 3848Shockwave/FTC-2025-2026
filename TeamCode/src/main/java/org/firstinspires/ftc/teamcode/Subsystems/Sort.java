@@ -61,7 +61,7 @@ public class Sort implements Subsystem {
     private int tolerance = 0;
     private Color[] colorArray = {Color.EMPTY, Color.EMPTY, Color.EMPTY};
 
-    double maxPower =.6;
+    double maxPowerSpindex =.6;
     private ElapsedTime timer = new ElapsedTime();
     private ControlSystem controlSystemSpindex = null;
     private ControlSystem controlSystem;
@@ -219,10 +219,10 @@ public class Sort implements Subsystem {
                     powerToMove = controlSystemSpindex.calculate(
                             new KineticState(turningPlate.getCurrentPosition(), turningPlate.getVelocity())
                     );
-                    if (powerToMove > maxPower) {
-                        powerToMove = maxPower;
-                    } else if (powerToMove < -maxPower) {
-                        powerToMove = -maxPower;
+                    if (powerToMove > maxPowerSpindex) {
+                        powerToMove = maxPowerSpindex;
+                    } else if (powerToMove < -maxPowerSpindex) {
+                        powerToMove = -maxPowerSpindex;
                     }
                        turningPlate.setPower(powerToMove);
 
@@ -254,15 +254,15 @@ public class Sort implements Subsystem {
                     powerToMove = controlSystemSpindex.calculate(
                             turningPlate.getState()
                     );
-                    if (powerToMove > maxPower) {
-                        powerToMove = maxPower;
-                    } else if (powerToMove < -maxPower) {
-                        powerToMove = -maxPower;
+                    if (powerToMove > maxPowerSpindex) {
+                        powerToMove = maxPowerSpindex;
+                    } else if (powerToMove < -maxPowerSpindex) {
+                        powerToMove = -maxPowerSpindex;
                     }
                     turningPlate.setPower(powerToMove);
                 })
-                .setIsDone(() -> (controlSystemSpindex.isWithinTolerance(new KineticState(1))))
-                .setStop(interrupted -> {
+                .setIsDone(() -> limitSwitch.getState()&&(controlSystemSpindex.isWithinTolerance(new KineticState(3))))
+                        .setStop(interrupted -> {
                     turningPlate.setPower(0);
                     timer.reset();
                 })

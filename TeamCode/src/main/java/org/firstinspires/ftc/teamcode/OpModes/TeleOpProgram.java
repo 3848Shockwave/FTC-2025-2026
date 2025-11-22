@@ -42,6 +42,7 @@ public class TeleOpProgram extends NextFTCOpMode {
 
 
     private static double power = 1.0;
+    private boolean sideSelected = false;
 
     public TeleOpProgram(){
         addComponents(
@@ -68,18 +69,20 @@ public class TeleOpProgram extends NextFTCOpMode {
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
         telemetryManager.addData("Select Alliance","");
         telemetryManager.update(telemetry);
-        if(ActiveOpMode.opModeInInit()) {
+        if(!ActiveOpMode.isStarted()&&!sideSelected) {
             Button x_button = button(() -> gamepad1.x).whenBecomesTrue(() ->{
                 Turret.INSTANCE.setSide("blue");
-                telemetryManager.addData("Blue Alliance","");
+                telemetryManager.addData("Alliance: ","Blue");
                 telemetryManager.update(telemetry);
+                sideSelected=true;
             });
 
             Button b_button = button(() -> gamepad1.b).whenBecomesTrue(() ->
             {
                 Turret.INSTANCE.setSide("red");
-                telemetryManager.addData("Red Alliance","");
+                telemetryManager.addData("Alliance: ","Red");
                 telemetryManager.update(telemetry);
+                sideSelected=true;
             });
         }
        // Turret.INSTANCE.limelightProcessing.getLimelightStatus();
@@ -129,15 +132,15 @@ public class TeleOpProgram extends NextFTCOpMode {
         Button right_bumper = button(() -> gamepad1.right_bumper)
                 .whenBecomesTrue(Sort.INSTANCE.cycleRight);
 
-        Button right_trigger = range(() -> gamepad1.right_trigger)
-                .greaterThan(0.2)
-                .whenBecomesTrue(Sort.INSTANCE.loadGreen)
-                .whenBecomesFalse(Sort.INSTANCE.shootGreen);
+//        Button right_trigger = range(() -> gamepad1.right_trigger)
+//                .greaterThan(0.2)
+//                .whenBecomesTrue(Sort.INSTANCE.loadGreen)
+//                .whenBecomesFalse(Sort.INSTANCE.shootGreen);
 
-        Button left_trigger = range(() -> gamepad1.left_trigger)
-                .greaterThan(0.2)
-                .whenBecomesTrue(Sort.INSTANCE.loadPurp)
-                .whenBecomesFalse(Sort.INSTANCE.shootPurp);
+//        Button left_trigger = range(() -> gamepad1.left_trigger)
+//                .greaterThan(0.2)
+//                .whenBecomesTrue(Sort.INSTANCE.loadPurp)
+//                .whenBecomesFalse(Sort.INSTANCE.shootPurp);
 
 //        intake.setPower(1);
 
@@ -162,7 +165,12 @@ public class TeleOpProgram extends NextFTCOpMode {
         //Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf,power);
        // Sort.INSTANCE.rebuildControlSystem(kp,ki,kd,kf,power);
         telemetryManager.addData("SpindexMotorPosition", Sort.INSTANCE.getCurrentPosition());
-
+       if(Sort.INSTANCE.getSpinLimitSwitchStatus()){
+           telemetryManager.addData("FIRE READY","");
+       }
+       else{
+              telemetryManager.addData("FIRE NOT READY","");
+       }
         telemetryManager.addData("turretMotorPosition", turretPos);
         telemetryManager.addData("SpinNextPosition", Sort.INSTANCE.getTargetPosition() );
         telemetryManager.addData("TurretNextPosition", turretWant );
@@ -170,11 +178,12 @@ public class TeleOpProgram extends NextFTCOpMode {
         telemetryManager.addData("Colors",Sort.INSTANCE.getColorArray());
         telemetryManager.addData("Pipeline", Turret.INSTANCE.limelightProcessing.getCurrentPipeline());
         telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
-        telemetryManager.addData("LimitSwitch Status", Sort.INSTANCE.getSpinLimitSwitchStatus());
+        telemetryManager.addData("Alliance",Turret.INSTANCE.getSide());
         telemetryManager.addData("turretVelocity",Turret.INSTANCE.getTurretVelocity());
        // telemetryManager.addData("desiredVelocity",newVelocity);
         telemetryManager.update(telemetry);
 
     }
+
 
 }

@@ -37,7 +37,7 @@ public class Turret implements Subsystem {
     private static double Rkd = 0.00026;
     private static double Rki = 0.004;
     private static double Rkf = 0.0000275;
-    private static double maxPower =.3;
+    private static double maxPower =1.0;
 
 
     private static double Lvelocity = 0.0;
@@ -207,6 +207,13 @@ public class Turret implements Subsystem {
             launcherTargetID=20;
         }
     }
+    public String getSide(){
+        if (side == Side.RED) {
+            return "red";
+        }else{
+            return "blue";
+        }
+    }
 
     @Override
     public void initialize() {
@@ -220,12 +227,15 @@ public class Turret implements Subsystem {
                 .build();
         lunchMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         rotateMotor.setCurrentPosition(0.0);
-        int defaultPipeline = 0; //set default pipeline
+        int defaultPipeline = 3; //set default pipeline
         // initialization logic (runs on init)
         rotateMotor.setPower(0);
         // rotateMotor.getRawTicks() this could be interesting?
         //set current position to 0
         lunchMotor.setPower(0);
+        if(side==null){
+            side = Side.BLUE;
+        }
         limelightProcessing.initLimelight(defaultPipeline); //initialize limelight processing
 
 
@@ -254,25 +264,29 @@ public class Turret implements Subsystem {
 
         limelightProcessing.processTargets();
         calculateLaunchStrength();
-
-        nextTurretPosition = rotateMotor.getCurrentPosition() + calculatePosition();
+        if(!limelightProcessing.processTargets().isEmpty()) {
+            nextTurretPosition = rotateMotor.getCurrentPosition() + calculatePosition();
+        }
+        else{
+            nextTurretPosition=500;
+        }
 
         ActiveOpMode.telemetry().addData("RunningLoop","");
         // periodic logic (runs every loop)
         if (nextTurretPosition <= maxPosition && nextTurretPosition >= minPosition) {
-            controlSystemRotate.setGoal(new KineticState(nextTurretPosition, 50));
+            controlSystemRotate.setGoal(new KineticState(nextTurretPosition, 850));
         } else if (rotateMotor.getCurrentPosition() < minPosition) {
-            controlSystemRotate.setGoal(new KineticState(minPosition, 50));
+            controlSystemRotate.setGoal(new KineticState(minPosition, 850));
         } else if (rotateMotor.getCurrentPosition() > maxPosition) {
-            controlSystemRotate.setGoal(new KineticState(maxPosition, 50));
+            controlSystemRotate.setGoal(new KineticState(maxPosition, 850));
         } else {
-            controlSystemRotate.setGoal(new KineticState(rotateMotor.getCurrentPosition(), 50));
+            controlSystemRotate.setGoal(new KineticState(rotateMotor.getCurrentPosition(), 850));
         }
         //reloads all limelight processing data
 
 
         double power = controlSystemRotate.calculate(
-                new KineticState(rotateMotor.getCurrentPosition(), rotateMotor.getVelocity())
+                new KineticState(rotateMotor.getCurrentPosition(),rotateMotor.getVelocity())
         );
 
         double Lpower = controlSystemTurret.calculate(new KineticState(lunchMotor.getCurrentPosition(),lunchMotor.getVelocity()));
