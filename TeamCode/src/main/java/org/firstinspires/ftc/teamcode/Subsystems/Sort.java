@@ -24,15 +24,18 @@ import dev.nextftc.ftc.ActiveOpMode;
 import dev.nextftc.hardware.impl.MotorEx;
 import dev.nextftc.hardware.impl.ServoEx;
 import dev.nextftc.hardware.positionable.SetPositions;
+import dev.nextftc.hardware.powerable.SetPower;
 
 public class Sort implements Subsystem {
     public static final Sort INSTANCE = new Sort();
     private final MotorEx turningPlate = new MotorEx("spindexMotor").brakeMode();
+    MotorEx intake = new MotorEx("intake").brakeMode();
     //1,425.1 at output, 2:1 gear ratio, thus 2850.2 at motor shaft
     private final double ticksPerSlot = (2850.2) / 3;
     public Command pushBall = null;
     public Command backPosition = null;
     public ifElseCommand pushBallAndBack = null;
+    public ifElseCommand positiveIntake = null;
     public Command cycleLeft = null;
     public Command cycleRight = null;
     public Command loadGreen = null;
@@ -40,6 +43,8 @@ public class Sort implements Subsystem {
     public Command shootGreen = null;
     public Command shootPurp = null;
     boolean stopCommand = false;
+//    public boolean intakeOn = true;
+//    public Command switchIntake = null;
 
     HardwareMap hardwareMap;
     Telemetry telemetry;
@@ -295,6 +300,16 @@ public class Sort implements Subsystem {
         )).requires(turningPlate.getVelocity()==0.0)
 
         );
+
+//        positiveIntake = new ifElseCommand(
+//                () ->intakeOn,
+//                new SetPower(intake, 1.0)
+//        );
+//        switchIntake = new LambdaCommand()
+//                .setStart(()->{
+//                    intakeOn = !intakeOn;
+//                });
+
 
         loadGreen = new LambdaCommand()
                 .setStart(()->{
