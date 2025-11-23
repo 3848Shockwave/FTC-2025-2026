@@ -61,7 +61,7 @@ public class Sort implements Subsystem {
     private int tolerance = 0;
     private Color[] colorArray = {Color.EMPTY, Color.EMPTY, Color.EMPTY};
 
-    double maxPowerSpindex =75;
+    double maxPowerSpindex =7.5;
     private double kp = 0.00;
     private double ki = 0.0;
     private double kd = 0.0;
@@ -286,7 +286,14 @@ public class Sort implements Subsystem {
                 ).thenWait(0.45).then(new SetPositions(
                         servoLeft.to(1.0),
                         servoRight.to(-1.0)
-                ))
+                )),new SetPositions(
+                servoLeft.to(-1.0),
+                servoRight.to(1.0)
+                ).thenWait(0.45).then(new SetPositions(
+                servoLeft.to(1.0),
+                servoRight.to(-1.0)
+        )).requires(turningPlate.getVelocity()==0.0)
+
         );
 
         loadGreen = new LambdaCommand()

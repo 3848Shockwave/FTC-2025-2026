@@ -41,12 +41,14 @@ public class TeleOpProgram extends NextFTCOpMode {
 
 
 
-    private static double power = 1.0;
-//    private static double kp = 0.0;
-//    private static double ki = 0.0;
-//    private static double kd = 0.0;
-//    private static double kf = 0.0;
+
+
     private boolean sideSelected = false;
+    public static double kp =0.004;
+    public static double ki = 0.004;
+    public static double kd =0.00026;
+    public static double kf = 0.0000275;
+    public static double power = 1.0;
 
     public TeleOpProgram(){
         addComponents(
@@ -165,8 +167,8 @@ public class TeleOpProgram extends NextFTCOpMode {
     public void onUpdate() {
         double turretPos = Turret.INSTANCE.getRotateMotorPosition();
         double turretWant = Turret.INSTANCE.getRotateMotorPosition()+Turret.INSTANCE.calculatePosition();
-       // Turret.INSTANCE.setSetVelocity(newVelocity);
-        //Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf,power);
+        // Turret.INSTANCE.setSetVelocity(newVelocity);
+        Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf,power);
        // Sort.INSTANCE.rebuildControlSystem(kp,ki,kd,kf,power);
         telemetryManager.addData("SpindexMotorPosition", Sort.INSTANCE.getCurrentPosition());
        if(Sort.INSTANCE.getSpinLimitSwitchStatus()){
