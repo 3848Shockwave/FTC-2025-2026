@@ -210,7 +210,6 @@ public class Turret implements Subsystem {
         lunchMotor.setPower(0);
         limelightProcessing.initLimelight(defaultPipeline); //initialize limelight processing
 
-
     }
 
     @Override

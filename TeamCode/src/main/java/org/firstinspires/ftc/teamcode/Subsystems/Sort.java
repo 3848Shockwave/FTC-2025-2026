@@ -71,7 +71,20 @@ public class Sort implements Subsystem {
     private double powerToMove;
 
 
-    private Sort() {
+    private Sort() { }
+
+    //  public final Command nextBall = new RunToPosition(controlSystem, 48358).requires(this).named("nextBall");
+
+
+//    private String detectLeftColor() {
+//        String color = detectColor(colorSensorLeft1);
+//        if ("UNKNOWN".equals(color)) {
+//            color = detectColor(colorSensorLeft2);
+//        }
+//        return color;
+//    }
+
+    public void checkColor(){
         int greenNumL = (colorSensorL1.green() + colorSensorL2.green()) / 2;
         int blueNumL = (colorSensorL1.blue() + colorSensorL2.blue()) / 2;
         int greenNumR = (colorSensorR1.green() + colorSensorR2.green()) / 2;
@@ -100,17 +113,6 @@ public class Sort implements Subsystem {
         }
 
     }
-
-    //  public final Command nextBall = new RunToPosition(controlSystem, 48358).requires(this).named("nextBall");
-
-
-//    private String detectLeftColor() {
-//        String color = detectColor(colorSensorLeft1);
-//        if ("UNKNOWN".equals(color)) {
-//            color = detectColor(colorSensorLeft2);
-//        }
-//        return color;
-//    }
 
     public double getCurrentPosition() {
         return turningPlate.getCurrentPosition();
@@ -280,10 +282,7 @@ public class Sort implements Subsystem {
 
                 })
                 .setUpdate(()->{
-
-
-
-
+                    
                         })
                 .setIsDone(()->{
                     return null;
