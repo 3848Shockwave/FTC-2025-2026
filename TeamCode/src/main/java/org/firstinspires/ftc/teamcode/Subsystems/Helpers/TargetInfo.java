@@ -30,7 +30,7 @@ public class TargetInfo {
     }
 
     public double getDistance(){
-       distance= 162.9528 *Math.pow(area,-1.85914);
+       distance= 17.3197 *Math.pow(area,-0.498853);
         return distance;
     }
     public double getID() {
