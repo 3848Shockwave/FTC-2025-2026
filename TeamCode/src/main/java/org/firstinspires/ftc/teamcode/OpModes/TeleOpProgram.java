@@ -34,8 +34,8 @@ import static dev.nextftc.extensions.pedro.PedroComponent.follower;//most import
 @Configurable
 @TeleOp(name = "TeleOp Program", group = "Production")
 public class TeleOpProgram extends NextFTCOpMode {
-    private final Pose BstartPose = new Pose(70,86, Math.toRadians(90)); // Start Pose of our robot.
-
+    private final Pose BstartPose = new Pose(70, 86, Math.toRadians(90)); // Start Pose of our robot.
+    private final Pose RstartPose = new Pose(96, 86, Math.toRadians(90)); // Start Pose of our robot.
     MotorEx intake = new MotorEx("intake").brakeMode();
 
 
@@ -70,7 +70,7 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     @Override
     public void onInit() {
-        follower().setPose(startPose);
+       // follower().setPose(startPose);
         Turret.INSTANCE.resetRotateMotorPosition();
         intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
@@ -81,6 +81,7 @@ public class TeleOpProgram extends NextFTCOpMode {
                 Turret.INSTANCE.setSide("blue");
                 telemetryManager.addData("Alliance: ","Blue");
                 telemetryManager.update(telemetry);
+                follower().setPose(BstartPose);
                 sideSelected=true;
             });
 
@@ -89,6 +90,7 @@ public class TeleOpProgram extends NextFTCOpMode {
                 Turret.INSTANCE.setSide("red");
                 telemetryManager.addData("Alliance: ","Red");
                 telemetryManager.update(telemetry);
+                follower().setPose(RstartPose);
                 sideSelected=true;
             });
         }
