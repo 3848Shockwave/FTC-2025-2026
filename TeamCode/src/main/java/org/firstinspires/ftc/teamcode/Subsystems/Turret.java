@@ -292,7 +292,6 @@ public class Turret implements Subsystem {
             lunchMotor.setPower(0);
         }).setName("RunTurret").requires(this);
 
-
     }
 
     @Override
