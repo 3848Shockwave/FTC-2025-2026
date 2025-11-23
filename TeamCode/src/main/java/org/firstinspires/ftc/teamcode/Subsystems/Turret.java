@@ -18,6 +18,7 @@ import java.util.List;
 
 import dev.nextftc.control.ControlSystem;
 import dev.nextftc.control.KineticState;
+import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.commands.utility.LambdaCommand;
 import dev.nextftc.core.subsystems.Subsystem;
 import dev.nextftc.ftc.ActiveOpMode;
@@ -87,10 +88,74 @@ public class Turret implements Subsystem {
     // post-start logic (runs once when start is pressed)
 
     private double nextTurretPosition;
+    public  boolean turretRunning = true;
     private Telemetry telemetry;
     private int launcherTargetID = 0;
     private double CurrentturretVelocity;
-    public Command RunTurret = null;
+    public Command  RunTurret = new LambdaCommand().setStart(()->{
+        if (side.equals( Side.RED)) {
+            limelightProcessing.setPipeline(4);
+            launcherTargetID=24;
+        }else if (side.equals( Side.BLUE)){
+            limelightProcessing.setPipeline(3);
+            launcherTargetID=20;
+        }
+        controlSystemRotate = ControlSystem.builder()
+                .posPid(Rkp, Rki, Rkd)
+                .basicFF(Rkf)
+                .build();
+        controlSystemTurret = ControlSystem.builder()
+                .velPid(Lkp, Lki, Lkd)
+                .basicFF(Lkf)
+                .build();
+        lunchMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+
+    }).setUpdate(()->{
+        controlSystemRotate = ControlSystem.builder()
+                .posPid(Rkp, Rki, Rkd)
+                .basicFF(Rkf)
+                .build();
+
+        controlSystemTurret = ControlSystem.builder()
+                .velPid(Lkp, Lki, Lkd)
+                .basicFF(Lkf)
+                .build();
+        limelightProcessing.processTargets();
+        calculateLaunchStrength();
+        nextTurretPosition = rotateMotor.getCurrentPosition() + calculatePosition();
+
+
+        ActiveOpMode.telemetry().addData("RunningLoop","");
+        // periodic logic (runs every loop)
+        if (nextTurretPosition <= maxPosition && nextTurretPosition >= minPosition) {
+            controlSystemRotate.setGoal(new KineticState(nextTurretPosition, 50));
+        } else if (rotateMotor.getCurrentPosition() < minPosition) {
+            controlSystemRotate.setGoal(new KineticState(minPosition, 50));
+
+        } else if (rotateMotor.getCurrentPosition() > maxPosition) {
+            controlSystemRotate.setGoal(new KineticState(maxPosition, 50));
+
+        } else {
+            controlSystemRotate.setGoal(new KineticState(rotateMotor.getCurrentPosition(), 50));
+        }
+
+        double power = controlSystemRotate.calculate(
+                new KineticState(rotateMotor.getCurrentPosition())
+        );
+        double Lpower = controlSystemTurret.calculate(new KineticState(lunchMotor.getCurrentPosition(),lunchMotor.getVelocity()));
+        //clamp power to limit during testing
+        rotateMotor.setPower(power);
+        lunchMotor.setPower(Lpower);
+    }).setInterruptible(true).setStop(interrupted->
+    {
+        rotateMotor.setPower(0);
+        lunchMotor.setPower(0);
+        turretRunning=false;
+    }).requires(this,turretRunning).setName("RunTurret");
+    public InstantCommand StopTurret = new InstantCommand(() -> {
+        turretRunning=false;
+    });
+
 
     private Turret() {
     }
@@ -116,7 +181,7 @@ public class Turret implements Subsystem {
         double angle = 0;
         if (!limelightProcessing.processTargets().isEmpty()) {
             ActiveOpMode.telemetry().addData("Target Found,", "Calculating Position");
-            angle = limelightProcessing.getTargetInfo().getTargetX();
+            angle = limelightProcessing.getTargetInfo().getTargetX()-5;
             //Simple calculation, using the distance from center given by limelight getTargetX, we then divide that by distance per encoder counts
             // This gives us the amount of encoder counts needed to reach desired location.
             // We negate the value because positive angle means target is to the right, so we need to rotate left (negative)
@@ -155,7 +220,7 @@ public class Turret implements Subsystem {
             controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
         }
         else{
-            Lvelocity= 700;
+            Lvelocity= 1345;
             controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
         }
     }
@@ -238,65 +303,8 @@ public class Turret implements Subsystem {
             side = Side.BLUE;
         }
         limelightProcessing.initLimelight(defaultPipeline); //initialize limelight processing
-        RunTurret = new LambdaCommand().setStart(()->{
-            if (side.equals( Side.RED)) {
-                limelightProcessing.setPipeline(4);
-                launcherTargetID=24;
-            }else if (side.equals( Side.BLUE)){
-                limelightProcessing.setPipeline(3);
-                launcherTargetID=20;
-            }
-            controlSystemRotate = ControlSystem.builder()
-                    .posPid(Rkp, Rki, Rkd)
-                    .basicFF(Rkf)
-                    .build();
-            controlSystemTurret = ControlSystem.builder()
-                    .velPid(Lkp, Lki, Lkd)
-                    .basicFF(Lkf)
-                    .build();
-            lunchMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-
-        }).setUpdate(()->{
-            controlSystemRotate = ControlSystem.builder()
-                    .posPid(Rkp, Rki, Rkd)
-                    .basicFF(Rkf)
-                    .build();
-
-            controlSystemTurret = ControlSystem.builder()
-                    .velPid(Lkp, Lki, Lkd)
-                    .basicFF(Lkf)
-                    .build();
-            limelightProcessing.processTargets();
-            calculateLaunchStrength();
-            nextTurretPosition = rotateMotor.getCurrentPosition() + calculatePosition();
 
 
-            ActiveOpMode.telemetry().addData("RunningLoop","");
-            // periodic logic (runs every loop)
-            if (nextTurretPosition <= maxPosition && nextTurretPosition >= minPosition) {
-                controlSystemRotate.setGoal(new KineticState(nextTurretPosition, 50));
-            } else if (rotateMotor.getCurrentPosition() < minPosition) {
-                controlSystemRotate.setGoal(new KineticState(minPosition, 50));
-
-            } else if (rotateMotor.getCurrentPosition() > maxPosition) {
-                controlSystemRotate.setGoal(new KineticState(maxPosition, 50));
-
-            } else {
-                controlSystemRotate.setGoal(new KineticState(rotateMotor.getCurrentPosition(), 50));
-            }
-
-            double power = controlSystemRotate.calculate(
-                    new KineticState(rotateMotor.getCurrentPosition())
-            );
-            double Lpower = controlSystemTurret.calculate(new KineticState(lunchMotor.getCurrentPosition(),lunchMotor.getVelocity()));
-            //clamp power to limit during testing
-            rotateMotor.setPower(power);
-            lunchMotor.setPower(Lpower);
-        }).setInterruptible(true).setStop(interrupted->
-                {
-            rotateMotor.setPower(0);
-            lunchMotor.setPower(0);
-        }).setName("RunTurret");
 
     }
 

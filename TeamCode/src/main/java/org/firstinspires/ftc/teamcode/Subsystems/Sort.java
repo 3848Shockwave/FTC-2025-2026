@@ -18,6 +18,7 @@ import java.time.Duration;
 import dev.nextftc.control.ControlSystem;
 import dev.nextftc.control.KineticState;
 import dev.nextftc.core.commands.Command;
+import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.commands.utility.LambdaCommand;
 import dev.nextftc.core.subsystems.Subsystem;
 import dev.nextftc.ftc.ActiveOpMode;
@@ -35,13 +36,16 @@ public class Sort implements Subsystem {
     public Command pushBall = null;
     public Command backPosition = null;
     public ifElseCommand pushBallAndBack = null;
-    public ifElseCommand positiveIntake = null;
+    public LambdaCommand positiveIntake = null;
+    public LambdaCommand negativeIntake = null;
     public Command cycleLeft = null;
     public Command cycleRight = null;
     public Command loadGreen = null;
     public Command loadPurp = null;
     public Command shootGreen = null;
     public Command shootPurp = null;
+    public Command overRideShoot = null;
+    public Command cycleLeftAuto = null;
     boolean stopCommand = false;
 //    public boolean intakeOn = true;
 //    public Command switchIntake = null;
@@ -66,7 +70,7 @@ public class Sort implements Subsystem {
     private int tolerance = 0;
     private Color[] colorArray = {Color.EMPTY, Color.EMPTY, Color.EMPTY};
 
-    double maxPowerSpindex =7.5;
+    double maxPowerSpindex =.75;
     private double kp = 0.00;
     private double ki = 0.0;
     private double kd = 0.0;
@@ -77,6 +81,11 @@ public class Sort implements Subsystem {
     private TelemetryManager telemetryManager;
     private double targetPosition = 0;
     private double powerToMove;
+    private boolean intakeOn = true;
+    public InstantCommand stopIntake = new InstantCommand(() -> {
+        intakeOn = false;
+
+    });
 
 
     private  Sort() {
@@ -243,8 +252,40 @@ public class Sort implements Subsystem {
                     turningPlate.setPower(0);
                     timer.reset();
                 })
-                .requires(this)
                 .named("cycleLeft");
+        cycleLeftAuto= new LambdaCommand().setStart(() -> {
+
+                    timer.reset();
+                    timer.startTime();
+                    controlSystemSpindex = ControlSystem.builder()
+                            .posPid(0.01265, ki, 0.000012)
+                            .basicFF(0.0001)
+                            .build();
+                    double goalPosition = targetPosition - ticksPerSlot;
+                    targetPosition = goalPosition;
+                    controlSystemSpindex.setGoal(new KineticState(goalPosition, 20));
+                })
+                .setUpdate(() -> {
+
+
+                    powerToMove = controlSystemSpindex.calculate(
+                            new KineticState(turningPlate.getCurrentPosition(), turningPlate.getVelocity())
+                    );
+                    if (powerToMove > maxPowerSpindex) {
+                        powerToMove = maxPowerSpindex;
+                    } else if (powerToMove < -maxPowerSpindex) {
+                        powerToMove = -maxPowerSpindex;
+                    }
+                    turningPlate.setPower(powerToMove);
+
+                })
+                .setIsDone(() ->
+                        limitSwitch.getState()&&
+                              (controlSystemSpindex.isWithinTolerance(new KineticState(10)))                                                                                             )
+                .setStop(interrupted -> {
+                    turningPlate.setPower(0);
+                    timer.reset();
+                }).setInterruptible(true).setName("cycleLeftAuto");
 
         cycleRight = new LambdaCommand()
                 .setStart(() -> {
@@ -297,18 +338,32 @@ public class Sort implements Subsystem {
                 ).thenWait(0.45).then(new SetPositions(
                 servoLeft.to(1.0),
                 servoRight.to(-1.0)
-        )).requires(turningPlate.getVelocity()==0.0)
+        )).requires(turningPlate.getVelocity()<10.0)
+
 
         );
+        overRideShoot = new InstantCommand(()->{
+            new SetPositions(
+                    servoLeft.to(-1.0),
+                    servoRight.to(1.0)
+            ).thenWait(0.45).then(new SetPositions(
+                    servoLeft.to(1.0),
+                    servoRight.to(-1.0)
+            ));
+        }).setName("overRideShoot");
 
-//        positiveIntake = new ifElseCommand(
-//                () ->intakeOn,
-//                new SetPower(intake, 1.0)
-//        );
-//        switchIntake = new LambdaCommand()
-//                .setStart(()->{
-//                    intakeOn = !intakeOn;
-//                });
+        positiveIntake= new LambdaCommand().setStart(()-> {
+                    intake.setPower(1.0);
+                }
+        ).setInterruptible(true).setStop(interrupted->{
+            intake.setPower(0.0);
+        }).requires(intakeOn,this);
+        negativeIntake= new LambdaCommand().setStart(()-> {
+                    intake.setPower(-1.0);
+                }
+        ).setInterruptible(true).setStop(interrupted->{
+            intake.setPower(0.0);
+        }).requires(intakeOn,this);
 
 
         loadGreen = new LambdaCommand()

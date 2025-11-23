@@ -4,6 +4,7 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
@@ -33,7 +34,7 @@ import static dev.nextftc.extensions.pedro.PedroComponent.follower;//most import
 @Configurable
 @TeleOp(name = "TeleOp Program", group = "Production")
 public class TeleOpProgram extends NextFTCOpMode {
-//    private final Pose startPose = new Pose(28.5, 128, Math.toRadians(180)); // Start Pose of our robot.
+    private final Pose BstartPose = new Pose(70,86, Math.toRadians(90)); // Start Pose of our robot.
 
     MotorEx intake = new MotorEx("intake").brakeMode();
 
@@ -69,7 +70,7 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     @Override
     public void onInit() {
-
+        follower().setPose(startPose);
         Turret.INSTANCE.resetRotateMotorPosition();
         intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
