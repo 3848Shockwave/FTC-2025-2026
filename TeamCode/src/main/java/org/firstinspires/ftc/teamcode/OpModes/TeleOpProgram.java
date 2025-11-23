@@ -42,6 +42,10 @@ public class TeleOpProgram extends NextFTCOpMode {
 
 
     private static double power = 1.0;
+//    private static double kp = 0.0;
+//    private static double ki = 0.0;
+//    private static double kd = 0.0;
+//    private static double kf = 0.0;
     private boolean sideSelected = false;
 
     public TeleOpProgram(){

@@ -61,7 +61,11 @@ public class Sort implements Subsystem {
     private int tolerance = 0;
     private Color[] colorArray = {Color.EMPTY, Color.EMPTY, Color.EMPTY};
 
-    double maxPowerSpindex =.6;
+    double maxPowerSpindex =75;
+    private double kp = 0.00;
+    private double ki = 0.0;
+    private double kd = 0.0;
+    private double kf = 0.0;
     private ElapsedTime timer = new ElapsedTime();
     private ControlSystem controlSystemSpindex = null;
     private ControlSystem controlSystem;
@@ -203,8 +207,8 @@ public class Sort implements Subsystem {
                     timer.reset();
                     timer.startTime();
                     controlSystemSpindex = ControlSystem.builder()
-                            .posPid(0.005, 0, 0)
-                            .basicFF(-0.01)
+                            .posPid(0.01265, ki, 0.000012)
+                            .basicFF(0.0001)
                             .build();
                     double goalPosition = targetPosition - ticksPerSlot;
                     targetPosition = goalPosition;
@@ -227,7 +231,9 @@ public class Sort implements Subsystem {
                        turningPlate.setPower(powerToMove);
 
                 })
-                .setIsDone(() ->  limitSwitch.getState()&&(controlSystemSpindex.isWithinTolerance(new KineticState(3)))                                                                                             )
+                .setIsDone(() ->
+                        limitSwitch.getState()&&
+                        (controlSystemSpindex.isWithinTolerance(new KineticState(3)))                                                                                             )
                 .setStop(interrupted -> {
                     turningPlate.setPower(0);
                     timer.reset();
@@ -239,12 +245,13 @@ public class Sort implements Subsystem {
                 .setStart(() -> {
 
                     controlSystemSpindex = ControlSystem.builder()
-                            .posPid(0.005, 0, 0)
-                            .basicFF(0.015)
+                            .posPid(0.015, ki, 0.000012)
+                            .basicFF(kf)
                             .build();
                     double goalPosition = targetPosition + ticksPerSlot;
                     targetPosition = goalPosition;
                     controlSystemSpindex.setGoal(new KineticState(goalPosition, 20));
+
                     colorArray[0] = colorArray[1];
                     colorArray[1] = colorArray[2];
                     colorArray[2] = colorArray[0];
@@ -261,7 +268,9 @@ public class Sort implements Subsystem {
                     }
                     turningPlate.setPower(powerToMove);
                 })
-                .setIsDone(() -> limitSwitch.getState()&&(controlSystemSpindex.isWithinTolerance(new KineticState(3))))
+                .setIsDone(() ->
+                        limitSwitch.getState()&&
+                                (controlSystemSpindex.isWithinTolerance(new KineticState(3))))
                         .setStop(interrupted -> {
                     turningPlate.setPower(0);
                     timer.reset();
@@ -396,7 +405,7 @@ public class Sort implements Subsystem {
 //        ki = i;
 //        kd = d;
 //        kf = f;
-//        maxPower = power;
+//        maxPowerSpindex = power;
 //    }
 
 }
