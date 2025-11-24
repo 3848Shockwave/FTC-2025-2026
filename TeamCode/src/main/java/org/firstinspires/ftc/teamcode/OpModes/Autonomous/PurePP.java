@@ -81,7 +81,7 @@ public class PurePP extends NextFTCOpMode {
                     new Delay(.3),
                     new FollowPath(moveToPick0).and(Sort.INSTANCE.positiveIntake),
                     new Delay(.3),
-                    new FollowPath(moveBackToScore0).and(Sort.INSTANCE.positiveIntake).thenWait(.5),
+                    new FollowPath(moveBackToScore0).and(Sort.INSTANCE.positiveIntake).thenWait(.6),
                     Sort.INSTANCE.pushBallAndBack,
                     new Delay(.45),
                     Sort.INSTANCE.cycleLeftAuto.endAfter(.9),
@@ -203,7 +203,7 @@ public class PurePP extends NextFTCOpMode {
                 startPose = new Pose(60, 10, Math.toRadians(90)); // Start Pose of our robot.
                 score = new Pose(70, 86, Math.toRadians(270)); // Scoring Pose of our robot.
                 readyPose0 = new Pose(65, 81, Math.toRadians(180));
-                pickUpBalls0 = new Pose(38, 83, Math.toRadians(180));
+                pickUpBalls0 = new Pose(36, 83, Math.toRadians(180));
                 readyPose1 = new Pose(65, 59, Math.toRadians(180));
                 pickUpBalls1 = new Pose(38, 59, Math.toRadians(180));
                 readyPose2 = new Pose(65, 36, Math.toRadians(180));
@@ -229,6 +229,7 @@ public class PurePP extends NextFTCOpMode {
                 readyPose2 = new Pose(89, 36, Math.toRadians(0));
                 pickUpBalls2 = new Pose(116, 36, Math.toRadians(0));
                 follower = Constants.createFollower(hardwareMap);
+
                 buildPaths();
                 follower.setStartingPose(startPose);
                 telemetry.addData("Alliance: ","Red");

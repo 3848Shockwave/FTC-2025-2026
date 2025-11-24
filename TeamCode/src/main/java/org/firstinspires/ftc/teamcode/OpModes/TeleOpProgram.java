@@ -10,6 +10,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 
 import dev.nextftc.bindings.Button;
+import dev.nextftc.bindings.Range;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.PedroComponent;
@@ -35,7 +36,7 @@ import static dev.nextftc.extensions.pedro.PedroComponent.follower;//most import
 @TeleOp(name = "TeleOp Program", group = "Production")
 public class TeleOpProgram extends NextFTCOpMode {
     private final Pose BstartPose = new Pose(70, 86, Math.toRadians(90)); // Start Pose of our robot.
-    private final Pose RstartPose = new Pose(96, 86, Math.toRadians(90)); // Start Pose of our robot.
+    private final Pose RstartPose = new Pose(96, 86, Math.toRadians(270)); // Start Pose of our robot.
     MotorEx intake = new MotorEx("intake").brakeMode();
 
 
@@ -133,7 +134,9 @@ public class TeleOpProgram extends NextFTCOpMode {
 
         Button dpad_up = button(() -> gamepad1.dpad_up)
                 .whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
-        Button dpad_down = button(() -> gamepad1.dpad_down).whenBecomesTrue(Sort.INSTANCE.cycleRight.thenWait(.5).then(Sort.INSTANCE.cycleLeft));
+        Button dpad_down = button(() -> gamepad1.dpad_down)
+                .whenBecomesTrue(Sort.INSTANCE.tripleLaunch);
+       // Button dpad_down = button(() -> gamepad1.dpad_down).whenBecomesTrue(Sort.INSTANCE.cycleRight.thenWait(.5).then(Sort.INSTANCE.cycleLeft));
 
         Button left_bumper = button(() -> gamepad1.left_bumper)
                 .whenBecomesTrue(Sort.INSTANCE.cycleLeft);
@@ -158,6 +161,16 @@ public class TeleOpProgram extends NextFTCOpMode {
         DriverControlledCommand driverControlled = new PedroDriverControlled(
                 Gamepads.gamepad1().leftStickY().negate(),
                 Gamepads.gamepad1().leftStickX().negate(),
+//                range(() -> {
+//                    double v = Gamepads.gamepad1().leftStickY().get();
+//                    double exp = Math.copySign(Math.pow(Math.abs(v), 3.6), v);
+//                    return -exp;
+//                }),
+//                range(() -> {
+//                    double v = Gamepads.gamepad1().leftStickX().get();
+//                    double exp = Math.copySign(Math.pow(Math.abs(v), 3.6), v);
+//                    return -exp;
+//                }),
                 Gamepads.gamepad1().rightStickX().negate(),
                 false
         );

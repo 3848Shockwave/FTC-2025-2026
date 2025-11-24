@@ -18,6 +18,8 @@ import java.time.Duration;
 import dev.nextftc.control.ControlSystem;
 import dev.nextftc.control.KineticState;
 import dev.nextftc.core.commands.Command;
+import dev.nextftc.core.commands.delays.Delay;
+import dev.nextftc.core.commands.groups.SequentialGroup;
 import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.commands.utility.LambdaCommand;
 import dev.nextftc.core.subsystems.Subsystem;
@@ -86,6 +88,7 @@ public class Sort implements Subsystem {
         intakeOn = false;
 
     });
+    public SequentialGroup tripleLaunch = null;
 
 
     private  Sort() {
@@ -364,6 +367,15 @@ public class Sort implements Subsystem {
         ).setInterruptible(true).setStop(interrupted->{
             intake.setPower(0.0);
         }).requires(intakeOn,this);
+        tripleLaunch = new SequentialGroup(
+                pushBallAndBack,
+                new Delay(.45),
+                cycleLeftAuto.endAfter(.9),
+                pushBallAndBack,
+                new Delay(.45),
+                cycleLeftAuto.endAfter(.9),
+                pushBallAndBack.thenWait(.2)
+        );
 
 
         loadGreen = new LambdaCommand()
