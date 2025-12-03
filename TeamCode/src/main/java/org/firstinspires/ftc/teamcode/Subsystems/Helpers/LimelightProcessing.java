@@ -87,7 +87,8 @@ public class LimelightProcessing {
                 }
             }
 
-        } else {
+        }
+        else {
             targetsDetected.clear(); // Clear all targets if no valid results
         }
         return targetsDetected;
