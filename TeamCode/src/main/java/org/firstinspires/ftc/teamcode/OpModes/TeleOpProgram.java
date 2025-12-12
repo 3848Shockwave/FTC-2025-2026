@@ -4,6 +4,7 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 
+
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -19,6 +20,7 @@ import dev.nextftc.ftc.ActiveOpMode;
 import dev.nextftc.ftc.Gamepads;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
+import dev.nextftc.ftc.components.Initializer;
 import dev.nextftc.hardware.driving.DriverControlledCommand;
 import dev.nextftc.hardware.impl.MotorEx;
 
@@ -38,11 +40,6 @@ public class TeleOpProgram extends NextFTCOpMode {
     private final Pose BstartPose = new Pose(70, 86, Math.toRadians(90)); // Start Pose of our robot.
     private final Pose RstartPose = new Pose(96, 86, Math.toRadians(270)); // Start Pose of our robot.
     MotorEx intake = new MotorEx("intake").brakeMode();
-
-
-
-
-
 
 
     private boolean sideSelected = false;
@@ -95,7 +92,6 @@ public class TeleOpProgram extends NextFTCOpMode {
                 sideSelected=true;
             });
         }
-       // Turret.INSTANCE.limelightProcessing.getLimelightStatus();
     }
 
     @Override
@@ -120,15 +116,6 @@ public class TeleOpProgram extends NextFTCOpMode {
             }
         });
 
-//        Button x_button = button(() -> gamepad1.x).whenBecomesTrue(()->
-//        {
-//            launchToggle = !launchToggle;
-//            if (launchToggle) {
-//                Turret.INSTANCE.setLaunchMotorSpeed(1.0);
-//            } else {
-//                Turret.INSTANCE.setLaunchMotorSpeed(0.0);
-//            }
-//        });
         Button y_button = button(() -> gamepad1.y)
                 .whenBecomesTrue(Turret.INSTANCE::resetRotateMotorPosition);
 
@@ -136,48 +123,27 @@ public class TeleOpProgram extends NextFTCOpMode {
                 .whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
         Button dpad_down = button(() -> gamepad1.dpad_down)
                 .whenBecomesTrue(Sort.INSTANCE.tripleLaunch);
-       // Button dpad_down = button(() -> gamepad1.dpad_down).whenBecomesTrue(Sort.INSTANCE.cycleRight.thenWait(.5).then(Sort.INSTANCE.cycleLeft));
-
         Button left_bumper = button(() -> gamepad1.left_bumper)
                 .whenBecomesTrue(Sort.INSTANCE.cycleLeft);
-
         Button right_bumper = button(() -> gamepad1.right_bumper)
                 .whenBecomesTrue(Sort.INSTANCE.cycleRight);
+ ;
 
-//        Button right_trigger = range(() -> gamepad1.right_trigger)
-//                .greaterThan(0.2)
-//                .whenBecomesTrue(Sort.INSTANCE.loadGreen)
-//                .whenBecomesFalse(Sort.INSTANCE.shootGreen);
 
-//        Button left_trigger = range(() -> gamepad1.left_trigger)
-//                .greaterThan(0.2)
-//                .whenBecomesTrue(Sort.INSTANCE.loadPurp)
-//                .whenBecomesFalse(Sort.INSTANCE.shootPurp);
 
-//        intake.setPower(1);
 
         follower().startTeleopDrive();
 
         DriverControlledCommand driverControlled = new PedroDriverControlled(
                 Gamepads.gamepad1().leftStickY().negate(),
                 Gamepads.gamepad1().leftStickX().negate(),
-//                range(() -> {
-//                    double v = Gamepads.gamepad1().leftStickY().get();
-//                    double exp = Math.copySign(Math.pow(Math.abs(v), 3.6), v);
-//                    return -exp;
-//                }),
-//                range(() -> {
-//                    double v = Gamepads.gamepad1().leftStickX().get();
-//                    double exp = Math.copySign(Math.pow(Math.abs(v), 3.6), v);
-//                    return -exp;
-//                }),
                 Gamepads.gamepad1().rightStickX().negate(),
                 false
         );
         driverControlled.schedule();
-
-
     }
+
+
 
     @Override
     public void onUpdate() {
@@ -206,6 +172,5 @@ public class TeleOpProgram extends NextFTCOpMode {
         telemetryManager.update(telemetry);
 
     }
-
 
 }

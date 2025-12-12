@@ -1,12 +1,11 @@
 package org.firstinspires.ftc.teamcode.Subsystems;
 
 
-import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.distanceperImulseForLunch;
-import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.flyWheelDiameter;
-import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.gravityAccalerationValue;
-import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.motorShaftRadiusForLuncher;
 import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.ticksPerDegreeOfRotation;
 import dev.nextftc.core.commands.Command;
+
+import static dev.nextftc.extensions.pedro.PedroComponent.follower;
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -48,6 +47,7 @@ public class Turret implements Subsystem {
     private static double Lkd =  .004026;
     private static double Lkf = 0.0005;
 
+    private Pose coordinate;
 
     public final LimelightProcessing limelightProcessing = new LimelightProcessing(); //Creates limelight processing object
     //all the hardware goes here
@@ -121,7 +121,7 @@ public class Turret implements Subsystem {
                 .basicFF(Lkf)
                 .build();
         limelightProcessing.processTargets();
-        calculateLaunchStrength();
+        calculateLaunchStrength(side);
         nextTurretPosition = rotateMotor.getCurrentPosition() + calculatePosition();
 
 
@@ -211,7 +211,7 @@ public class Turret implements Subsystem {
     formula: v_{rim} = v \frac{R}{r_{motor}}
 
      */
-    public void calculateLaunchStrength() {
+    public void calculateLaunchStrength(Side side) {
 
         limelightProcessing.processTargets();
         if (!limelightProcessing.processTargets().isEmpty()) {
@@ -220,7 +220,7 @@ public class Turret implements Subsystem {
             controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
         }
         else{
-            Lvelocity= 1345;
+            Lvelocity= 219.6943 * Math.pow(calculateRelativeRange(side),0.361185);
             controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
         }
     }
@@ -261,6 +261,20 @@ public class Turret implements Subsystem {
         }
         return null;
     }
+
+    public double calculateRelativeRange(Side side){
+        double x = coordinate.getX();
+        double y = coordinate.getY();
+
+        if (side == Side.BLUE) {
+            double distance =  Math.sqrt(Math.pow((35.5 - x), 2) + Math.pow((23.5 - y), 2));
+            return Math.sqrt(Math.pow(distance,2)+Math.pow(63.5, 2));
+        }else{
+            double distance = Math.sqrt(Math.pow((335.5-x),2)+Math.pow((335.5-y),2));
+            return Math.sqrt(Math.pow(distance,2)+Math.pow(63.5, 2));
+        }
+    }
+
 
     public void setSide(String input){
         if (input.equals("red")) {
@@ -310,6 +324,8 @@ public class Turret implements Subsystem {
 
     @Override
     public void periodic() {
+        coordinate = follower().getPose();
+
         controlSystemRotate = ControlSystem.builder()
                 .posPid(Rkp, Rki, Rkd)
                 .basicFF(Rkf)
@@ -330,7 +346,7 @@ public class Turret implements Subsystem {
         }
 
         limelightProcessing.processTargets();
-        calculateLaunchStrength();
+        calculateLaunchStrength(side);
         nextTurretPosition = rotateMotor.getCurrentPosition() + calculatePosition();
 
 
