@@ -373,11 +373,11 @@ public class Turret implements Subsystem {
         );
 
         double Lpower = controlSystemTurret.calculate(new KineticState(lunchMotor.getCurrentPosition(),lunchMotor.getVelocity()));
-        ActiveOpMode.telemetry().addData("Calculated Power",controlSystemTurret.calculate(lunchMotor.getState()));
-        ActiveOpMode.telemetry().addData("LaunchMotorState", lunchMotor.getState().component2());
-        ActiveOpMode.telemetry().addData("PowerRotate",power);
-        ActiveOpMode.telemetry().addData("Power Turret",Lpower);
+        ActiveOpMode.telemetry().addData("robot position (X)", coordinate.getX());
+        ActiveOpMode.telemetry().addData("robot position (Y)", coordinate.getY());
+
         ActiveOpMode.telemetry().addData("calcLVelocity", Lvelocity);
+
         if(!limelightProcessing.processTargets().isEmpty()) {
             ActiveOpMode.telemetry().addData("distance in CM", limelightProcessing.getTargetInfo().getDistance());
         }

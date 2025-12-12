@@ -159,13 +159,7 @@ public class TeleOpProgram extends NextFTCOpMode {
        else{
               telemetryManager.addData("FIRE NOT READY","");
        }
-        telemetryManager.addData("turretMotorPosition", turretPos);
-        telemetryManager.addData("SpinNextPosition", Sort.INSTANCE.getTargetPosition() );
-        telemetryManager.addData("TurretNextPosition", turretWant );
-        telemetryManager.addData("error", Math.abs(Sort.INSTANCE.getCurrentPosition()-Sort.INSTANCE.getTargetPosition()) );
-        telemetryManager.addData("Colors",Sort.INSTANCE.getColorArray());
-        telemetryManager.addData("Pipeline", Turret.INSTANCE.limelightProcessing.getCurrentPipeline());
-        telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
+
         telemetryManager.addData("Alliance",Turret.INSTANCE.getSide());
         telemetryManager.addData("turretVelocity",Turret.INSTANCE.getTurretVelocity());
        // telemetryManager.addData("desiredVelocity",newVelocity);
