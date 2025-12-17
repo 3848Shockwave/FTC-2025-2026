@@ -377,6 +377,8 @@ public class Turret implements Subsystem {
         ActiveOpMode.telemetry().addData("robot position (Y)", coordinate.getY());
 
         ActiveOpMode.telemetry().addData("calcLVelocity", Lvelocity);
+        ActiveOpMode.telemetry().addData("relative range", calculateRelativeRange(side));
+
 
         if(!limelightProcessing.processTargets().isEmpty()) {
             ActiveOpMode.telemetry().addData("distance in CM", limelightProcessing.getTargetInfo().getDistance());
