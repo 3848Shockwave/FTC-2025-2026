@@ -24,6 +24,9 @@ import dev.nextftc.core.subsystems.Subsystem;
 import dev.nextftc.ftc.ActiveOpMode;
 import dev.nextftc.hardware.impl.MotorEx;
 
+import com.pedropathing.geometry.Pose;
+import static dev.nextftc.extensions.pedro.PedroComponent.follower;
+
 
 public class Turret implements Subsystem {
 
@@ -47,6 +50,8 @@ public class Turret implements Subsystem {
     private static double Lki =  .07;
     private static double Lkd =  .004026;
     private static double Lkf = 0.0005;
+
+    private Pose coordinate;
 
 
     public final LimelightProcessing limelightProcessing = new LimelightProcessing(); //Creates limelight processing object
@@ -220,10 +225,24 @@ public class Turret implements Subsystem {
             controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
         }
         else{
-            Lvelocity= 1345;
+            Lvelocity= 219.6943 * Math.pow(calculateRelativeRange(side),0.361185);
             controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
         }
     }
+
+    public double calculateRelativeRange(Side side){
+        double x = coordinate.getX();
+        double y = coordinate.getY();
+
+        if (side == Side.BLUE) {
+            double distance =  Math.sqrt(Math.pow((12 - x), 2) + Math.pow((138 - y), 2) )*2.54;
+            return Math.sqrt(Math.pow(distance,2)+Math.pow(63.5, 2));
+        }else{
+            double distance = Math.sqrt(Math.pow((130-x),2)+Math.pow((138-y),2))*2.541;
+            return Math.sqrt(Math.pow(distance,2)+Math.pow(63.5, 2));
+        }
+    }
+
     public void setLaunchMotorSpeed(double power){
         lunchMotor.setPower(power);
     }
@@ -310,6 +329,7 @@ public class Turret implements Subsystem {
 
     @Override
     public void periodic() {
+        coordinate = follower().getPose();
         controlSystemRotate = ControlSystem.builder()
                 .posPid(Rkp, Rki, Rkd)
                 .basicFF(Rkf)
@@ -362,8 +382,13 @@ public class Turret implements Subsystem {
         ActiveOpMode.telemetry().addData("PowerRotate",power);
         ActiveOpMode.telemetry().addData("Power Turret",Lpower);
         ActiveOpMode.telemetry().addData("calcLVelocity", Lvelocity);
+
+
+
         if(!limelightProcessing.processTargets().isEmpty()) {
             ActiveOpMode.telemetry().addData("distance in CM", limelightProcessing.getTargetInfo().getDistance());
+        }else{
+            ActiveOpMode.telemetry().addData("distance in CM", calculateRelativeRange(side));
         }
         ActiveOpMode.telemetry().addData("Goal Velocity", controlSystemTurret.getGoal().component2());
         lunchMotor.getVelocity();

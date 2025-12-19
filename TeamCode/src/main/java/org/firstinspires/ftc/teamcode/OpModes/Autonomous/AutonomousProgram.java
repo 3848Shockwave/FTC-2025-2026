@@ -34,7 +34,6 @@ import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 /*
     1.nin auto there always have 2 purple 1 green, no matter the pattern
     2.load all 3 at once and check the inner 2 balls
-
  */
 @Autonomous(name = "NextFTC Autonomous Program Java")
 public class AutonomousProgram extends NextFTCOpMode {
