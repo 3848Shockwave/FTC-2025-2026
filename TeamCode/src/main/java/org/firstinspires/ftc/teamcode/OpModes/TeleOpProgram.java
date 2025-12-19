@@ -35,22 +35,31 @@ import static dev.nextftc.extensions.pedro.PedroComponent.follower;//most import
 @Configurable
 @TeleOp(name = "TeleOp Program", group = "Production")
 public class TeleOpProgram extends NextFTCOpMode {
-    private final Pose BstartPose = new Pose(70, 86, Math.toRadians(90)); // Start Pose of our robot.
-    private final Pose RstartPose = new Pose(96, 86, Math.toRadians(270)); // Start Pose of our robot.
+    private final Pose BSstartPose = new Pose(70, 86, Math.toRadians(90)); // Start Pose of our robot.
+    private final Pose RSstartPose = new Pose(96, 86, Math.toRadians(270)); // Start Pose of our robot.
+    private final Pose BMstartPose = new Pose(44, 110, Math.toRadians(92)); // Start Pose of our robot.
+    private final Pose RMstartPose = new Pose(78, 110, Math.toRadians(92)); // Start Pose of our robot.
+
     MotorEx intake = new MotorEx("intake").brakeMode();
-
-
+    Button x_button, y_button, a_button, b_button;
+    public static double newVelocity = 0.0;
 
 
 
 
 
     private boolean sideSelected = false;
-    public static double kp =0.004;
-    public static double ki = 0.004;
-    public static double kd =0.00026;
-    public static double kf = 0.0000275;
+//    public static double kp =0.004;
+//    public static double ki = 0.004;
+//    public static double kd =0.00026;
+//    public static double kf = 0.0000275;
+    //launcher
+//private static double kp =0.008;
+//    private static double ki =  0.9;
+//    private static double kd =  0.000375;
+//    private static double kf = 0.0005;
     public static double power = 1.0;
+    public static double xOffset = 0.0;
 
     public TeleOpProgram(){
         addComponents(
@@ -73,29 +82,58 @@ public class TeleOpProgram extends NextFTCOpMode {
     public void onInit() {
        // follower().setPose(startPose);
         Turret.INSTANCE.resetRotateMotorPosition();
+        x_button = button(() -> gamepad1.x);
+        y_button = button(() -> gamepad1.y);
+        a_button = button(() -> gamepad1.a);
+        b_button = button(() -> gamepad1.b);
+        Turret.INSTANCE.setSide("blue");
         intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
-        telemetryManager.addData("Select Alliance","");
+
+       // Turret.INSTANCE.limelightProcessing.getLimelightStatus();
+    }
+    @Override
+    public void onWaitForStart() {
+        telemetryManager.addData("Select Alliance: ","Left Button for Blue, Right for Red");
         telemetryManager.update(telemetry);
         if(!ActiveOpMode.isStarted()&&!sideSelected) {
-            Button x_button = button(() -> gamepad1.x).whenBecomesTrue(() ->{
+            x_button.whenBecomesTrue(() ->{
                 Turret.INSTANCE.setSide("blue");
                 telemetryManager.addData("Alliance: ","Blue");
+                telemetryManager.addData("Select Auto: ","Top Button for Score Auto, Bottom for Move Auto");
                 telemetryManager.update(telemetry);
-                follower().setPose(BstartPose);
+                y_button.whenBecomesTrue(() -> {
+                    telemetryManager.addData("Auto: ","Score");
+                    telemetryManager.update(telemetry);
+                    follower().setPose(BSstartPose);
+                });
+                a_button.whenBecomesTrue(() -> {
+                    telemetryManager.addData("Auto: ","Move");
+                    telemetryManager.update(telemetry);
+                    follower().setPose(BMstartPose);
+                });
+
                 sideSelected=true;
             });
 
-            Button b_button = button(() -> gamepad1.b).whenBecomesTrue(() ->
+             b_button.whenBecomesTrue(() ->
             {
                 Turret.INSTANCE.setSide("red");
-                telemetryManager.addData("Alliance: ","Red");
+                telemetryManager.addData("Select Auto: ","Top Button for Score Auto, Bottom for Move Auto");
                 telemetryManager.update(telemetry);
-                follower().setPose(RstartPose);
+                y_button.whenBecomesTrue(() -> {
+                    telemetryManager.addData("Auto: ","Score");
+                    telemetryManager.update(telemetry);
+                    follower().setPose(RSstartPose);
+                });
+                 a_button.whenBecomesTrue(() -> {
+                    telemetryManager.addData("Auto: ","Move");
+                    telemetryManager.update(telemetry);
+                    follower().setPose(RMstartPose);
+                });
                 sideSelected=true;
             });
         }
-       // Turret.INSTANCE.limelightProcessing.getLimelightStatus();
     }
 
     @Override
@@ -136,6 +174,7 @@ public class TeleOpProgram extends NextFTCOpMode {
                 .whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
         Button dpad_down = button(() -> gamepad1.dpad_down)
                 .whenBecomesTrue(Sort.INSTANCE.tripleLaunch);
+     //   Button dpad_left = button(() -> gamepad1.dpad_left).whenBecomesTrue(()->{follower().setPose(new Pose(0,0,0));});
        // Button dpad_down = button(() -> gamepad1.dpad_down).whenBecomesTrue(Sort.INSTANCE.cycleRight.thenWait(.5).then(Sort.INSTANCE.cycleLeft));
 
         Button left_bumper = button(() -> gamepad1.left_bumper)
@@ -183,8 +222,10 @@ public class TeleOpProgram extends NextFTCOpMode {
     public void onUpdate() {
         double turretPos = Turret.INSTANCE.getRotateMotorPosition();
         double turretWant = Turret.INSTANCE.getRotateMotorPosition()+Turret.INSTANCE.calculatePosition();
-        // Turret.INSTANCE.setSetVelocity(newVelocity);
-        Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf,power);
+        //Turret.INSTANCE.setSetTurretVelocity(newVelocity);
+        Turret.INSTANCE.setXoffset(xOffset);
+
+        //Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf,power);
        // Sort.INSTANCE.rebuildControlSystem(kp,ki,kd,kf,power);
         telemetryManager.addData("SpindexMotorPosition", Sort.INSTANCE.getCurrentPosition());
        if(Sort.INSTANCE.getSpinLimitSwitchStatus()){
