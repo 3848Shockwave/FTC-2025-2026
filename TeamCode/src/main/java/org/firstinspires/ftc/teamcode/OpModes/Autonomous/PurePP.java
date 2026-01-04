@@ -227,7 +227,7 @@ public class PurePP extends NextFTCOpMode {
                     telemetry.addData("Auto: ", "Score");
                     telemetry.update();
                     autoType = 0;
-                    Turret.INSTANCE.setSide("blue");
+                    //Turret.INSTANCE.setSide("blue");
                     startPose = new Pose(60, 10, Math.toRadians(90)); // Start Pose of our robot.
                     score = new Pose(70, 86, Math.toRadians(270)); // Scoring Pose of our robot.
                     readyPose0 = new Pose(65, 81, Math.toRadians(180));
@@ -240,7 +240,7 @@ public class PurePP extends NextFTCOpMode {
                     follower.setStartingPose(startPose);
                 });
                 a_button.whenBecomesTrue(() -> {
-                    Turret.INSTANCE.setSide("blue");
+                   // Turret.INSTANCE.setSide("blue");
                     autoType = 1;
                     telemetry.addData("Alliance: ", "Blue");
                     telemetry.addData("Auto: ", "Move");
@@ -264,7 +264,7 @@ public class PurePP extends NextFTCOpMode {
                 telemetry.update();
                 y_button.whenBecomesTrue(() -> {
                     autoType = 0;
-                    Turret.INSTANCE.setSide("red");
+                   // Turret.INSTANCE.setSide("red");
                     telemetry.addData("Alliance: ", "Red");
                     telemetry.addData("Auto: ", "Score");
                     telemetry.update();
@@ -282,7 +282,7 @@ public class PurePP extends NextFTCOpMode {
                 });
                 a_button.whenBecomesTrue(() ->
                 {
-                    Turret.INSTANCE.setSide("red");
+                    //Turret.INSTANCE.setSide("red");
                     autoType = 1;
                     telemetry.addData("Alliance: ", "Red");
                     telemetry.addData("Auto: ", "Move");
