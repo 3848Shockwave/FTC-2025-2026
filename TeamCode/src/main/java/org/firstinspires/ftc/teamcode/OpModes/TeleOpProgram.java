@@ -1,27 +1,14 @@
 package org.firstinspires.ftc.teamcode.OpModes;
 
+import static dev.nextftc.bindings.Bindings.button;
+import static dev.nextftc.extensions.pedro.PedroComponent.follower;
+
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
-
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DigitalChannel;
-
-import dev.nextftc.bindings.Button;
-import dev.nextftc.bindings.Range;
-import dev.nextftc.core.components.BindingsComponent;
-import dev.nextftc.core.components.SubsystemComponent;
-import dev.nextftc.extensions.pedro.PedroComponent;
-import dev.nextftc.extensions.pedro.PedroDriverControlled;
-import dev.nextftc.ftc.ActiveOpMode;
-import dev.nextftc.ftc.Gamepads;
-import dev.nextftc.ftc.NextFTCOpMode;
-import dev.nextftc.ftc.components.BulkReadComponent;
-import dev.nextftc.hardware.driving.DriverControlledCommand;
-import dev.nextftc.hardware.impl.MotorEx;
-
 
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotStateTracker;
@@ -29,22 +16,25 @@ import org.firstinspires.ftc.teamcode.Subsystems.Sort;
 import org.firstinspires.ftc.teamcode.Subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
-
-import static dev.nextftc.bindings.Bindings.button;
-import static dev.nextftc.bindings.Bindings.range;
-import static dev.nextftc.extensions.pedro.PedroComponent.follower;//most important one to import
+import dev.nextftc.bindings.Button;
+import dev.nextftc.core.components.BindingsComponent;
+import dev.nextftc.core.components.SubsystemComponent;
+import dev.nextftc.extensions.pedro.PedroComponent;
+import dev.nextftc.extensions.pedro.PedroDriverControlled;
+import dev.nextftc.ftc.Gamepads;
+import dev.nextftc.ftc.NextFTCOpMode;
+import dev.nextftc.ftc.components.BulkReadComponent;
+import dev.nextftc.hardware.driving.DriverControlledCommand;
+import dev.nextftc.hardware.impl.MotorEx;
 
 
 @Configurable
 @TeleOp(name = "TeleOp Program", group = "Production")
 public class TeleOpProgram extends NextFTCOpMode {
 
-    MotorEx intake = new MotorEx("intake").brakeMode();
-    Button x_button, y_button, a_button, b_button;
     public static RobotStateTracker antiCrazy = new RobotStateTracker();
     public static double newVelocity = 0.0;
-    Pose startPose = null;
-//    public static double kp =0.004;
+    //    public static double kp =0.004;
 //    public static double ki = 0.004;
 //    public static double kd =0.00026;
 //    public static double kf = 0.0000275;
@@ -55,32 +45,32 @@ public class TeleOpProgram extends NextFTCOpMode {
 //    private static double kf = 0.0005;
     public static double power = 1.0;
     public static double xOffset = 0.0;
+    private final boolean launchToggle = false;
+    MotorEx intake = new MotorEx("intake").brakeMode();
+    Button x_button, y_button, a_button, b_button;
+    Pose startPose = null;
+    private boolean motorToggle = false;
+    private TelemetryManager telemetryManager;
 
-    public TeleOpProgram(){
+
+    public TeleOpProgram() {
         addComponents(
                 new SubsystemComponent(Sort.INSTANCE),
                 new SubsystemComponent(Turret.INSTANCE),
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
                 new PedroComponent(Constants::createFollower)
-                );
+        );
     }
-
-
-    private boolean motorToggle = false;
-    private boolean launchToggle = false;
-
-
-    private TelemetryManager telemetryManager;
 
     @Override
     public void onInit() {
-        startPose=RobotConfig.autonomousStartEndPoses.getEndPose();
+        startPose = RobotConfig.autonomousStartEndPoses.getEndPose();
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
 
-        telemetryManager.addData("Start selected: ",RobotConfig.autonomousStartEndPoses.name());
+        telemetryManager.addData("Start selected: ", RobotConfig.autonomousStartEndPoses.name());
         telemetryManager.update(telemetry);
-        if(startPose==null) {
+        if (startPose == null) {
             x_button = button(() -> gamepad1.x);
             y_button = button(() -> gamepad1.y);
             a_button = button(() -> gamepad1.a);
@@ -128,11 +118,11 @@ public class TeleOpProgram extends NextFTCOpMode {
         intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
 
-       // Turret.INSTANCE.limelightProcessing.getLimelightStatus();
+        // Turret.INSTANCE.limelightProcessing.getLimelightStatus();
     }
 
     @Override
-    public void onStartButtonPressed(){
+    public void onStartButtonPressed() {
         Button a_button = button(() -> gamepad1.a).whenBecomesTrue(() ->
         {
             motorToggle = !motorToggle;
@@ -143,7 +133,7 @@ public class TeleOpProgram extends NextFTCOpMode {
             }
         });
 
-        Button b_button = button(() -> gamepad1.b).whenBecomesTrue(()->
+        Button b_button = button(() -> gamepad1.b).whenBecomesTrue(() ->
         {
             motorToggle = !motorToggle;
             if (motorToggle) {
@@ -161,8 +151,8 @@ public class TeleOpProgram extends NextFTCOpMode {
                 .whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
         Button dpad_down = button(() -> gamepad1.dpad_down)
                 .whenBecomesTrue(Sort.INSTANCE.tripleLaunch);
-     //   Button dpad_left = button(() -> gamepad1.dpad_left).whenBecomesTrue(()->{follower().setPose(new Pose(0,0,0));});
-       // Button dpad_down = button(() -> gamepad1.dpad_down).whenBecomesTrue(Sort.INSTANCE.cycleRight.thenWait(.5).then(Sort.INSTANCE.cycleLeft));
+        //   Button dpad_left = button(() -> gamepad1.dpad_left).whenBecomesTrue(()->{follower().setPose(new Pose(0,0,0));});
+        // Button dpad_down = button(() -> gamepad1.dpad_down).whenBecomesTrue(Sort.INSTANCE.cycleRight.thenWait(.5).then(Sort.INSTANCE.cycleLeft));
 
         Button left_bumper = button(() -> gamepad1.left_bumper)
                 .whenBecomesTrue(Sort.INSTANCE.cycleLeft);
@@ -207,41 +197,39 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
-        if(!follower().getPose().roughlyEquals(antiCrazy.getLastMeasuredPose(),15)){
+        if (!follower().getPose().roughlyEquals(antiCrazy.getLastMeasuredPose(), 15)) {
             /* this is my feeble attempt to convince the machine to NOT BREAK RANDOMLY
-            * Basically, we check how close our pose is to the last one, if it's super different, as this
-            * updates like a lot big fast, we should know that the pose had gone crazy and to ignore the last reading
-            * maybe
-            * hopefully */
+             * Basically, we check how close our pose is to the last one, if it's super different, as this
+             * updates like a lot big fast, we should know that the pose had gone crazy and to ignore the last reading
+             * maybe
+             * hopefully */
             follower().setPose(antiCrazy.getLastMeasuredPose());
-        }
-        else{
+        } else {
             antiCrazy.updateLastPose(follower().getPose());
         }
         double turretPos = Turret.INSTANCE.getRotateMotorPosition();
-        double turretWant = Turret.INSTANCE.getRotateMotorPosition()+Turret.INSTANCE.calculatePosition();
+        double turretWant = Turret.INSTANCE.getRotateMotorPosition() + Turret.INSTANCE.calculatePosition();
         //Turret.INSTANCE.setSetTurretVelocity(newVelocity);
         Turret.INSTANCE.setXoffset(xOffset);
 
         //Turret.INSTANCE.rebuildControlSystem(kp, ki, kd, kf,power);
-       // Sort.INSTANCE.rebuildControlSystem(kp,ki,kd,kf,power);
+        // Sort.INSTANCE.rebuildControlSystem(kp,ki,kd,kf,power);
         telemetryManager.addData("SpindexMotorPosition", Sort.INSTANCE.getCurrentPosition());
-       if(Sort.INSTANCE.getSpinLimitSwitchStatus()){
-           telemetryManager.addData("FIRE READY","");
-       }
-       else{
-              telemetryManager.addData("FIRE NOT READY","");
-       }
+        if (Sort.INSTANCE.getSpinLimitSwitchStatus()) {
+            telemetryManager.addData("FIRE READY", "");
+        } else {
+            telemetryManager.addData("FIRE NOT READY", "");
+        }
         telemetryManager.addData("turretMotorPosition", turretPos);
-        telemetryManager.addData("SpinNextPosition", Sort.INSTANCE.getTargetPosition() );
-        telemetryManager.addData("TurretNextPosition", turretWant );
-        telemetryManager.addData("error", Math.abs(Sort.INSTANCE.getCurrentPosition()-Sort.INSTANCE.getTargetPosition()) );
-        telemetryManager.addData("Colors",Sort.INSTANCE.getColorArray());
+        telemetryManager.addData("SpinNextPosition", Sort.INSTANCE.getTargetPosition());
+        telemetryManager.addData("TurretNextPosition", turretWant);
+        telemetryManager.addData("error", Math.abs(Sort.INSTANCE.getCurrentPosition() - Sort.INSTANCE.getTargetPosition()));
+        telemetryManager.addData("Colors", Sort.INSTANCE.getColorArray());
         telemetryManager.addData("Pipeline", Turret.INSTANCE.limelightProcessing.getCurrentPipeline());
         telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
-        telemetryManager.addData("Alliance",Turret.INSTANCE.getSide());
-        telemetryManager.addData("turretVelocity",Turret.INSTANCE.getTurretVelocity());
-       // telemetryManager.addData("desiredVelocity",newVelocity);
+        telemetryManager.addData("Alliance", Turret.INSTANCE.getSide());
+        telemetryManager.addData("turretVelocity", Turret.INSTANCE.getTurretVelocity());
+        // telemetryManager.addData("desiredVelocity",newVelocity);
         telemetryManager.update(telemetry);
 
     }
