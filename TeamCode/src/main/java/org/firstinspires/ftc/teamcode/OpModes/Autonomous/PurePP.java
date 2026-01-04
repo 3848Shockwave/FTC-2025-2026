@@ -49,8 +49,8 @@ public class PurePP extends NextFTCOpMode {
     public Command fireAll=null;
 
     private  Pose  startPose = new Pose(60, 10, Math.toRadians(90));
-    private  Pose score = new Pose(144 - 70, 86, Math.toRadians(270));; // Scoring Pose of our robot.
-    private  Pose readyPose0 = new Pose(65, 81, Math.toRadians(180));
+    private  Pose  score = new Pose(144 - 70, 86, Math.toRadians(270));; // Scoring Pose of our robot.
+    private  Pose  readyPose0 = new Pose(65, 81, Math.toRadians(180));
     private  Pose pickUpBalls0 =  new Pose(38, 83, Math.toRadians(180));
     private  Pose readyPose1 = readyPose1 = new Pose(65, 59, Math.toRadians(180));
     private  Pose pickUpBalls1 =  pickUpBalls1 = new Pose(38, 59, Math.toRadians(180));

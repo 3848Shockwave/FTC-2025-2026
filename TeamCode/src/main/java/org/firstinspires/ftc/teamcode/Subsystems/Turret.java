@@ -12,6 +12,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.OpModes.TeleOpProgram;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.LimelightProcessing;
+import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
 import java.util.ArrayList;
@@ -28,12 +29,6 @@ import dev.nextftc.hardware.impl.MotorEx;
 
 public class Turret implements Subsystem {
 
-    public enum Side {
-        BLUE,
-        RED
-    }
-
-    private Side side;
     //declare for every subsystem
     public static final Turret INSTANCE = new Turret();
     private static double Rkp = 0.004;
@@ -95,10 +90,10 @@ public class Turret implements Subsystem {
     private int launcherTargetID = 0;
     private double setTurretVelocity =0.0;
     public Command  RunTurret = new LambdaCommand().setStart(()->{
-        if (side.equals( Side.RED)) {
+        if (RobotConfig.alliance==RobotConfig.Alliance.RED) {
             limelightProcessing.setPipeline(4);
             launcherTargetID=24;
-        }else if (side.equals( Side.BLUE)){
+        }else if (RobotConfig.alliance==RobotConfig.Alliance.BLUE){
             limelightProcessing.setPipeline(3);
             launcherTargetID=20;
         }
@@ -277,23 +272,9 @@ public class Turret implements Subsystem {
         return null;
     }
 
-    public void setSide(String input){
-        if (input.equals("red")) {
-            side = Side.RED;
-            limelightProcessing.setPipeline(4);
-            launcherTargetID=24;
-        }else if (input.equals("blue")){
-            side = Side.BLUE;
-            limelightProcessing.setPipeline(3);
-            launcherTargetID=20;
-        }
-    }
+
     public String getSide(){
-        if (side == Side.RED) {
-            return "red";
-        }else{
-            return "blue";
-        }
+       return RobotConfig.alliance.name();
     }
 
     @Override
@@ -314,9 +295,6 @@ public class Turret implements Subsystem {
         // rotateMotor.getRawTicks() this could be interesting?
         //set current position to 0
         lunchMotor.setPower(0);
-        if(side==null){
-            side = Side.BLUE;
-        }
         limelightProcessing.initLimelight(defaultPipeline); //initialize limelight processing
 
 
@@ -342,6 +320,11 @@ public class Turret implements Subsystem {
             rotateMotor.setPower(0);
             lunchMotor.setPower(0);
             return;
+        }
+        if (limelightProcessing.processTargets().isEmpty()){
+            TeleOpProgram.antiCrazy.setBlind(true);
+        } else  {
+            TeleOpProgram.antiCrazy.setBlind(false);
         }
 
         limelightProcessing.processTargets();
