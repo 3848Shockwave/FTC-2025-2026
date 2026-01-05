@@ -1,10 +1,5 @@
 package org.firstinspires.ftc.teamcode.Subsystems;
 
-
-import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.distanceperImulseForLunch;
-import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.flyWheelDiameter;
-import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.gravityAccalerationValue;
-import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.motorShaftRadiusForLuncher;
 import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.ticksPerDegreeOfRotation;
 import dev.nextftc.core.commands.Command;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -97,6 +92,7 @@ public class Turret implements Subsystem {
     private Telemetry telemetry;
     private int launcherTargetID = 0;
     private double CurrentturretVelocity;
+
     public Command  RunTurret = new LambdaCommand().setStart(()->{
         if (side.equals( Side.RED)) {
             limelightProcessing.setPipeline(4);

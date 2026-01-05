@@ -24,6 +24,7 @@ import dev.nextftc.ftc.components.Initializer;
 import dev.nextftc.hardware.driving.DriverControlledCommand;
 import dev.nextftc.hardware.impl.MotorEx;
 
+import org.firstinspires.ftc.teamcode.Subsystems.PTO;
 import org.firstinspires.ftc.teamcode.Subsystems.Sort;
 import org.firstinspires.ftc.teamcode.Subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
@@ -53,6 +54,7 @@ public class TeleOpProgram extends NextFTCOpMode {
         addComponents(
                 new SubsystemComponent(Sort.INSTANCE),
                 new SubsystemComponent(Turret.INSTANCE),
+                new SubsystemComponent(PTO.INSTANCE),
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
                 new PedroComponent(Constants::createFollower)
@@ -118,7 +120,10 @@ public class TeleOpProgram extends NextFTCOpMode {
 
         Button y_button = button(() -> gamepad1.y)
                 .whenBecomesTrue(Turret.INSTANCE::resetRotateMotorPosition);
-
+        Button dpad_left = button(() -> gamepad1.x)
+                .whenBecomesTrue(PTO.INSTANCE.engage);
+        Button dpad_right = button(() -> gamepad1.b)
+                .whenBecomesTrue(PTO.INSTANCE.lift);
         Button dpad_up = button(() -> gamepad1.dpad_up)
                 .whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
         Button dpad_down = button(() -> gamepad1.dpad_down)

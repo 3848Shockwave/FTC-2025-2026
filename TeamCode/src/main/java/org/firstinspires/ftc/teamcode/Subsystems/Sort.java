@@ -50,8 +50,7 @@ public class Sort implements Subsystem {
     public Command cycleLeftAuto = null;
     boolean stopCommand = false;
 //    public boolean intakeOn = true;
-//    public Command switchIntake = null;
-
+//    public Command switchIntake = null
     HardwareMap hardwareMap;
     Telemetry telemetry;
     DigitalChannel limitSwitch;
