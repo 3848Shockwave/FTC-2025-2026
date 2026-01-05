@@ -52,6 +52,7 @@ public class Turret implements Subsystem {
     public final LimelightProcessing limelightProcessing = new LimelightProcessing(); //Creates limelight processing object
     //all the hardware goes here
     private final MotorEx lunchMotor = new MotorEx("lunchMotor").brakeMode();
+    private final MotorEx lunchMotor2 = new MotorEx("lunchMotor2").brakeMode(); // Added the second launch motor
 
     /*
     launcher angle(horizontal): 65  degrees
@@ -92,7 +93,6 @@ public class Turret implements Subsystem {
     private Telemetry telemetry;
     private int launcherTargetID = 0;
     private double CurrentturretVelocity;
-
     public Command  RunTurret = new LambdaCommand().setStart(()->{
         if (side.equals( Side.RED)) {
             limelightProcessing.setPipeline(4);
@@ -110,6 +110,7 @@ public class Turret implements Subsystem {
                 .basicFF(Lkf)
                 .build();
         lunchMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        lunchMotor2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT); // Set behavior for the second motor
 
     }).setUpdate(()->{
         controlSystemRotate = ControlSystem.builder()
@@ -143,14 +144,18 @@ public class Turret implements Subsystem {
         double power = controlSystemRotate.calculate(
                 new KineticState(rotateMotor.getCurrentPosition())
         );
+        // We can still use the first motor for velocity feedback, as they should be running in sync.
         double Lpower = controlSystemTurret.calculate(new KineticState(lunchMotor.getCurrentPosition(),lunchMotor.getVelocity()));
         //clamp power to limit during testing
         rotateMotor.setPower(power);
+        // Set the same power for both launch motors
         lunchMotor.setPower(Lpower);
+        lunchMotor2.setPower(Lpower);
     }).setInterruptible(true).setStop(interrupted->
     {
         rotateMotor.setPower(0);
         lunchMotor.setPower(0);
+        lunchMotor2.setPower(0); // Stop the second motor
         turretRunning=false;
     }).requires(this,turretRunning).setName("RunTurret");
     public InstantCommand StopTurret = new InstantCommand(() -> {
@@ -166,6 +171,7 @@ public class Turret implements Subsystem {
     }
 
     public double getTurretVelocity(){
+        // The velocity of either motor should be representative
         return lunchMotor.getVelocity();
     }
 
@@ -241,6 +247,7 @@ public class Turret implements Subsystem {
 
     public void setLaunchMotorSpeed(double power){
         lunchMotor.setPower(power);
+        lunchMotor2.setPower(power); // Set power for the second motor as well
     }
 
         /*
@@ -307,6 +314,7 @@ public class Turret implements Subsystem {
                 .basicFF(Lkf)
                 .build();
         lunchMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        lunchMotor2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT); // Set behavior for the second motor
 
         int defaultPipeline = 3; //set default pipeline
         // initialization logic (runs on init)
@@ -314,6 +322,7 @@ public class Turret implements Subsystem {
         // rotateMotor.getRawTicks() this could be interesting?
         //set current position to 0
         lunchMotor.setPower(0);
+        lunchMotor2.setPower(0); // Initialize second motor to zero power
         if(side==null){
             side = Side.BLUE;
         }
@@ -342,6 +351,7 @@ public class Turret implements Subsystem {
             // add detected tags to telemetry
             rotateMotor.setPower(0);
             lunchMotor.setPower(0);
+            lunchMotor2.setPower(0); // Stop the second motor during init loop
             return;
         }
 
@@ -372,6 +382,7 @@ public class Turret implements Subsystem {
                 new KineticState(rotateMotor.getCurrentPosition())
         );
 
+        // Calculate power based on one motor's state, assuming they are in sync
         double Lpower = controlSystemTurret.calculate(new KineticState(lunchMotor.getCurrentPosition(),lunchMotor.getVelocity()));
         ActiveOpMode.telemetry().addData("Calculated Power",controlSystemTurret.calculate(lunchMotor.getState()));
         ActiveOpMode.telemetry().addData("LaunchMotorState", lunchMotor.getState().component2());
@@ -390,7 +401,9 @@ public class Turret implements Subsystem {
         lunchMotor.getVelocity();
         //clamp power to limit during testing
         rotateMotor.setPower(power);
+        // Apply the same calculated power to both launch motors
         lunchMotor.setPower(Lpower);
+        lunchMotor2.setPower(Lpower);
 
 
 
