@@ -96,15 +96,15 @@ public class ELCEncoderTeleOp extends NextFTCOpMode {
 
 
         double servoPower =servoControl.calculate(encoder.getState());
-        if(servoPower>1){
-            servoPower=1;
+        if(servoPower>0.3){
+            servoPower=0.3;
         }
-        if(servoPower<-1){
-            servoPower=-1;
+        if(servoPower<-0.3){
+            servoPower=-0.3;
         }
         if(!servoControl.isWithinTolerance(new KineticState(4))) {
-            servoRight.setPower(-servoPower);
-            servoLeft.setPower(-servoPower);
+            servoRight.setPower(servoPower);
+            servoLeft.setPower(servoPower);
             telemetryManager.update(telemetry);
         }
 
