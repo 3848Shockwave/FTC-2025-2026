@@ -51,6 +51,7 @@ public class AprilTagRangeCalculator extends NextFTCOpMode {
                 telemetryManager.addData("TargetX", limelightProcessing.getTargetInfo().getTargetX());
                 telemetryManager.addData("Current Area", currentArea);
                 telemetryManager.addData("Average Area", averageArea);
+                telemetryManager.addData("Calculated Distance", limelightProcessing.getTargetInfo().getDistance());
                 telemetryManager.addData("Min Area", minArea);
                 telemetryManager.addData("Max Area", maxArea);
                 telemetryManager.update(telemetry);

@@ -67,7 +67,6 @@ public class TeleOpProgram extends NextFTCOpMode {
     private boolean launchToggle = false;
 
 
-
     private TelemetryManager telemetryManager;
 
     @Override
@@ -96,7 +95,6 @@ public class TeleOpProgram extends NextFTCOpMode {
                 sideSelected=true;
             });
         }
-        Sort.INSTANCE.checkColors();
        // Turret.INSTANCE.limelightProcessing.getLimelightStatus();
     }
 
@@ -143,20 +141,20 @@ public class TeleOpProgram extends NextFTCOpMode {
         Button left_bumper = button(() -> gamepad1.left_bumper)
                 .whenBecomesTrue(Sort.INSTANCE.cycleLeft);
 
-
         Button right_bumper = button(() -> gamepad1.right_bumper)
                 .whenBecomesTrue(Sort.INSTANCE.cycleRight);
 
-        Button right_trigger = range(() -> gamepad1.right_trigger)
-                .greaterThan(0.2)
-                .whenBecomesTrue(Sort.INSTANCE.loadGreen);
+//        Button right_trigger = range(() -> gamepad1.right_trigger)
+//                .greaterThan(0.2)
+//                .whenBecomesTrue(Sort.INSTANCE.loadGreen)
+//                .whenBecomesFalse(Sort.INSTANCE.shootGreen);
 
-        Button left_trigger = range(() -> gamepad1.left_trigger)
-                .greaterThan(0.2)
-                .whenBecomesTrue(Sort.INSTANCE.loadPurp);
+//        Button left_trigger = range(() -> gamepad1.left_trigger)
+//                .greaterThan(0.2)
+//                .whenBecomesTrue(Sort.INSTANCE.loadPurp)
+//                .whenBecomesFalse(Sort.INSTANCE.shootPurp);
 
-
-
+//        intake.setPower(1);
 
         follower().startTeleopDrive();
 
