@@ -29,14 +29,11 @@ public class ELCEncoderTeleOp extends NextFTCOpMode {
     private CRServo servoRight;
     private CRServo servoLeft;
     KineticState newGoal ;
-    double goal = 0.0;
+    double goal = 260;
     Button aButton;
-    public static double kp = 0.00;
+    public static double kp = 0.01;
     public static double ki = 0.00;
-    public static double kd = 0.00;
-    public static double kv = 0.00;
-    public static double ka = 0.00;
-    public static double ks = 0.00;
+    public static double kd = 0.00001;
 
     public ELCEncoderTeleOp() {
         addComponents(
@@ -56,13 +53,13 @@ public class ELCEncoderTeleOp extends NextFTCOpMode {
         servoControl   = dev.nextftc.control.ControlSystem.builder()
                 .posPid(kp,ki,kd)
                 .posFilter(filter->filter.lowPass(.3))
-                .basicFF(kv,ka,ks)
                 .build();
+        servoControl.setGoal( new KineticState(goal));
         aButton.whenBecomesTrue(()->{
             servoControl   = dev.nextftc.control.ControlSystem.builder()
                     .posPid(kp,ki,kd)
                     .posFilter(filter->filter.lowPass(.3))
-                    .basicFF(kv,ka,ks)
+
                     .build();
             goal+=120;
             servoControl.setGoal( new KineticState(goal));
