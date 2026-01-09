@@ -18,20 +18,20 @@ import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 public class PTO implements Subsystem {
     public static final PTO INSTANCE = new PTO();
 
-    private final MotorEx leftFront = new MotorEx("front_left");
-    private final MotorEx rightFront = new MotorEx("front_right");
+    private final MotorEx leftBack = new MotorEx("back_left");
+    private final MotorEx rightBack = new MotorEx("back_right");
 
-    private final ServoEx linearServoL = new ServoEx("linearServoL");
-    private final ServoEx linearServoR = new ServoEx("linearServoR");
+    private final ServoEx linearServoL = new ServoEx("liftServoLeft");
+    private final ServoEx linearServoR = new ServoEx("liftServoRight");
 
     public Command engageL = new SetPosition(linearServoL, 0.5).requires(linearServoL);
     public Command engageR = new SetPosition(linearServoR, 0.5).requires(linearServoR);
     public Command engage = new ParallelGroup(engageL, engageR).requires(linearServoL, linearServoR);
 
-    public Command liftR = new SetPower(rightFront, 1);
-    public Command liftL = new SetPower(leftFront, 1);
-
-    public Command lift = new ParallelGroup(liftL, liftR).requires(leftFront, rightFront);
+    public Command liftLeft = new SetPower(leftBack, 1.0);
+    public Command liftRight = new SetPower(rightBack, -1.0);
+    public Command stopLeft = new SetPower(leftBack, 0.0);
+    public Command stopRight = new SetPower(rightBack, 0.0);
 
 
 

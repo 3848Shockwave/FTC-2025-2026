@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.Subsystems;
 
+import org.jetbrains.annotations.NotNull;
+
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.utility.LambdaCommand;
 import dev.nextftc.core.subsystems.SubsystemGroup;
@@ -29,12 +31,14 @@ public class MySubsystemGroup extends SubsystemGroup {
 
     public Command shootInPattern = new LambdaCommand()
             .setStart(() -> {
-                for (int i = 0; i < targetColor.length; i++){
-                    if (containsColor(targetColor[i])){
-                        if (targetColor[i] == Sort.Color.PURPLE){
-                            Sort.INSTANCE.shootPurp.schedule();
-                        }else{
-                            Sort.INSTANCE.shootGreen.schedule();
+                if(targetColor!=null) {
+                    for (Sort.Color color : targetColor) {
+                        if (containsColor(color)) {
+                            if (color == Sort.Color.PURPLE) {
+                                Sort.INSTANCE.shootPurp.schedule();
+                            } else {
+                                Sort.INSTANCE.shootGreen.schedule();
+                            }
                         }
                     }
                 }
@@ -42,7 +46,7 @@ public class MySubsystemGroup extends SubsystemGroup {
             .setUpdate(()->{
                 colorWeHave = Sort.INSTANCE.getColorArray();
             })
-            .requires(this)
+            .requires(this,targetColor.length>0)
             .setInterruptible(false)
             .named("shootInPattern");
 
