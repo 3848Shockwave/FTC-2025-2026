@@ -4,21 +4,15 @@ import static dev.nextftc.bindings.Bindings.button;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
 import dev.nextftc.control.ControlSystem;
 
-import org.firstinspires.ftc.teamcode.Subsystems.Sort;
-import org.firstinspires.ftc.teamcode.Subsystems.Turret;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ELCEncoderV2;
 
 import dev.nextftc.bindings.Button;
 import dev.nextftc.control.KineticState;
-import dev.nextftc.control.builder.FilterBuilder;
 import dev.nextftc.core.components.BindingsComponent;
-import dev.nextftc.core.components.SubsystemComponent;
-import dev.nextftc.extensions.pedro.PedroComponent;
 
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;

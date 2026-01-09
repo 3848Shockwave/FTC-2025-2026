@@ -12,6 +12,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotStateTracker;
+import org.firstinspires.ftc.teamcode.Subsystems.MySubsystemGroup;
 import org.firstinspires.ftc.teamcode.Subsystems.Sort;
 import org.firstinspires.ftc.teamcode.Subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
@@ -57,6 +58,7 @@ public class TeleOpProgram extends NextFTCOpMode {
         addComponents(
                 new SubsystemComponent(Sort.INSTANCE),
                 new SubsystemComponent(Turret.INSTANCE),
+                new SubsystemComponent(MySubsystemGroup.INSTANCE),
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
                 new PedroComponent(Constants::createFollower)
@@ -123,7 +125,7 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     @Override
     public void onStartButtonPressed() {
-        Button a_button = button(() -> gamepad1.a).whenBecomesTrue(() ->
+        Button dpad_up = button(() -> gamepad1.dpad_up).whenBecomesTrue(() ->
         {
             motorToggle = !motorToggle;
             if (motorToggle) {
@@ -133,7 +135,7 @@ public class TeleOpProgram extends NextFTCOpMode {
             }
         });
 
-        Button b_button = button(() -> gamepad1.b).whenBecomesTrue(() ->
+        Button dpad_down = button(() -> gamepad1.dpad_down).whenBecomesTrue(() ->
         {
             motorToggle = !motorToggle;
             if (motorToggle) {
@@ -143,16 +145,15 @@ public class TeleOpProgram extends NextFTCOpMode {
             }
         });
 
-
+        Button x_button = button(() -> gamepad1.x)
+                .whenBecomesTrue(Sort.INSTANCE.shootGreen);
         Button y_button = button(() -> gamepad1.y)
-                .whenBecomesTrue(Turret.INSTANCE::resetRotateMotorPosition);
-
-        Button dpad_up = button(() -> gamepad1.dpad_up)
                 .whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
-        Button dpad_down = button(() -> gamepad1.dpad_down)
-                .whenBecomesTrue(Sort.INSTANCE.tripleLaunch);
-        //   Button dpad_left = button(() -> gamepad1.dpad_left).whenBecomesTrue(()->{follower().setPose(new Pose(0,0,0));});
-        // Button dpad_down = button(() -> gamepad1.dpad_down).whenBecomesTrue(Sort.INSTANCE.cycleRight.thenWait(.5).then(Sort.INSTANCE.cycleLeft));
+        Button a_button = button(() -> gamepad1.a)
+                .whenBecomesTrue(MySubsystemGroup.INSTANCE.shootInPattern);
+        Button b_button = button(() -> gamepad1.b)
+                .whenBecomesTrue(Sort.INSTANCE.shootPurp);
+
 
         Button left_bumper = button(() -> gamepad1.left_bumper)
                 .whenBecomesTrue(Sort.INSTANCE.cycleLeft);
@@ -160,33 +161,13 @@ public class TeleOpProgram extends NextFTCOpMode {
         Button right_bumper = button(() -> gamepad1.right_bumper)
                 .whenBecomesTrue(Sort.INSTANCE.cycleRight);
 
-//        Button right_trigger = range(() -> gamepad1.right_trigger)
-//                .greaterThan(0.2)
-//                .whenBecomesTrue(Sort.INSTANCE.loadGreen)
-//                .whenBecomesFalse(Sort.INSTANCE.shootGreen);
 
-//        Button left_trigger = range(() -> gamepad1.left_trigger)
-//                .greaterThan(0.2)
-//                .whenBecomesTrue(Sort.INSTANCE.loadPurp)
-//                .whenBecomesFalse(Sort.INSTANCE.shootPurp);
-
-//        intake.setPower(1);
 
         follower().startTeleopDrive();
 
         DriverControlledCommand driverControlled = new PedroDriverControlled(
                 Gamepads.gamepad1().leftStickY().negate(),
                 Gamepads.gamepad1().leftStickX().negate(),
-//                range(() -> {
-//                    double v = Gamepads.gamepad1().leftStickY().get();
-//                    double exp = Math.copySign(Math.pow(Math.abs(v), 3.6), v);
-//                    return -exp;
-//                }),
-//                range(() -> {
-//                    double v = Gamepads.gamepad1().leftStickX().get();
-//                    double exp = Math.copySign(Math.pow(Math.abs(v), 3.6), v);
-//                    return -exp;
-//                }),
                 Gamepads.gamepad1().rightStickX().negate(),
                 false
         );
