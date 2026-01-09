@@ -25,7 +25,7 @@ public class LimelightProcessing {
     //Pipeline 0: AprilTag ID 21
     public void initLimelight(int pipeline) {
         hardwareMap = ActiveOpMode.hardwareMap();
-       // limelight.updateRobotOrientation(); //This may be iffy, It needs to ge the yaw of the robot to do pose localization
+        // limelight.updateRobotOrientation(); //This may be iffy, It needs to ge the yaw of the robot to do pose localization
         telemetry = ActiveOpMode.telemetry();
         targetsDetected = new ArrayList<>();
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
@@ -87,8 +87,6 @@ public class LimelightProcessing {
                 }
             }
 
-        }
-        else {
             targetsDetected.clear(); // Clear all targets if no valid results
         }
         return targetsDetected;
@@ -112,11 +110,11 @@ public class LimelightProcessing {
     public Pose3D getPose(){
         Pose3D pose;
         limelight.updateRobotOrientation(PedroComponent.follower().getHeading());
-       LLResult result = limelight.getLatestResult();
-       if (!result.isValid()) {
-        pose = null;
-       }
-       pose = limelight.getLatestResult().getBotpose_MT2();
+        LLResult result = limelight.getLatestResult();
+        if (!result.isValid()) {
+            pose = null;
+        }
+        pose = limelight.getLatestResult().getBotpose_MT2();
         return pose;
     }
 
@@ -151,4 +149,3 @@ public class LimelightProcessing {
         return output.toString();
     }
 }
-

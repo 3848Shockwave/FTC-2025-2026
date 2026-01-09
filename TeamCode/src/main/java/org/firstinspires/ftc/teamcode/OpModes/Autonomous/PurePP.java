@@ -69,10 +69,10 @@ public class PurePP extends NextFTCOpMode {
             return new SequentialGroup(
                     Sort.INSTANCE.pushBallAndBack,
                     new FollowPath(scorePreload).and(Turret.INSTANCE.RunTurret).thenWait(.5),
-                    Sort.INSTANCE.pushBallAndBack,
+                    Sort.INSTANCE.pushBallAndBack.thenWait(.6),
                     new Delay(.45),
                     Sort.INSTANCE.cycleLeftAuto.endAfter(.9),
-                    Sort.INSTANCE.pushBallAndBack,
+                    Sort.INSTANCE.pushBallAndBack.thenWait(.6),
                     new Delay(.45),
                     Sort.INSTANCE.cycleLeftAuto.endAfter(.9),
                     Sort.INSTANCE.pushBallAndBack.thenWait(.2),
@@ -81,10 +81,10 @@ public class PurePP extends NextFTCOpMode {
                     new FollowPath(moveToPick0).and(Sort.INSTANCE.positiveIntake),
                     new Delay(.3),
                     new FollowPath(moveBackToScore0).and(Sort.INSTANCE.positiveIntake).thenWait(.6),
-                    Sort.INSTANCE.pushBallAndBack,
+                    Sort.INSTANCE.pushBallAndBack.thenWait(.6),
                     new Delay(.45),
                     Sort.INSTANCE.cycleLeftAuto.endAfter(.9),
-                    Sort.INSTANCE.pushBallAndBack,
+                    Sort.INSTANCE.pushBallAndBack.thenWait(.6),
                     new Delay(.45),
                     Sort.INSTANCE.cycleLeftAuto.endAfter(.9),
                     Sort.INSTANCE.pushBallAndBack.thenWait(.2),
@@ -93,13 +93,10 @@ public class PurePP extends NextFTCOpMode {
                     new FollowPath(moveToPick1).and(Sort.INSTANCE.positiveIntake),
                     new Delay(.35),
                     new FollowPath(moveBackToScore1).and(Sort.INSTANCE.positiveIntake).afterTime(.2).then(Sort.INSTANCE.negativeIntake),
-                    Sort.INSTANCE.pushBallAndBack,
+                    Sort.INSTANCE.pushBallAndBack.thenWait(.6),
                     new Delay(.45),
                     Sort.INSTANCE.cycleLeftAuto.endAfter(.9),
-                    Sort.INSTANCE.pushBallAndBack,
-                    new Delay(.45),
-                    Sort.INSTANCE.cycleLeftAuto.endAfter(.9),
-                    Sort.INSTANCE.pushBallAndBack.thenWait(.2)
+                    Sort.INSTANCE.pushBallAndBack.thenWait(.6)
 
             );
         }

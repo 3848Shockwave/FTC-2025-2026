@@ -4,7 +4,6 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
-import org.firstinspires.ftc.teamcode.Subsystems.Drive;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 import dev.nextftc.core.commands.Command;
@@ -34,7 +33,6 @@ import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 /*
     1.nin auto there always have 2 purple 1 green, no matter the pattern
     2.load all 3 at once and check the inner 2 balls
-
  */
 @Autonomous(name = "NextFTC Autonomous Program Java")
 public class AutonomousProgram extends NextFTCOpMode {
@@ -79,7 +77,6 @@ public class AutonomousProgram extends NextFTCOpMode {
 
     public AutonomousProgram(){
         addComponents(
-                new SubsystemComponent(Drive.INSTANCE),
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
                 new PedroComponent(Constants::createFollower)
