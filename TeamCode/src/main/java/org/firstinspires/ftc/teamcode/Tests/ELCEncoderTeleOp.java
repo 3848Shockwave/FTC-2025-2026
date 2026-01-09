@@ -20,17 +20,14 @@ import dev.nextftc.ftc.components.BulkReadComponent;
 @TeleOp(name="ELC Encoder V2 Test", group="Sensor")
 public class ELCEncoderTeleOp extends NextFTCOpMode {
     private ELCEncoderV2 encoder;
-    private CRServo servoRight;
-    private CRServo servoLeft;
+    private CRServo spindexRight;
+    private CRServo spindexLeft;
     KineticState newGoal ;
-    double goal = 0.0;
+    double goal = 260;
     Button aButton;
-    public static double kp = 0.00;
+    public static double kp = 0.01;
     public static double ki = 0.00;
-    public static double kd = 0.00;
-    public static double kv = 0.00;
-    public static double ka = 0.00;
-    public static double ks = 0.00;
+    public static double kd = 0.00001;
 
     public ELCEncoderTeleOp() {
         addComponents(
@@ -44,19 +41,19 @@ public class ELCEncoderTeleOp extends NextFTCOpMode {
     public void onInit() {
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
         aButton = button(() -> gamepad1.a);
-        encoder = new ELCEncoderV2(hardwareMap, "encoder");
-        servoRight = hardwareMap.get(CRServo.class, "servo_right");
-        servoLeft = hardwareMap.get(CRServo.class, "servo_left");
+        encoder = new ELCEncoderV2(hardwareMap, "spindexEncoder");
+        spindexRight = hardwareMap.get(CRServo.class, "spindexRight");
+        spindexLeft = hardwareMap.get(CRServo.class, "spindexLeft");
         servoControl   = dev.nextftc.control.ControlSystem.builder()
                 .posPid(kp,ki,kd)
                 .posFilter(filter->filter.lowPass(.3))
-                .basicFF(kv,ka,ks)
                 .build();
+        servoControl.setGoal( new KineticState(goal));
         aButton.whenBecomesTrue(()->{
             servoControl   = dev.nextftc.control.ControlSystem.builder()
                     .posPid(kp,ki,kd)
                     .posFilter(filter->filter.lowPass(.3))
-                    .basicFF(kv,ka,ks)
+
                     .build();
             goal+=120;
             servoControl.setGoal( new KineticState(goal));
@@ -97,8 +94,8 @@ public class ELCEncoderTeleOp extends NextFTCOpMode {
             servoPower=-0.3;
         }
         if(!servoControl.isWithinTolerance(new KineticState(4))) {
-            servoRight.setPower(servoPower);
-            servoLeft.setPower(servoPower);
+            spindexRight.setPower(servoPower);
+            spindexLeft.setPower(servoPower);
             telemetryManager.update(telemetry);
         }
 

@@ -1,10 +1,6 @@
 package org.firstinspires.ftc.teamcode.Subsystems;
 
 
-import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.distanceperImulseForLunch;
-import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.flyWheelDiameter;
-import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.gravityAccalerationValue;
-import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.motorShaftRadiusForLuncher;
 import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.ticksPerDegreeOfRotation;
 import dev.nextftc.core.commands.Command;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -48,7 +44,9 @@ public class Turret implements Subsystem {
 
     public final LimelightProcessing limelightProcessing = new LimelightProcessing(); //Creates limelight processing object
     //all the hardware goes here
-    private final MotorEx lunchMotor = new MotorEx("lunchMotor").brakeMode();
+    private final MotorEx launchMotorLeft = new MotorEx("launchMotorLeft").brakeMode();
+    private final MotorEx launchMotorRight = new MotorEx("launchMotorLeft").brakeMode();
+
 
     /*
     launcher angle(horizontal): 65  degrees
@@ -105,7 +103,7 @@ public class Turret implements Subsystem {
                 .velPid(Lkp, Lki, Lkd)
                 .basicFF(Lkf)
                 .build();
-        lunchMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        launchMotorLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
     }).setUpdate(()->{
         controlSystemRotate = ControlSystem.builder()
@@ -139,14 +137,14 @@ public class Turret implements Subsystem {
         double power = controlSystemRotate.calculate(
                 new KineticState(rotateMotor.getCurrentPosition())
         );
-        double Lpower = controlSystemTurret.calculate(new KineticState(lunchMotor.getCurrentPosition(),lunchMotor.getVelocity()));
+        double Lpower = controlSystemTurret.calculate(new KineticState(launchMotorLeft.getCurrentPosition(), launchMotorLeft.getVelocity()));
         //clamp power to limit during testing
         rotateMotor.setPower(power);
-        lunchMotor.setPower(Lpower);
+        launchMotorLeft.setPower(Lpower);
     }).setInterruptible(true).setStop(interrupted->
     {
         rotateMotor.setPower(0);
-        lunchMotor.setPower(0);
+        launchMotorLeft.setPower(0);
         turretRunning=false;
     }).requires(this,turretRunning).setName("RunTurret");
     public InstantCommand StopTurret = new InstantCommand(() -> {
@@ -168,7 +166,7 @@ public class Turret implements Subsystem {
     }
 
     public double getTurretVelocity(){
-        return lunchMotor.getVelocity();
+        return launchMotorLeft.getVelocity();
     }
 
     public void resetRotateMotorPosition() {
@@ -235,7 +233,7 @@ public class Turret implements Subsystem {
         }
     }
     public void setLaunchMotorSpeed(double power){
-        lunchMotor.setPower(power);
+        launchMotorLeft.setPower(power);
     }
 
         /*
@@ -287,14 +285,14 @@ public class Turret implements Subsystem {
                 .velPid(Lkp, Lki, Lkd)
                 .basicFF(Lkf)
                 .build();
-        lunchMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        launchMotorLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
         int defaultPipeline = 3; //set default pipeline
         // initialization logic (runs on init)
         rotateMotor.setPower(0);
         // rotateMotor.getRawTicks() this could be interesting?
         //set current position to 0
-        lunchMotor.setPower(0);
+        launchMotorLeft.setPower(0);
         limelightProcessing.initLimelight(defaultPipeline); //initialize limelight processing
 
 
@@ -318,7 +316,7 @@ public class Turret implements Subsystem {
             limelightProcessing.processTargets();
             // add detected tags to telemetry
             rotateMotor.setPower(0);
-            lunchMotor.setPower(0);
+            launchMotorLeft.setPower(0);
             return;
         }
         if (limelightProcessing.processTargets().isEmpty()){
@@ -356,9 +354,9 @@ public class Turret implements Subsystem {
         );
 
 
-        double Lpower = controlSystemTurret.calculate(new KineticState(lunchMotor.getCurrentPosition(),lunchMotor.getVelocity()));
-        ActiveOpMode.telemetry().addData("Calculated Power",controlSystemTurret.calculate(lunchMotor.getState()));
-        ActiveOpMode.telemetry().addData("LaunchMotorState", lunchMotor.getState().component2());
+        double Lpower = controlSystemTurret.calculate(new KineticState(launchMotorLeft.getCurrentPosition(), launchMotorLeft.getVelocity()));
+        ActiveOpMode.telemetry().addData("Calculated Power",controlSystemTurret.calculate(launchMotorLeft.getState()));
+        ActiveOpMode.telemetry().addData("LaunchMotorState", launchMotorLeft.getState().component2());
         ActiveOpMode.telemetry().addData("PowerRotate",power);
         ActiveOpMode.telemetry().addData("Power Turret",Lpower);
         ActiveOpMode.telemetry().addData("calcLVelocity", Lvelocity);
@@ -369,10 +367,11 @@ public class Turret implements Subsystem {
         }
 
         ActiveOpMode.telemetry().addData("Goal Velocity", controlSystemTurret.getGoal().component2());
-        lunchMotor.getVelocity();
+        launchMotorLeft.getVelocity();
         //clamp power to limit during testing
         rotateMotor.setPower(power);
-        lunchMotor.setPower(Lpower);
+        launchMotorLeft.setPower(Lpower);
+        launchMotorRight.setPower(Lpower);
 
 
 

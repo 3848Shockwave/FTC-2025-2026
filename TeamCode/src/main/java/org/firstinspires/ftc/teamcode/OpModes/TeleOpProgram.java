@@ -47,7 +47,7 @@ public class TeleOpProgram extends NextFTCOpMode {
     public static double power = 1.0;
     public static double xOffset = 0.0;
     private final boolean launchToggle = false;
-    MotorEx intake = new MotorEx("intake").brakeMode();
+    MotorEx intake = new MotorEx("intakeMotor").brakeMode();
     Button x_button, y_button, a_button, b_button;
     Pose startPose = null;
     private boolean motorToggle = false;
