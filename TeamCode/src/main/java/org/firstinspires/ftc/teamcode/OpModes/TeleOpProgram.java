@@ -21,6 +21,7 @@ import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.extensions.pedro.PedroDriverControlled;
+import dev.nextftc.ftc.ActiveOpMode;
 import dev.nextftc.ftc.Gamepads;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
@@ -82,35 +83,36 @@ public class TeleOpProgram extends NextFTCOpMode {
                             "\nPress B for RED GOAL SIDE autonomous");
             telemetryManager.update(telemetry);
 
+            if (ActiveOpMode.opModeInInit()) {
+                x_button.whenBecomesTrue(() -> {
+                    RobotConfig.alliance = RobotConfig.Alliance.BLUE;
+                    RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.FARSIDEBLUE;
+                    telemetryManager.addData("Start Selected:", " BLUE FAR SIDE autonomous");
+                    telemetryManager.update(telemetry);
 
-            x_button.whenBecomesTrue(() -> {
-                RobotConfig.alliance = RobotConfig.Alliance.BLUE;
-                RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.FARSIDEBLUE;
-                telemetryManager.addData("Start Selected:", " BLUE FAR SIDE autonomous");
-                telemetryManager.update(telemetry);
+                });
+                y_button.whenBecomesTrue(() -> {
+                    RobotConfig.alliance = RobotConfig.Alliance.BLUE;
+                    RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.GOALSIDEBLUE;
+                    telemetryManager.addData("Start Selected:", " BLUE GOAL SIDE autonomous");
+                    telemetryManager.update(telemetry);
 
-            });
-            y_button.whenBecomesTrue(() -> {
-                RobotConfig.alliance = RobotConfig.Alliance.BLUE;
-                RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.GOALSIDEBLUE;
-                telemetryManager.addData("Start Selected:", " BLUE GOAL SIDE autonomous");
-                telemetryManager.update(telemetry);
+                });
+                a_button.whenBecomesTrue(() -> {
+                    RobotConfig.alliance = RobotConfig.Alliance.RED;
+                    RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.FARSIDERED;
+                    telemetryManager.addData("Start Selected:", " RED FAR SIDE autonomous");
+                    telemetryManager.update(telemetry);
 
-            });
-            a_button.whenBecomesTrue(() -> {
-                RobotConfig.alliance = RobotConfig.Alliance.RED;
-                RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.FARSIDERED;
-                telemetryManager.addData("Start Selected:", " RED FAR SIDE autonomous");
-                telemetryManager.update(telemetry);
+                });
+                b_button.whenBecomesTrue(() -> {
+                    RobotConfig.alliance = RobotConfig.Alliance.RED;
+                    RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.GOALSIDERED;
+                    telemetryManager.addData("Start Selected:", " RED GOAL SIDE autonomous");
+                    telemetryManager.update(telemetry);
 
-            });
-            b_button.whenBecomesTrue(() -> {
-                RobotConfig.alliance = RobotConfig.Alliance.RED;
-                RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.GOALSIDERED;
-                telemetryManager.addData("Start Selected:", " RED GOAL SIDE autonomous");
-                telemetryManager.update(telemetry);
-
-            });
+                });
+            }
         }
         antiCrazy.updateLastPose(RobotConfig.finalMeasuredPose);
         follower().setPose(startPose);
