@@ -27,7 +27,6 @@ import dev.nextftc.hardware.positionable.SetPositions;
 
 public class Sort implements Subsystem {
     public static final Sort INSTANCE = new Sort();
-
     MotorEx intake = new MotorEx("intake").brakeMode();
     //1,425.1 at output, 2:1 gear ratio, thus 2850.2 at motor shaft
 
@@ -44,6 +43,10 @@ public class Sort implements Subsystem {
     public Command shootPurp = null;
 
     boolean stopCommand = false;
+
+
+
+
 
     HardwareMap hardwareMap;
     Telemetry telemetry;
@@ -62,6 +65,7 @@ public class Sort implements Subsystem {
     public enum Color {
         GREEN, PURPLE, EMPTY;
     }
+
     private int tolerance = 0;
     private Color[] colorArray = {Color.EMPTY, Color.EMPTY, Color.EMPTY};
 
@@ -100,8 +104,8 @@ public class Sort implements Subsystem {
         return isPressed;
     }
 
-    public String getColorArray() {
-        return colorArray[0] + ", " + colorArray[1] + ", " + colorArray[2];
+    public Color[] getColorArray() {
+      return colorArray;
     }
 
     public void checkColors() {
