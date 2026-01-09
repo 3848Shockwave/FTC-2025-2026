@@ -1,19 +1,16 @@
 package org.firstinspires.ftc.teamcode.Subsystems;
 
-import androidx.core.widget.TintableCheckedTextView;
-
 import com.bylazar.telemetry.TelemetryManager;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ELCEncoderV2;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ifElseCommand;
-
-import java.time.Duration;
 
 import dev.nextftc.control.ControlSystem;
 import dev.nextftc.control.KineticState;
@@ -27,14 +24,13 @@ import dev.nextftc.ftc.ActiveOpMode;
 import dev.nextftc.hardware.impl.MotorEx;
 import dev.nextftc.hardware.impl.ServoEx;
 import dev.nextftc.hardware.positionable.SetPositions;
-import dev.nextftc.hardware.powerable.SetPower;
 
 public class Sort implements Subsystem {
     public static final Sort INSTANCE = new Sort();
-    private final MotorEx turningPlate = new MotorEx("spindexMotor").brakeMode();
+
     MotorEx intake = new MotorEx("intake").brakeMode();
     //1,425.1 at output, 2:1 gear ratio, thus 2850.2 at motor shaft
-    private final double ticksPerSlot = (2850.2) / 3;
+
     public Command pushBall = null;
     public Command backPosition = null;
     public ifElseCommand pushBallAndBack = null;
@@ -46,14 +42,16 @@ public class Sort implements Subsystem {
     public Command loadPurp = null;
     public Command shootGreen = null;
     public Command shootPurp = null;
-    public Command overRideShoot = null;
-    public Command cycleLeftAuto = null;
+
     boolean stopCommand = false;
 
     HardwareMap hardwareMap;
     Telemetry telemetry;
     DigitalChannel limitSwitch;
     ServoEx servoLeft;
+     ELCEncoderV2 spindexEncoder;
+     CRServo spindexRight;
+     CRServo spindexLeft;
 
     ServoEx servoRight;
     ColorSensor colorSensorL1;
@@ -67,18 +65,17 @@ public class Sort implements Subsystem {
     private int tolerance = 0;
     private Color[] colorArray = {Color.EMPTY, Color.EMPTY, Color.EMPTY};
 
-    double maxPowerSpindex =.75;
-    private double kp = 0.00;
-    private double ki = 0.0;
-    private double kd = 0.0;
-    private double kf = 0.0;
+    public static double kp = 0.01;
+    public static double ki = 0.00;
+    public static double kd = 0.00001;
+    double goal = 260;
     private ElapsedTime timer = new ElapsedTime();
-    private ControlSystem controlSystemSpindex = null;
-    private ControlSystem controlSystem;
+
     private TelemetryManager telemetryManager;
     private double targetPosition = 0;
     private double powerToMove;
     private boolean intakeOn = true;
+    ControlSystem spindexControl = null;
     public InstantCommand stopIntake = new InstantCommand(() -> {
         intakeOn = false;
 
@@ -90,16 +87,13 @@ public class Sort implements Subsystem {
     }
 
     public double getCurrentPosition() {
-        return turningPlate.getCurrentPosition();
+        return spindexEncoder.getTotalDegrees();
     }
 
     public double getTargetPosition() {
         return targetPosition;
     }
 
-    public double getPowerToMove() {
-        return powerToMove;
-    }
 
     public boolean getSpinLimitSwitchStatus() {
         boolean isPressed = limitSwitch.getState(); // Assuming active low
@@ -108,9 +102,6 @@ public class Sort implements Subsystem {
 
     public String getColorArray() {
         return colorArray[0] + ", " + colorArray[1] + ", " + colorArray[2];
-    }
-    public void resetSpindexPosition() {
-        turningPlate.setCurrentPosition(0.0);
     }
 
     public void checkColors() {
@@ -147,16 +138,22 @@ public class Sort implements Subsystem {
     public void initialize() {
         hardwareMap = ActiveOpMode.hardwareMap();
         telemetry = ActiveOpMode.telemetry();
-        limitSwitch = hardwareMap.get(DigitalChannel.class, "spinLimitSwitch");
-        Servo sLeft = hardwareMap.get(Servo.class, "servoLeft");
+        Servo sLeft = hardwareMap.get(Servo.class, "scissorLeft");
         servoLeft = new ServoEx(sLeft);
-        Servo sRight = hardwareMap.get(Servo.class, "servoRight");
+        Servo sRight = hardwareMap.get(Servo.class, "scissorRight");
         servoRight = new ServoEx(sRight);
         colorSensorL1 = hardwareMap.get(ColorSensor.class, "colorSensorL1");
         colorSensorL2 = hardwareMap.get(ColorSensor.class, "colorSensorL2");
         colorSensorR1 = hardwareMap.get(ColorSensor.class, "colorSensorR1");
         colorSensorR2 = hardwareMap.get(ColorSensor.class, "colorSensorR2");
-
+        spindexEncoder = new ELCEncoderV2(hardwareMap, "spindexEncoder");
+        spindexRight = hardwareMap.get(CRServo.class, "spindexRight");
+        spindexLeft = hardwareMap.get(CRServo.class, "spindexLeft");
+        spindexControl = dev.nextftc.control.ControlSystem.builder()
+                .posPid(kp,ki,kd)
+                .posFilter(filter->filter.lowPass(.3))
+                .build();
+        spindexControl.setGoal( new KineticState(goal));
         pushBall = new SetPositions(
                 servoLeft.to(-1.0),
                 servoRight.to(1.0)
@@ -169,103 +166,48 @@ public class Sort implements Subsystem {
 
         cycleLeft = new LambdaCommand()
                 .setStart(() -> {
-                    timer.reset();
-                    timer.startTime();
-                    controlSystemSpindex = ControlSystem.builder()
-                            .posPid(0.01265, ki, 0.000012)
-                            .basicFF(0.0001)
-                            .build();
-                    double goalPosition = targetPosition - ticksPerSlot;
-                    targetPosition = goalPosition;
-                    controlSystemSpindex.setGoal(new KineticState(goalPosition, 20));
+                    goal+=120;
+                    spindexControl.setGoal( new KineticState(goal));
+
                 })
                 .setUpdate(() -> {
-                    powerToMove = controlSystemSpindex.calculate(
-                            new KineticState(turningPlate.getCurrentPosition(), turningPlate.getVelocity())
-                    );
-                    if (powerToMove > maxPowerSpindex) {
-                        powerToMove = maxPowerSpindex;
-                    } else if (powerToMove < -maxPowerSpindex) {
-                        powerToMove = -maxPowerSpindex;
+                    spindexEncoder.updateRotations();
+                    double servoPower = spindexControl.calculate(spindexEncoder.getState());
+                    if(servoPower>0.3){
+                        servoPower=0.3;
                     }
-                    turningPlate.setPower(powerToMove);
+                    if(servoPower<-0.3){
+                        servoPower=-0.3;
+                    }
+                    if(!spindexControl.isWithinTolerance(new KineticState(4))) {
+                        spindexRight.setPower(servoPower);
+                        spindexLeft.setPower(servoPower);
+                    }
                 })
-                .setIsDone(() ->
-                        limitSwitch.getState()&&
-                                (controlSystemSpindex.isWithinTolerance(new KineticState(3))))
-                .setStop(interrupted -> {
-                    turningPlate.setPower(0);
-                    colorArray[2] = colorArray[0];
-                    checkColors();
-                    // telemetryManager.addData("color array: ", getColorArray());
-                    timer.reset();
-                })
+                .setIsDone(()-> spindexControl.isWithinTolerance(new KineticState(4)))
                 .named("cycleLeft");
-
-        cycleLeftAuto= new LambdaCommand().setStart(() -> {
-                    timer.reset();
-                    timer.startTime();
-                    controlSystemSpindex = ControlSystem.builder()
-                            .posPid(0.01265, ki, 0.000012)
-                            .basicFF(0.0001)
-                            .build();
-                    double goalPosition = targetPosition - ticksPerSlot;
-                    targetPosition = goalPosition;
-                    controlSystemSpindex.setGoal(new KineticState(goalPosition, 20));
-                })
-                .setUpdate(() -> {
-                    powerToMove = controlSystemSpindex.calculate(
-                            new KineticState(turningPlate.getCurrentPosition(), turningPlate.getVelocity())
-                    );
-                    if (powerToMove > maxPowerSpindex) {
-                        powerToMove = maxPowerSpindex;
-                    } else if (powerToMove < -maxPowerSpindex) {
-                        powerToMove = -maxPowerSpindex;
-                    }
-                    turningPlate.setPower(powerToMove);
-
-                })
-                .setIsDone(() ->
-                        limitSwitch.getState()&&
-                                (controlSystemSpindex.isWithinTolerance(new KineticState(10))))
-                .setStop(interrupted -> {
-                    turningPlate.setPower(0);
-                    timer.reset();
-                }).setInterruptible(true).setName("cycleLeftAuto");
-
 
         cycleRight = new LambdaCommand()
                 .setStart(() -> {
-                    controlSystemSpindex = ControlSystem.builder()
-                            .posPid(0.015, ki, 0.000012)
-                            .basicFF(kf)
-                            .build();
-                    double goalPosition = targetPosition + ticksPerSlot;
-                    targetPosition = goalPosition;
-                    controlSystemSpindex.setGoal(new KineticState(goalPosition, 20));
+                    goal-=120;
+                    spindexControl.setGoal( new KineticState(goal));
+
                 })
                 .setUpdate(() -> {
-                    powerToMove = controlSystemSpindex.calculate(
-                            turningPlate.getState()
-                    );
-                    if (powerToMove > maxPowerSpindex) {
-                        powerToMove = maxPowerSpindex;
-                    } else if (powerToMove < -maxPowerSpindex) {
-                        powerToMove = -maxPowerSpindex;
+                    spindexEncoder.updateRotations();
+                    double servoPower = spindexControl.calculate(spindexEncoder.getState());
+                    if(servoPower>0.3){
+                        servoPower=0.3;
                     }
-                    turningPlate.setPower(powerToMove);
+                    if(servoPower<-0.3){
+                        servoPower=-0.3;
+                    }
+                    if(!spindexControl.isWithinTolerance(new KineticState(4))) {
+                        spindexRight.setPower(servoPower);
+                        spindexLeft.setPower(servoPower);
+                    }
                 })
-                .setIsDone(() ->
-                        limitSwitch.getState()&&
-                                (controlSystemSpindex.isWithinTolerance(new KineticState(3))))
-                .setStop(interrupted -> {
-                    turningPlate.setPower(0);
-                    colorArray[2] = colorArray[1];
-                    checkColors();
-                    // telemetryManager.addData("color array: ", getColorArray());
-                    timer.reset();
-                })
-                .requires(this)
+                .setIsDone(()-> spindexControl.isWithinTolerance(new KineticState(4)))
                 .named("cycleRight");
 
         pushBallAndBack = new ifElseCommand(
@@ -282,18 +224,10 @@ public class Sort implements Subsystem {
         ).thenWait(0.45).then(new SetPositions(
                 servoLeft.to(1.0),
                 servoRight.to(-1.0)
-        )).requires(turningPlate.getVelocity()<10.0)
+        )).requires(spindexControl.isWithinTolerance(new KineticState(4)))
         );
 
-        overRideShoot = new InstantCommand(()->{
-            new SetPositions(
-                    servoLeft.to(-1.0),
-                    servoRight.to(1.0)
-            ).thenWait(0.45).then(new SetPositions(
-                    servoLeft.to(1.0),
-                    servoRight.to(-1.0)
-            ));
-        }).setName("overRideShoot");
+
 
         positiveIntake= new LambdaCommand().setStart(()-> {
                     intake.setPower(1.0);
@@ -312,10 +246,10 @@ public class Sort implements Subsystem {
         tripleLaunch = new SequentialGroup(
                 pushBallAndBack,
                 new Delay(.45),
-                cycleLeftAuto.endAfter(.9),
+                cycleLeft.endAfter(.9),
                 pushBallAndBack,
                 new Delay(.45),
-                cycleLeftAuto.endAfter(.9),
+                cycleLeft.endAfter(.9),
                 pushBallAndBack.thenWait(.2)
         );
 
