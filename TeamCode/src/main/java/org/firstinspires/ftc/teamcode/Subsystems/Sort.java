@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ELCEncoderV2;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ifElseCommand;
 
 import dev.nextftc.core.commands.Command;
@@ -23,7 +24,7 @@ public class Sort implements Subsystem {
     public static final Sort INSTANCE = new Sort();
 
     MotorEx intake = new MotorEx("intake").brakeMode();
-
+    ELCEncoderV2 spindexEncoder = null;
     ServoEx spindexRight;
     ServoEx spindexLeft;
 
@@ -77,6 +78,7 @@ public class Sort implements Subsystem {
     public void initialize() {
         hardwareMap = ActiveOpMode.hardwareMap();
         telemetry = ActiveOpMode.telemetry();
+        spindexEncoder = new ELCEncoderV2(ActiveOpMode.hardwareMap(),"spindexEncoder");
 
         servoLeft = new ServoEx(hardwareMap.get(Servo.class, "scissorLeft"));
         servoRight = new ServoEx(hardwareMap.get(Servo.class, "scissorRight"));
@@ -100,7 +102,7 @@ public class Sort implements Subsystem {
                                     servoRight.to(-1.0)
                             )).schedule();
                         }
-                ).named("pushBallAndBack");
+                ).named("pushBallAndBack").requires(Math.abs(spindexEncoder.computeVelocity(spindexEncoder.getTotalDegrees()))<0.1);
 
         // Core Rotation Logic
         // Rotate Left (Index + 1)
@@ -237,6 +239,7 @@ public class Sort implements Subsystem {
     public void periodic() {
         checkColors();
         updateServo();
+        spindexEncoder.updateRotations();
     }
 
     public void checkColors() {
