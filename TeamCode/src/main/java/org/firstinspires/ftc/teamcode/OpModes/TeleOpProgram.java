@@ -40,11 +40,6 @@ public class TeleOpProgram extends NextFTCOpMode {
     MotorEx intake = new MotorEx("intake").brakeMode();
 
 
-
-
-
-
-
     private boolean sideSelected = false;
     public static double kp =0.004;
     public static double ki = 0.004;
@@ -62,7 +57,7 @@ public class TeleOpProgram extends NextFTCOpMode {
                 );
     }
 
-
+    Button x_button, b_button;
     private boolean motorToggle = false;
     private boolean launchToggle = false;
 
@@ -71,6 +66,8 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     @Override
     public void onInit() {
+        x_button = button(() -> gamepad1.x);
+        b_button = button(() -> gamepad1.b);
        // follower().setPose(startPose);
         Turret.INSTANCE.resetRotateMotorPosition();
         intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -78,21 +75,25 @@ public class TeleOpProgram extends NextFTCOpMode {
         telemetryManager.addData("Select Alliance","");
         telemetryManager.update(telemetry);
         if(ActiveOpMode.opModeInInit()&&!sideSelected) {
-            Button x_button = button(() -> gamepad1.x).whenBecomesTrue(() ->{
-                Turret.INSTANCE.setSide("blue");
-                telemetryManager.addData("Alliance: ","Blue");
-                telemetryManager.update(telemetry);
-                follower().setPose(BstartPose);
-                sideSelected=true;
+           x_button.whenBecomesTrue(() ->{
+               if(opModeInInit()) {
+                   Turret.INSTANCE.setSide("blue");
+                   telemetryManager.addData("Alliance: ", "Blue");
+                   telemetryManager.update(telemetry);
+                   follower().setPose(BstartPose);
+                   sideSelected = true;
+               }
             });
 
-            Button b_button = button(() -> gamepad1.b).whenBecomesTrue(() ->
+             b_button.whenBecomesTrue(() ->
             {
-                Turret.INSTANCE.setSide("red");
-                telemetryManager.addData("Alliance: ","Red");
-                telemetryManager.update(telemetry);
-                follower().setPose(RstartPose);
-                sideSelected=true;
+                if(opModeInInit()) {
+                    Turret.INSTANCE.setSide("red");
+                    telemetryManager.addData("Alliance: ", "Red");
+                    telemetryManager.update(telemetry);
+                    follower().setPose(RstartPose);
+                    sideSelected = true;
+                }
             });
         }
        // Turret.INSTANCE.limelightProcessing.getLimelightStatus();
@@ -110,7 +111,7 @@ public class TeleOpProgram extends NextFTCOpMode {
             }
         });
 
-        Button b_button2 = button(() -> gamepad1.b).whenBecomesTrue(()->
+         b_button.whenBecomesTrue(()->
         {
             motorToggle = !motorToggle;
             if (motorToggle) {
@@ -119,7 +120,7 @@ public class TeleOpProgram extends NextFTCOpMode {
                 intake.setPower(0);
             }
         });
-        Button x_button2 = button(() -> gamepad1.b).whenBecomesTrue(()->
+         x_button.whenBecomesTrue(()->
         {
             if(Turret.INSTANCE.getSide()=="blue"){
                 follower().setPose(BstartPose);
@@ -209,6 +210,8 @@ public class TeleOpProgram extends NextFTCOpMode {
         telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
         telemetryManager.addData("Alliance",Turret.INSTANCE.getSide());
         telemetryManager.addData("turretVelocity",Turret.INSTANCE.getTurretVelocity());
+        telemetryManager.addData("turretCalcVelocity",Turret.INSTANCE.getLaunchCalcSpeed());
+
        // telemetryManager.addData("desiredVelocity",newVelocity);
         telemetryManager.update(telemetry);
 

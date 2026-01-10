@@ -370,10 +370,10 @@ public class Sort implements Subsystem {
         tripleLaunch = new SequentialGroup(
                 pushBallAndBack,
                 new Delay(.45),
-                cycleLeftAuto.endAfter(.9),
+                cycleLeftAuto.endAfter(1.1),
                 pushBallAndBack,
                 new Delay(.45),
-                cycleLeftAuto.endAfter(.9),
+                cycleLeftAuto.endAfter(1.1),
                 pushBallAndBack.thenWait(.2)
         );
 

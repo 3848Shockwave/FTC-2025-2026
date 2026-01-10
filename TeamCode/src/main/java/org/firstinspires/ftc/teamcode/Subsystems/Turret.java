@@ -216,13 +216,21 @@ public class Turret implements Subsystem {
         limelightProcessing.processTargets();
         if (!limelightProcessing.processTargets().isEmpty()) {
             double distance = limelightProcessing.getTargetInfo().getDistance();
-            Lvelocity= 219.6943 * Math.pow(distance,0.361185);//in cm
+            Lvelocity =
+                    1.76197e-9 * Math.pow(distance, 5)
+                    +( -0.00000127185 * Math.pow(distance, 4))+
+                    (0.000264251 * Math.pow(distance, 3))
+                    +(-0.00562191* Math.pow(distance, 2))
+                    + 996.67782;
             controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
         }
         else{
             Lvelocity= 1345;
             controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
         }
+    }
+    public double getLaunchCalcSpeed(){
+        return Lvelocity;
     }
     public void setLaunchMotorSpeed(double power){
         lunchMotor.setPower(power);
@@ -337,7 +345,14 @@ public class Turret implements Subsystem {
         ActiveOpMode.telemetry().addData("RunningLoop","");
         // periodic logic (runs every loop)
         if (nextTurretPosition <= maxPosition && nextTurretPosition >= minPosition) {
-            controlSystemRotate.setGoal(new KineticState(nextTurretPosition, 50));
+            if(!limelightProcessing.processTargets().isEmpty()){
+                controlSystemRotate.setGoal(new KineticState(nextTurretPosition, 50));
+            }
+            else{
+                controlSystemRotate.setGoal(new KineticState(250, 50));
+            }
+
+
         } else if (rotateMotor.getCurrentPosition() < minPosition) {
             controlSystemRotate.setGoal(new KineticState(minPosition, 50));
 
@@ -345,7 +360,9 @@ public class Turret implements Subsystem {
             controlSystemRotate.setGoal(new KineticState(maxPosition, 50));
 
         } else {
-            controlSystemRotate.setGoal(new KineticState(rotateMotor.getCurrentPosition(), 50));
+
+                controlSystemRotate.setGoal(new KineticState(rotateMotor.getCurrentPosition(), 50));
+
         }
 
 
@@ -360,6 +377,8 @@ public class Turret implements Subsystem {
         ActiveOpMode.telemetry().addData("Calculated Power",controlSystemTurret.calculate(lunchMotor.getState()));
         ActiveOpMode.telemetry().addData("LaunchMotorState", lunchMotor.getState().component2());
         ActiveOpMode.telemetry().addData("PowerRotate",power);
+        ActiveOpMode.telemetry().addData("calcPosition", calculatePosition());
+        ActiveOpMode.telemetry().addData("CurrentPos", rotateMotor.getCurrentPosition());
         ActiveOpMode.telemetry().addData("Power Turret",Lpower);
         ActiveOpMode.telemetry().addData("calcLVelocity", Lvelocity);
         if(!limelightProcessing.processTargets().isEmpty()) {
