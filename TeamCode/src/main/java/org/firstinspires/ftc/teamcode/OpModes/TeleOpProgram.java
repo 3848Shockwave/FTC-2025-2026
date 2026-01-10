@@ -77,7 +77,7 @@ public class TeleOpProgram extends NextFTCOpMode {
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
         telemetryManager.addData("Select Alliance","");
         telemetryManager.update(telemetry);
-        if(!ActiveOpMode.isStarted()&&!sideSelected) {
+        if(ActiveOpMode.opModeInInit()&&!sideSelected) {
             Button x_button = button(() -> gamepad1.x).whenBecomesTrue(() ->{
                 Turret.INSTANCE.setSide("blue");
                 telemetryManager.addData("Alliance: ","Blue");
@@ -110,13 +110,22 @@ public class TeleOpProgram extends NextFTCOpMode {
             }
         });
 
-        Button b_button = button(() -> gamepad1.b).whenBecomesTrue(()->
+        Button b_button2 = button(() -> gamepad1.b).whenBecomesTrue(()->
         {
             motorToggle = !motorToggle;
             if (motorToggle) {
                 intake.setPower(-1);
             } else {
                 intake.setPower(0);
+            }
+        });
+        Button x_button2 = button(() -> gamepad1.b).whenBecomesTrue(()->
+        {
+            if(Turret.INSTANCE.getSide()=="blue"){
+                follower().setPose(BstartPose);
+            }
+            else if(Turret.INSTANCE.getSide()=="red"){
+                follower().setPose(RstartPose);
             }
         });
 
@@ -130,12 +139,10 @@ public class TeleOpProgram extends NextFTCOpMode {
 //            }
 //        });
         Button y_button = button(() -> gamepad1.y)
-                .whenBecomesTrue(Turret.INSTANCE::resetRotateMotorPosition);
+                .whenBecomesTrue(Sort.INSTANCE.tripleLaunch);
 
         Button dpad_up = button(() -> gamepad1.dpad_up)
                 .whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
-        Button dpad_down = button(() -> gamepad1.dpad_down)
-                .whenBecomesTrue(Sort.INSTANCE.tripleLaunch);
        // Button dpad_down = button(() -> gamepad1.dpad_down).whenBecomesTrue(Sort.INSTANCE.cycleRight.thenWait(.5).then(Sort.INSTANCE.cycleLeft));
 
         Button left_bumper = button(() -> gamepad1.left_bumper)
