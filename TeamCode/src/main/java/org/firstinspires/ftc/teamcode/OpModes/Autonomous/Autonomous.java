@@ -51,7 +51,7 @@ public class Autonomous extends NextFTCOpMode {
     public Autonomous() {
         addComponents(
                 new SubsystemComponent(Sort.INSTANCE),
-                new SubsystemComponent(Turret.INSTANCE),
+                //new SubsystemComponent(Turret.INSTANCE),
                 BindingsComponent.INSTANCE,
                 new PedroComponent(Constants::createFollower),
                 BulkReadComponent.INSTANCE
@@ -104,6 +104,7 @@ public class Autonomous extends NextFTCOpMode {
             telemetry.addData("Auto Selected:", "RED GOAL SIDE autonomous");
             telemetry.update();
         });
+        follower = Constants.createFollower(hardwareMap);
     }
 
     @Override
@@ -226,7 +227,7 @@ public class Autonomous extends NextFTCOpMode {
     private Command runRedScoreCommands() {
         return new SequentialGroup(
                 Sort.INSTANCE.pushBallAndBack,
-                new FollowPath(scorePreload).and(Turret.INSTANCE.RunTurret).thenWait(.5),
+              //  new FollowPath(scorePreload).and(Turret.INSTANCE.RunTurret).thenWait(.5),
                 Sort.INSTANCE.pushBallAndBack,
                 new Delay(.45),
                 Sort.INSTANCE.cycleLeft.endAfter(.9),
@@ -305,7 +306,7 @@ public class Autonomous extends NextFTCOpMode {
     private Command runBlueScoreCommands() {
         return new SequentialGroup(
                 Sort.INSTANCE.pushBallAndBack,
-                new FollowPath(scorePreload).and(Turret.INSTANCE.RunTurret).thenWait(.5),
+               // new FollowPath(scorePreload).and(Turret.INSTANCE.RunTurret).thenWait(.5),
                 Sort.INSTANCE.pushBallAndBack,
                 new Delay(.45),
                 Sort.INSTANCE.cycleLeft.endAfter(.9),

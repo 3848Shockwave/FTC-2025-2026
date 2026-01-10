@@ -249,13 +249,13 @@ public class Sort implements Subsystem {
         int blueNumR = (colorSensorR1.blue() + colorSensorR2.blue()) / 2;
 
         // Color determination logic
-        if (greenNumR > 100 && blueNumR > 100) {
+        if (greenNumR > 100 && blueNumR > 50) {
             colorArray[0] = (greenNumR > blueNumR) ? Color.GREEN : Color.PURPLE;
         } else {
             colorArray[0] = Color.EMPTY;
         }
 
-        if (greenNumL > 100 && blueNumL > 100) {
+        if (greenNumL > 100 && blueNumL > 50) {
             colorArray[1] = (greenNumL > blueNumL) ? Color.GREEN : Color.PURPLE;
         } else {
             colorArray[1] = Color.EMPTY;
