@@ -27,7 +27,7 @@ public class Constants {
             ;
 
     public static MecanumConstants driveConstants = new MecanumConstants()
-            .maxPower(0.2)
+            .maxPower(1)
             .rightFrontMotorName("front_right")
             .rightRearMotorName("back_right")
             .leftRearMotorName("back_left")
@@ -37,8 +37,8 @@ public class Constants {
             .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
             .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
             .useBrakeModeInTeleOp(true)
-            .xVelocity(86.56)
-            .yVelocity(70.83)
+            .xVelocity(67.149)
+            .yVelocity(57.76)
 
             ;
 
@@ -46,7 +46,7 @@ public class Constants {
 
     public static PinpointConstants localizerConstants = new PinpointConstants()
             .forwardPodY(0.0)//inches for now?
-            .strafePodX(2.5)//inches for now?
+            .strafePodX(14)//inches for now?
             .distanceUnit(DistanceUnit.INCH)
 
             .hardwareMapName("pinpoint")

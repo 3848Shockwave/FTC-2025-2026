@@ -41,7 +41,7 @@ public class Sort implements Subsystem {
     // 0.0 -> Position A
     // 0.45 -> Position C
     // 0.92 -> Position B
-    private double[] POSITIONS = {0.048, 0.51, 0.972};
+    private double[] POSITIONS = {0.045, 0.494, 0.979};
     private int currentIndex = 0; // Current slot index (0, 1, or 2)
 
 
@@ -54,7 +54,7 @@ public class Sort implements Subsystem {
 
     // === Commands ===
     public Command pushBall = null;
-    public ifElseCommand pushBallAndBack = null;
+    public LambdaCommand pushBallAndBack = null;
     public LambdaCommand positiveIntake = null;
     public LambdaCommand negativeIntake = null;
     public InstantCommand cycleLeft ;
@@ -90,17 +90,17 @@ public class Sort implements Subsystem {
         spindexLeft = new ServoEx(hardwareMap.get(Servo.class, "spindexLeft"));
 
 
-        pushBallAndBack = new ifElseCommand(
-                () -> true,
-                new SetPositions(
-                        servoLeft.to(-1.0),
-                        servoRight.to(1.0)
-                ).thenWait(0.4).then(new SetPositions(
-                        servoLeft.to(1.0),
-                        servoRight.to(-1.0)
-                )),
-                new InstantCommand(()->{})
-        );
+        pushBallAndBack = new LambdaCommand()
+                .setStart( ()-> {
+                            new SetPositions(
+                                    servoLeft.to(-1.0),
+                                    servoRight.to(1.0)
+                            ).thenWait(0.4).then(new SetPositions(
+                                    servoLeft.to(1.0),
+                                    servoRight.to(-1.0)
+                            )).schedule();
+                        }
+                ).named("pushBallAndBack");
 
         // Core Rotation Logic
         // Rotate Left (Index + 1)
@@ -187,6 +187,7 @@ public class Sort implements Subsystem {
     }
 
 
+
      // direction 1 for clockwise (Next slot), -1 for counter-clockwise (Previous slot)
      private void moveSpindex(int direction) {
          currentIndex += direction;
@@ -213,11 +214,10 @@ public class Sort implements Subsystem {
              colorArray[2] = temp;
          }
 
-         // 3. Move Hardware
-         updateServo();
      }
 
-    private void updateServo() {
+
+    public void updateServo() {
         double targetPos = POSITIONS[currentIndex];
         spindexRight.setPosition(targetPos);
         spindexLeft.setPosition(targetPos);
@@ -236,6 +236,7 @@ public class Sort implements Subsystem {
     @Override
     public void periodic() {
         checkColors();
+        updateServo();
     }
 
     public void checkColors() {

@@ -5,6 +5,7 @@ import com.pedropathing.geometry.Pose;
 public final class RobotConfig {
     public static Alliance alliance = null;
     public static Pose finalMeasuredPose = null;
+    public static double finalMeasuredSpindexPosition = 0;
     public static AutonomousStartEndPoses autonomousStartEndPoses = null;
     private RobotConfig() {
     }

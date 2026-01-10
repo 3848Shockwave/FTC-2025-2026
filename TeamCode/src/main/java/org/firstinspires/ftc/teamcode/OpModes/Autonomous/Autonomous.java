@@ -146,6 +146,7 @@ public class Autonomous extends NextFTCOpMode {
     @Override
     public void onStop() {
         RobotConfig.finalMeasuredPose = follower.getPose();
+        RobotConfig.finalMeasuredSpindexPosition = Sort.INSTANCE.getServoPosition();
         super.onStop();
     }
 

@@ -19,7 +19,7 @@ public class LimelightProcessing {
     HardwareMap hardwareMap;
     Telemetry telemetry;
     ArrayList<TargetInfo> targetsDetected = new ArrayList<>();
-    int currentPipeline = 0;
+    int currentPipeline = 4;
     private Limelight3A limelight;
 
     //Pipeline 0: AprilTag ID 21
@@ -58,6 +58,7 @@ public class LimelightProcessing {
     }
 
     public ArrayList<TargetInfo> processTargets() {
+        targetsDetected.clear();
         LLResult result = limelight.getLatestResult();
         if (result.isValid()) {
             List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
@@ -87,7 +88,7 @@ public class LimelightProcessing {
                 }
             }
 
-            targetsDetected.clear(); // Clear all targets if no valid results
+           // targetsDetected.clear(); // Clear all targets if no valid results
         }
         return targetsDetected;
     }
