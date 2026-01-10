@@ -105,6 +105,7 @@ public class ELCEncoderV2 {
 
         totalDegrees += delta;
         lastDegrees = currentDegrees;
+        lastPosition = currentDegrees;
     }
     public double computeVelocity(double currentPosition) {
         long now = System.nanoTime();

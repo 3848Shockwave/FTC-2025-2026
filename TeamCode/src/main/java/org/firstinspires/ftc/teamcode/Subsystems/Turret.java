@@ -337,11 +337,13 @@ public class Turret implements Subsystem {
                 .basicFF(Lkf)
                 .build();
         rotateEncoder.updateRotations();
-        limelightProcessing.processTargets();
+        if(ActiveOpMode.isStarted()) {
+            limelightProcessing.processTargets();
+        }
 
         // remove after tuning, no need to rebuild control system every loop
-        if (!ActiveOpMode.isStarted()) {
-            limelightProcessing.processTargets();
+        if (!ActiveOpMode.isStarted()&&ActiveOpMode.opModeInInit()) {
+           //limelightProcessing.processTargets();
             // add detected tags to telemetry
             rotateMotor.setPower(0);
             launchMotorLeft.setPower(0);

@@ -175,13 +175,13 @@ public class Sort implements Subsystem {
 
         tripleLaunch = new SequentialGroup(
                 pushBallAndBack,
-                new Delay(0.45),
+
                 cycleLeft,
-                new Delay(0.3), // Wait for servo to arrive at new position
+                 // Wait for servo to arrive at new position
                 pushBallAndBack,
-                new Delay(0.45),
+
                 cycleLeft,
-                new Delay(0.3), // Wait for servo to arrive at new position
+                // Wait for servo to arrive at new position
                 pushBallAndBack
         );
 
