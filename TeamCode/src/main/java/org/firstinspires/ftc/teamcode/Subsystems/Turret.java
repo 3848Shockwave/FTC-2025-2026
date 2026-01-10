@@ -36,7 +36,7 @@ public class Turret implements Subsystem {
     private static double maxPower =1.0;
     private double xOffset = 0.0;
 
-
+    boolean testing = false;
     private static double Lvelocity = 1345;
     private double testingVelocity = 1345;
     private static double Lkp =0.0004;
@@ -221,16 +221,19 @@ public class Turret implements Subsystem {
         return -rotateEncoder.getTotalDegrees()/5.625;
     }
     public void calculateLaunchStrength() {
-
+        if(testing){
+            Lvelocity = testingVelocity;
+            controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
+            return;
+        }
         limelightProcessing.processTargets();
         if (!limelightProcessing.processTargets().isEmpty()) {
             double distance = limelightProcessing.getTargetInfo().getDistance();
             //Lvelocity= 219.6943 * Math.pow(distance,0.361185);//in cm
-            Lvelocity =(1.76197e-9* Math.pow(distance, 5))
-                    +( -0.00000127185 * Math.pow(distance, 4))+
-                     (0.000264251 * Math.pow(distance, 3))
-                    +(-0.00562191* Math.pow(distance, 2))
-                    + 996.67782;
+            Lvelocity =(0.0000300785* Math.pow(distance, 3))
+                    +( -0.0226083 * Math.pow(distance, 2))+
+                     (7.13468 * distance)
+                    + 589.24871;
             //Lvelocity = setTurretVelocity;// for manual control
             controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
         }
@@ -420,6 +423,9 @@ public class Turret implements Subsystem {
        Lkf = f;
        testingVelocity = speed;
 
+    }
+    public void setTestSpeed(double speed){
+        testingVelocity = speed;
     }
 
 

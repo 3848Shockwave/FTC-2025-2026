@@ -59,6 +59,7 @@ public static double Lkp =0.0004;
     public static double Lki =  0.004;
     public static double Lkd =  0.0088;
     public static double Lkf = 0.000452;
+    public static double speed =1345;
 
 
     public TeleOpProgram() {
@@ -266,8 +267,7 @@ public static double Lkp =0.0004;
         telemetryManager.addData("Pipeline", Turret.INSTANCE.limelightProcessing.getCurrentPipeline());
         telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
         telemetryManager.addData("turretVelocity", Turret.INSTANCE.getTurretVelocity());
-
-
+        Turret.INSTANCE.setTestSpeed(speed);
 
         telemetryManager.update(telemetry);
     }
