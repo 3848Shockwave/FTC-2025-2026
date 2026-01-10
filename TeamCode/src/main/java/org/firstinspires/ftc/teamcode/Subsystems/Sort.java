@@ -1,19 +1,13 @@
 package org.firstinspires.ftc.teamcode.Subsystems;
 
-import com.bylazar.telemetry.TelemetryManager;
-import com.qualcomm.robotcore.hardware.CRServo;
+import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.ColorSensor;
-import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ELCEncoderV2;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ifElseCommand;
 
-import dev.nextftc.control.ControlSystem;
-import dev.nextftc.control.KineticState;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.delays.Delay;
 import dev.nextftc.core.commands.groups.SequentialGroup;
@@ -24,91 +18,224 @@ import dev.nextftc.ftc.ActiveOpMode;
 import dev.nextftc.hardware.impl.MotorEx;
 import dev.nextftc.hardware.impl.ServoEx;
 import dev.nextftc.hardware.positionable.SetPositions;
-
 public class Sort implements Subsystem {
+
     public static final Sort INSTANCE = new Sort();
+
     MotorEx intake = new MotorEx("intake").brakeMode();
-    //1,425.1 at output, 2:1 gear ratio, thus 2850.2 at motor shaft
 
-    public Command pushBall = null;
-    public Command backPosition = null;
-    public ifElseCommand pushBallAndBack = null;
-    public LambdaCommand positiveIntake = null;
-    public LambdaCommand negativeIntake = null;
-    public Command cycleLeft = null;
-    public Command cycleRight = null;
-    public Command loadGreen = null;
-    public Command loadPurp = null;
-    public Command shootGreen = null;
-    public Command shootPurp = null;
+    ServoEx spindexRight;
+    ServoEx spindexLeft;
 
-    boolean stopCommand = false;
+    ServoEx servoLeft;
+    ServoEx servoRight;
 
-
-
-
+    ColorSensor colorSensorL1, colorSensorL2;
+    ColorSensor colorSensorR1, colorSensorR2;
 
     HardwareMap hardwareMap;
     Telemetry telemetry;
 
-    ServoEx servoLeft;
-     ELCEncoderV2 spindexEncoder;
-     CRServo spindexRight;
-     CRServo spindexLeft;
+    // === Constants ===
+    // Positions defined based on Test code (A, C, B)
+    // 0.0 -> Position A
+    // 0.45 -> Position C
+    // 0.92 -> Position B
+    private double[] POSITIONS = {0.048, 0.51, 0.972};
+    private int currentIndex = 0; // Current slot index (0, 1, or 2)
 
-    ServoEx servoRight;
-    ColorSensor colorSensorL1;
-    ColorSensor colorSensorL2;
-    ColorSensor colorSensorR1;
-    ColorSensor colorSensorR2;
 
     public enum Color {
-        GREEN, PURPLE, EMPTY;
+        GREEN, PURPLE, EMPTY
     }
-
-    private int tolerance = 0;
+    // Assuming index 0 is Right side, index 1 is Left side (Adjust based on physical mounting)
     private Color[] colorArray = {Color.EMPTY, Color.EMPTY, Color.EMPTY};
-
-    public static double Spinkp = 0.002;
-    public static double Spinki = 0.000;
-    public static double Spinkd = 0.00001;
-    public static double Spinkv =0.0;
-    public static double Spinka =0.0;
-    public static double Spinks =0.0;
-    double goal = 301;
-    private ElapsedTime timer = new ElapsedTime();
-
-    private TelemetryManager telemetryManager;
-    private double targetPosition = 0;
-    private double powerToMove;
     private boolean intakeOn = true;
-    ControlSystem spindexControl = null;
-    public InstantCommand stopIntake = new InstantCommand(() -> {
-        intakeOn = false;
 
-    });
+    // === Commands ===
+    public Command pushBall = null;
+    public ifElseCommand pushBallAndBack = null;
+    public LambdaCommand positiveIntake = null;
+    public LambdaCommand negativeIntake = null;
+    public InstantCommand cycleLeft ;
+    public InstantCommand cycleRight;
+    public Command loadGreen = null;
+    public Command loadPurp = null;
+    public Command shootGreen = null;
+    public Command shootPurp = null;
     public SequentialGroup tripleLaunch = null;
 
+    public InstantCommand stopIntake = new InstantCommand(() -> {
+        intakeOn = false;
+    });
 
-    private  Sort() {
+    private Sort() {
     }
 
-    public double getCurrentPosition() {
-        return spindexEncoder.getTotalDegrees();
+    @Override
+
+    public void initialize() {
+        hardwareMap = ActiveOpMode.hardwareMap();
+        telemetry = ActiveOpMode.telemetry();
+
+        servoLeft = new ServoEx(hardwareMap.get(Servo.class, "scissorLeft"));
+        servoRight = new ServoEx(hardwareMap.get(Servo.class, "scissorRight"));
+
+        colorSensorL1 = hardwareMap.get(ColorSensor.class, "colorSensorL1");
+        colorSensorL2 = hardwareMap.get(ColorSensor.class, "colorSensorL2");
+        colorSensorR1 = hardwareMap.get(ColorSensor.class, "colorSensorR1");
+        colorSensorR2 = hardwareMap.get(ColorSensor.class, "colorSensorR2");
+
+        spindexRight = new ServoEx(hardwareMap.get(Servo.class, "spindexRight"));
+        spindexLeft = new ServoEx(hardwareMap.get(Servo.class, "spindexLeft"));
+
+
+        pushBallAndBack = new ifElseCommand(
+                () -> true,
+                new SetPositions(
+                        servoLeft.to(-1.0),
+                        servoRight.to(1.0)
+                ).thenWait(0.4).then(new SetPositions(
+                        servoLeft.to(1.0),
+                        servoRight.to(-1.0)
+                )),
+                new InstantCommand(()->{})
+        );
+
+        // Core Rotation Logic
+        // Rotate Left (Index + 1)
+        cycleLeft = (InstantCommand) new InstantCommand(() -> {
+            moveSpindex(1);
+        }).named("cycleLeft");
+
+        // Rotate Right (Index - 1)
+        cycleRight = (InstantCommand) new InstantCommand(() -> {
+            moveSpindex(-1);
+        }).named("cycleRight");
+
+
+        positiveIntake = new LambdaCommand()
+                .setStart(() -> intake.setPower(1.0))
+                .setInterruptible(true)
+                .setStop(interrupted -> intake.setPower(0.0))
+                .requires(intakeOn, this);
+
+        negativeIntake = new LambdaCommand()
+                .setStart(() -> intake.setPower(-1.0))
+                .setInterruptible(true)
+                .setStop(interrupted -> intake.setPower(0.0))
+                .requires(intakeOn, this);
+
+
+        shootGreen = new InstantCommand(() -> {
+            if (colorArray[2] == Color.GREEN) {
+                // Already in position! Fire!
+                pushBallAndBack.schedule();
+            }
+            else if (colorArray[1] == Color.GREEN) {
+                // Ball is at Left (1). Path: 1 -> 2 (Cycle Left)
+                new SequentialGroup(
+                        cycleLeft,
+                        new Delay(0.3), // Wait for servo to align
+                        pushBallAndBack
+                ).schedule();
+            }
+            else if (colorArray[0] == Color.GREEN) {
+                // Ball is at Right (0). Path: 0 -> 2 (Cycle Right)
+                // Note: 0->2 is 1 step backwards, which is faster than 2 steps forwards
+                new SequentialGroup(
+                        cycleRight,
+                        new Delay(0.3),
+                        pushBallAndBack
+                ).schedule();
+            }
+        }).named("shootGreen");
+
+        shootPurp = new InstantCommand(() -> {
+            if (colorArray[2] == Color.PURPLE) {
+                pushBallAndBack.schedule();
+            }
+            else if (colorArray[1] == Color.PURPLE) {
+                new SequentialGroup(
+                        cycleLeft,
+                        new Delay(0.3),
+                        pushBallAndBack
+                ).schedule();
+            }
+            else if (colorArray[0] == Color.PURPLE) {
+                new SequentialGroup(
+                        cycleRight,
+                        new Delay(0.3),
+                        pushBallAndBack
+                ).schedule();
+            }
+        }).named("shootPurp");
+
+        tripleLaunch = new SequentialGroup(
+                pushBallAndBack,
+                new Delay(0.45),
+                cycleLeft,
+                new Delay(0.3), // Wait for servo to arrive at new position
+                pushBallAndBack,
+                new Delay(0.45),
+                cycleLeft,
+                new Delay(0.3), // Wait for servo to arrive at new position
+                pushBallAndBack
+        );
+
+        updateServo();
     }
 
 
+     // direction 1 for clockwise (Next slot), -1 for counter-clockwise (Previous slot)
+     private void moveSpindex(int direction) {
+         currentIndex += direction;
 
+         if (currentIndex > 2) {
+             currentIndex = 0;
+         } else if (currentIndex < 0) {
+             currentIndex = 2;
+         }
 
+         //Memory Shifting (Virtual Rotation)
+         Color temp;
+         if (direction == 1) {
+             // Rotating Left (1->2, 0->1, 2->0)
+             temp = colorArray[2];
+             colorArray[2] = colorArray[1];
+             colorArray[1] = colorArray[0];
+             colorArray[0] = temp;
+         } else {
+             // Rotating Right (0->2, 1->0, 2->1)
+             temp = colorArray[0];
+             colorArray[0] = colorArray[1];
+             colorArray[1] = colorArray[2];
+             colorArray[2] = temp;
+         }
 
-    public Color[] getColorArray() {
-      return colorArray;
+         // 3. Move Hardware
+         updateServo();
+     }
+
+    private void updateServo() {
+        double targetPos = POSITIONS[currentIndex];
+        spindexRight.setPosition(targetPos);
+        spindexLeft.setPosition(targetPos);
     }
-    public ELCEncoderV2 getSpindexEncoder(){
-        return spindexEncoder;
+
+    public double getServoPosition() {
+        // Returns the last position set (e.g., 0.0, 0.45, or 0.92)
+        return spindexRight.getPosition();
     }
-    public ControlSystem getSpindexControl(){
-        return spindexControl;
+
+    public int getCurrentIndex() {
+        // Returns the logical slot number (0, 1, or 2)
+        return currentIndex;
+    }
+
+    @Override
+    public void periodic() {
+        checkColors();
     }
 
     public void checkColors() {
@@ -117,202 +244,22 @@ public class Sort implements Subsystem {
         int greenNumR = (colorSensorR1.green() + colorSensorR2.green()) / 2;
         int blueNumR = (colorSensorR1.blue() + colorSensorR2.blue()) / 2;
 
-        if (greenNumR > 100 &&  blueNumR > 100){
-            if (greenNumR > blueNumR){
-                colorArray[0] = Color.GREEN;
-            }
-            else{
-                colorArray[0] = Color.PURPLE;
-            }
-        }
-        else{
+        // Color determination logic
+        if (greenNumR > 100 && blueNumR > 100) {
+            colorArray[0] = (greenNumR > blueNumR) ? Color.GREEN : Color.PURPLE;
+        } else {
             colorArray[0] = Color.EMPTY;
         }
-        if(greenNumL > 100 && blueNumL > 100) {
-            if (greenNumL > blueNumL) {
-                colorArray[1] = Color.GREEN;
-            } else {
-                colorArray[1] = Color.PURPLE;
-            }
-        }
-        else{
+
+        if (greenNumL > 100 && blueNumL > 100) {
+            colorArray[1] = (greenNumL > blueNumL) ? Color.GREEN : Color.PURPLE;
+        } else {
             colorArray[1] = Color.EMPTY;
         }
-
     }
 
-    @Override
-    public void initialize() {
-        hardwareMap = ActiveOpMode.hardwareMap();
-        telemetry = ActiveOpMode.telemetry();
-        Servo sLeft = hardwareMap.get(Servo.class, "scissorLeft");
-        servoLeft = new ServoEx(sLeft);
-        Servo sRight = hardwareMap.get(Servo.class, "scissorRight");
-        servoRight = new ServoEx(sRight);
-        colorSensorL1 = hardwareMap.get(ColorSensor.class, "colorSensorL1");
-        colorSensorL2 = hardwareMap.get(ColorSensor.class, "colorSensorL2");
-        colorSensorR1 = hardwareMap.get(ColorSensor.class, "colorSensorR1");
-        colorSensorR2 = hardwareMap.get(ColorSensor.class, "colorSensorR2");
-        spindexEncoder = new ELCEncoderV2(hardwareMap, "spindexEncoder");
-        spindexRight = hardwareMap.get(CRServo.class, "spindexRight");
-        spindexLeft = hardwareMap.get(CRServo.class, "spindexLeft");
-        spindexControl = dev.nextftc.control.ControlSystem.builder()
-                .posPid(Spinkp,Spinki,Spinkd)
-                .basicFF(Spinkv,Spinka,Spinks)
-                .posFilter(filter->filter.lowPass(.3))
-                .build();
-        spindexControl.setGoal( new KineticState(goal));
-        pushBall = new SetPositions(
-                servoLeft.to(-1.0),
-                servoRight.to(1.0)
-        ).requires(this);
-
-        backPosition = new SetPositions(
-                servoLeft.to(1.0),
-                servoRight.to(-1.0)
-        ).requires(this);
-
-        cycleLeft = new InstantCommand(()->{
-
-            spindexControl   = dev.nextftc.control.ControlSystem.builder()
-                    .posPid(0.002,0.00000000000001,0.00001)
-                    .basicFF(0.00001,Spinka,Spinks)
-                    .posFilter(filter->filter.lowPass(.3))
-
-                    .build();
-            spindexControl.setGoal( new KineticState(goal+120));
-            goal+=120;
-        }).named("cycleLeft");
-
-        cycleRight = new InstantCommand(()->{
-
-            spindexControl  = dev.nextftc.control.ControlSystem.builder()
-                    .posPid(0.003,0.0000000000001,0.000001)
-                    .basicFF(-0.00001,Spinka,Spinks)
-                    .posFilter(filter->filter.lowPass(.3))
-                    .build();
-            spindexControl.setGoal( new KineticState(goal-120));
-            goal=goal-120;
-        }).named("cycleRight");
-
-        pushBallAndBack = new ifElseCommand(
-                () -> spindexControl.isWithinTolerance(new KineticState(4)),
-                new SetPositions(
-                        servoLeft.to(-1.0),
-                        servoRight.to(1.0)
-                ).thenWait(0.4).then(new SetPositions(
-                        servoLeft.to(1.0),
-                        servoRight.to(-1.0)
-                )),new SetPositions(
-                servoLeft.to(-1.0),
-                servoRight.to(1.0)
-        ).thenWait(0.4).then(new SetPositions(
-                servoLeft.to(1.0),
-                servoRight.to(-1.0)
-        )).requires(spindexControl.isWithinTolerance(new KineticState(4)))
-        );
-
-
-
-        positiveIntake= new LambdaCommand().setStart(()-> {
-                    intake.setPower(1.0);
-                }
-        ).setInterruptible(true).setStop(interrupted->{
-            intake.setPower(0.0);
-        }).requires(intakeOn,this);
-
-        negativeIntake= new LambdaCommand().setStart(()-> {
-                    intake.setPower(-1.0);
-                }
-        ).setInterruptible(true).setStop(interrupted->{
-            intake.setPower(0.0);
-        }).requires(intakeOn,this);
-
-        tripleLaunch = new SequentialGroup(
-                pushBallAndBack,
-                new Delay(.45),
-                cycleLeft.endAfter(.9),
-                pushBallAndBack,
-                new Delay(.45),
-                cycleLeft.endAfter(.9),
-                pushBallAndBack.thenWait(.2)
-        );
-
-
-        loadGreen = new LambdaCommand()
-                .setStart(()->{
-                    if (colorArray[0] == Color.GREEN) {
-                        cycleLeft.schedule();
-                    }
-                    else if (colorArray[1] == Color.GREEN){
-                        cycleRight.schedule();
-                    }
-                    else {
-                        return;
-                    }
-                })
-                .setName("loadgreen").requires(this);
-
-        loadPurp = new LambdaCommand()
-                .setStart(()->{
-                    if (colorArray[0] == Color.PURPLE) {
-                        cycleLeft.schedule();
-                    }
-                    else if (colorArray[1] == Color.PURPLE){
-                        cycleRight.schedule();
-                    }
-                    else {
-                        return;
-                    }
-                })
-                .setName("loadpurp").requires(this);
-
-
-        shootGreen = new LambdaCommand()
-                .setStart(()->{
-                    if (colorArray[2] == Color.GREEN){
-                        pushBallAndBack.run();
-                    }
-                }).setName("shootgreen").requires(this);
-
-        shootPurp = new LambdaCommand()
-                .setStart(()->{
-                    if (colorArray[0] == Color.PURPLE) {
-                        pushBallAndBack.run();
-                    }
-                    else if (colorArray[1] == Color.GREEN){
-                        cycleRight.run();
-                    }
-                })
-                .setName("shootpurp").requires(this);
-
-
+    // Getters
+    public Color[] getColorArray() {
+        return colorArray;
     }
-
-    @Override
-    public void periodic() {
-        checkColors();
-        spindexEncoder.updateRotations();
-        if(ActiveOpMode.isStarted()){
-            double servoPower =spindexControl.calculate(spindexEncoder.getState());
-            if(servoPower>0.2){
-                servoPower=0.2;
-            }
-            if(servoPower<-0.2){
-                servoPower=-0.2;
-            }
-
-                spindexRight.setPower(servoPower);
-                spindexLeft.setPower(servoPower);
-
-            }
-
-    }
-    public void rebuildControlSystem(double kp,double ki, double kd,double ks){
-        Spinkp=kp;
-        Spinki=ki;
-        Spinkd=kd;
-        Spinkv = ks;
-    }
-
 }
