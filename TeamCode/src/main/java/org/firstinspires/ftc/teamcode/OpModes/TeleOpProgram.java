@@ -144,6 +144,7 @@ public static double Lkp =0.0004;
 
     @Override
     public void onStartButtonPressed() {
+   //     Turret.INSTANCE.RunTurret.schedule();
 
         // 1. Move spindex Hardware
         Sort.INSTANCE.updateServo();
@@ -165,7 +166,8 @@ public static double Lkp =0.0004;
             }
         });
 
-
+         Button x = button(() -> gamepad1.x)
+                .whenBecomesTrue(Sort.INSTANCE.tripleLaunch);
 
         Button y_button = button(() -> gamepad1.y)
                 .whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);

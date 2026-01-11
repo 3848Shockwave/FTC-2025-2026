@@ -94,26 +94,26 @@ public class ELCEncoderV2 {
 
         // Detect wrap-around
         if (delta > 180) {
-            // Wrapped from 360 to 0 (going backwards)
             rotations--;
             delta -= 360;
         } else if (delta < -180) {
-            // Wrapped from 0 to 360 (going forwards)
             rotations++;
             delta += 360;
         }
 
         totalDegrees += delta;
         lastDegrees = currentDegrees;
-        lastPosition = currentDegrees;
+
     }
     public double computeVelocity(double currentPosition) {
         long now = System.nanoTime();
         double dt = (now - lastTimeNs) / 1e9; // seconds
         double vel = 0.0;
+
         if (dt > 1e-9) {
             vel = (currentPosition - lastPosition) / dt;
         }
+
         lastPosition = currentPosition;
         lastTimeNs = now;
         return vel;

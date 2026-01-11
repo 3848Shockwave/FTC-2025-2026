@@ -121,22 +121,23 @@ public class Turret implements Subsystem {
                 .build();
         limelightProcessing.processTargets();
         calculateLaunchStrength();
+
         nextTurretPosition =rotateEncoder.getTotalDegrees()+ calculatePosition();
+
+        double rawTargetPosition = rotateEncoder.getTotalDegrees() + calculatePosition();
 
 
         ActiveOpMode.telemetry().addData("RunningLoop","");
-        // periodic logic (runs every loop)
-        if (nextTurretPosition <= maxPosition && nextTurretPosition >= minPosition) {
-            controlSystemRotate.setGoal(new KineticState(nextTurretPosition, 50));
-        } else if (rotateEncoder.getTotalDegrees() < minPosition) {
-            controlSystemRotate.setGoal(new KineticState(minPosition, 50));
 
-        } else if (rotateEncoder.getTotalDegrees() > maxPosition) {
-            controlSystemRotate.setGoal(new KineticState(maxPosition, 50));
-
+        if (rawTargetPosition >= minPosition) {
+            nextTurretPosition = minPosition;
+        } else if (rawTargetPosition <= maxPosition) {
+            nextTurretPosition = maxPosition;
         } else {
-            controlSystemRotate.setGoal(new KineticState(rotateEncoder.getTotalDegrees(), 50));
+            nextTurretPosition = rawTargetPosition;
         }
+
+        controlSystemRotate.setGoal(new KineticState(nextTurretPosition, 50));
 
         double power = controlSystemRotate.calculate(
                 new KineticState(rotateEncoder.getTotalDegrees())
@@ -330,16 +331,18 @@ public class Turret implements Subsystem {
 
     @Override
     public void periodic() {
-//        controlSystemRotate = ControlSystem.builder()
-//                .posPid(Rkp, Rki, Rkd)
-//                .basicFF(Rkf)
-//                .build();
+        controlSystemRotate = ControlSystem.builder()
+                .posPid(Rkp, Rki, Rkd)
+                .basicFF(Rkf)
+                .build();
 
         controlSystemTurret = ControlSystem.builder()
                 .velPid(Lkp, Lki, Lkd)
                 .basicFF(Lkf)
                 .build();
+
         rotateEncoder.updateRotations();
+
         if(ActiveOpMode.isStarted()) {
             limelightProcessing.processTargets();
         }

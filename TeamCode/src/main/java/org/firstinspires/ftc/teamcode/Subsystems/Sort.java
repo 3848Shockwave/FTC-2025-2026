@@ -1,13 +1,11 @@
 package org.firstinspires.ftc.teamcode.Subsystems;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ELCEncoderV2;
-import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ifElseCommand;
 
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.delays.Delay;
@@ -45,6 +43,8 @@ public class Sort implements Subsystem {
     private double[] POSITIONS = {0.045, 0.494, 0.979};
     private int currentIndex = 0; // Current slot index (0, 1, or 2)
 
+    private double currentSpindexVelocity = 0.0;
+
 
     public enum Color {
         GREEN, PURPLE, EMPTY
@@ -60,8 +60,6 @@ public class Sort implements Subsystem {
     public LambdaCommand negativeIntake = null;
     public InstantCommand cycleLeft ;
     public InstantCommand cycleRight;
-    public Command loadGreen = null;
-    public Command loadPurp = null;
     public Command shootGreen = null;
     public Command shootPurp = null;
     public SequentialGroup tripleLaunch = null;
@@ -131,23 +129,22 @@ public class Sort implements Subsystem {
 
         shootGreen = new InstantCommand(() -> {
             if (colorArray[2] == Color.GREEN) {
-                // Already in position! Fire!
-                pushBallAndBack.schedule();
+                new SequentialGroup(
+                        new Delay(1),
+                        pushBallAndBack
+                ).schedule();
             }
             else if (colorArray[1] == Color.GREEN) {
-                // Ball is at Left (1). Path: 1 -> 2 (Cycle Left)
                 new SequentialGroup(
                         cycleLeft,
-                        new Delay(0.3), // Wait for servo to align
+                        new Delay(1),
                         pushBallAndBack
                 ).schedule();
             }
             else if (colorArray[0] == Color.GREEN) {
-                // Ball is at Right (0). Path: 0 -> 2 (Cycle Right)
-                // Note: 0->2 is 1 step backwards, which is faster than 2 steps forwards
                 new SequentialGroup(
                         cycleRight,
-                        new Delay(0.3),
+                        new Delay(1),
                         pushBallAndBack
                 ).schedule();
             }
@@ -155,19 +152,22 @@ public class Sort implements Subsystem {
 
         shootPurp = new InstantCommand(() -> {
             if (colorArray[2] == Color.PURPLE) {
-                pushBallAndBack.schedule();
+                new SequentialGroup(
+                        new Delay(1),
+                        pushBallAndBack
+                ).schedule();
             }
             else if (colorArray[1] == Color.PURPLE) {
                 new SequentialGroup(
                         cycleLeft,
-                        new Delay(0.3),
+                        new Delay(1),
                         pushBallAndBack
                 ).schedule();
             }
             else if (colorArray[0] == Color.PURPLE) {
                 new SequentialGroup(
                         cycleRight,
-                        new Delay(0.3),
+                        new Delay(1),
                         pushBallAndBack
                 ).schedule();
             }
@@ -175,17 +175,21 @@ public class Sort implements Subsystem {
 
         tripleLaunch = new SequentialGroup(
                 pushBallAndBack,
+                new Delay(0.6),
 
                 cycleLeft,
-                 // Wait for servo to arrive at new position
+                new Delay(1),
                 pushBallAndBack,
+                new Delay(0.6),
 
                 cycleLeft,
-                // Wait for servo to arrive at new position
+                new Delay(1),
                 pushBallAndBack
         );
 
         updateServo();
+
+
     }
 
 
@@ -217,7 +221,12 @@ public class Sort implements Subsystem {
          }
 
      }
-
+    Command waitForStableCmd = new LambdaCommand()
+            .setIsDone(this::waitToStable)
+            .named("WaitForStable");
+    public boolean waitToStable(){
+        return Math.abs(currentSpindexVelocity) == 0;
+    }
 
     public void updateServo() {
         double targetPos = POSITIONS[currentIndex];
@@ -240,6 +249,8 @@ public class Sort implements Subsystem {
         checkColors();
         updateServo();
         spindexEncoder.updateRotations();
+
+
     }
 
     public void checkColors() {
@@ -249,13 +260,13 @@ public class Sort implements Subsystem {
         int blueNumR = (colorSensorR1.blue() + colorSensorR2.blue()) / 2;
 
         // Color determination logic
-        if (greenNumR > 100 && blueNumR > 50) {
+        if (greenNumR > 100 && blueNumR > 100      ) {
             colorArray[0] = (greenNumR > blueNumR) ? Color.GREEN : Color.PURPLE;
         } else {
             colorArray[0] = Color.EMPTY;
         }
 
-        if (greenNumL > 100 && blueNumL > 50) {
+        if (greenNumL > 100 && blueNumL > 100) {
             colorArray[1] = (greenNumL > blueNumL) ? Color.GREEN : Color.PURPLE;
         } else {
             colorArray[1] = Color.EMPTY;
