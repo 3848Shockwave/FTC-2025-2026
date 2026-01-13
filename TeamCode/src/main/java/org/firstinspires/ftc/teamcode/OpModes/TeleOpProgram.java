@@ -51,10 +51,10 @@ public class TeleOpProgram extends NextFTCOpMode {
     Pose startPose = null;
     private boolean motorToggle = false;
     private TelemetryManager telemetryManager;
-//    public static double Rkp = 0.004;
-//    public static double Rkd = 0.00026;
-//    public static double Rki = 0.004;
-//    public static double Rkf = 0.0000275;
+    public static double Rkp = 0.004;
+    public static double Rkd = 0.00026;
+    public static double Rki = 0.004;
+    public static double Rkf = 0.0000275;
 public static double Lkp =0.0004;
     public static double Lki =  0.004;
     public static double Lkd =  0.0088;
@@ -260,11 +260,15 @@ public static double Lkp =0.0004;
 
         telemetryManager.addData("=== ROTATION TRACKING ===", "");
         telemetryManager.addData("Rotations", Turret.INSTANCE.getRotateEncoder().getRotations());
-        telemetryManager.addData("Total Degrees", String.format("%.2f°", Turret.INSTANCE.getRotateEncoder().getTotalDegrees()));
-        telemetryManager.addData("Total Radians", String.format("%.3f rad", Turret.INSTANCE.getRotateEncoder().getTotalRadians()));
-        telemetryManager.addData("Position",Turret.INSTANCE.getRealTurretPosition());
-        telemetryManager.addData("Goal Position", Turret.INSTANCE.calculatePosition());
-       // Turret.INSTANCE.rebuildControlSystem(Lkp,Lki,Lkd,Lkf,100);
+        telemetryManager.addData("Position",Turret.INSTANCE.getRotateEncoder().getTotalDegrees());
+        telemetryManager.addData("Calculate Position", Turret.INSTANCE.calculatePosition());
+        telemetryManager.addData("Next Position", Turret.INSTANCE.getNextTurretPosition());
+        telemetryManager.addData("Real Goal Position", Turret.INSTANCE.getControlSystemRotate().getGoal());
+
+
+
+
+         Turret.INSTANCE.rebuildControlSystem(Rkp,Rki,Rkd,Rkf,100);
         // --- Limelight Telemetry ---
         telemetryManager.addData("Pipeline", Turret.INSTANCE.limelightProcessing.getCurrentPipeline());
         telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
