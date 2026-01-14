@@ -4,7 +4,6 @@ import com.pedropathing.geometry.Pose;
 
 public class RobotStateTracker {
     Pose lastMeasuredPose = null;
-
     boolean liftActive = false;
     //if we are lifting the robot, NOTHING will be able to move. this will be set ONCE, and can't be reset during the match.
     boolean cantSee = false;
@@ -38,5 +37,6 @@ public class RobotStateTracker {
     public void setBlind(boolean ahhimblind) {
         cantSee = ahhimblind;
     }
+
 
 }

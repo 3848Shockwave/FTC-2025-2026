@@ -7,6 +7,7 @@ public final class RobotConfig {
     public static Pose finalMeasuredPose = null;
     public static double finalMeasuredSpindexPosition = 0;
     public static AutonomousStartEndPoses autonomousStartEndPoses = null;
+    public static RobotStateTracker robotStateTracker = null;
     private RobotConfig() {
     }
     public enum Alliance {

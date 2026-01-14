@@ -25,6 +25,8 @@ public class ELCEncoderV2 {
     // Analog mode variables
     private AnalogInput analogInput;
     private double maxVoltage;
+    private double stabilityCheckPosition = 0;
+    private int stableReadings = 0;
     private double lastDegrees = 0;
     private int rotations = 0;
     private double totalDegrees = 0;
@@ -104,6 +106,28 @@ public class ELCEncoderV2 {
         totalDegrees += delta;
         lastDegrees = currentDegrees;
 
+    }
+    /**
+     * Check if encoder is stable (not moving)
+     * @param threshold Position change threshold in degrees
+     * @param requiredReadings Number of consecutive stable readings needed
+     * @return true if stable
+     */
+    public boolean isStable(double threshold, int requiredReadings) {
+        if (mode != Mode.ANALOG) {
+            throw new IllegalStateException("isStable() only works in ANALOG mode");
+        }
+
+        double currentPos = getTotalDegrees();
+
+        if (Math.abs(currentPos - stabilityCheckPosition) < threshold) {
+            stableReadings++;
+        } else {
+            stableReadings = 0;
+        }
+
+        stabilityCheckPosition = currentPos;
+        return stableReadings >= requiredReadings;
     }
     public double computeVelocity(double currentPosition) {
         long now = System.nanoTime();

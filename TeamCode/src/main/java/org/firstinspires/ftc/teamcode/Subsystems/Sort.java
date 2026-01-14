@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.Subsystems;
 
+import com.qualcomm.hardware.rev.RevTouchSensor;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -9,6 +10,7 @@ import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ELCEncoderV2;
 
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.delays.Delay;
+import dev.nextftc.core.commands.delays.WaitUntil;
 import dev.nextftc.core.commands.groups.SequentialGroup;
 import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.commands.utility.LambdaCommand;
@@ -44,6 +46,9 @@ public class Sort implements Subsystem {
     private int currentIndex = 0; // Current slot index (0, 1, or 2)
 
     private double currentSpindexVelocity = 0.0;
+    boolean hasRunL = false;
+    boolean hasRunR = false;
+    private boolean secondPressSeen = false;
 
 
     public enum Color {
@@ -58,11 +63,15 @@ public class Sort implements Subsystem {
     public LambdaCommand pushBallAndBack = null;
     public LambdaCommand positiveIntake = null;
     public LambdaCommand negativeIntake = null;
-    public InstantCommand cycleLeft ;
-    public InstantCommand cycleRight;
+
+    public LambdaCommand cycleLeft ;
+    public LambdaCommand cycleRight;
     public Command shootGreen = null;
     public Command shootPurp = null;
     public SequentialGroup tripleLaunch = null;
+    private boolean spindexIsStable = false;
+    private boolean running = false;
+    RevTouchSensor touchSensor = null;
 
     public InstantCommand stopIntake = new InstantCommand(() -> {
         intakeOn = false;
@@ -77,7 +86,7 @@ public class Sort implements Subsystem {
         hardwareMap = ActiveOpMode.hardwareMap();
         telemetry = ActiveOpMode.telemetry();
         spindexEncoder = new ELCEncoderV2(ActiveOpMode.hardwareMap(),"spindexEncoder");
-
+        touchSensor = ActiveOpMode.hardwareMap().get(RevTouchSensor.class, "touchSensor");
         servoLeft = new ServoEx(hardwareMap.get(Servo.class, "scissorLeft"));
         servoRight = new ServoEx(hardwareMap.get(Servo.class, "scissorRight"));
 
@@ -91,30 +100,65 @@ public class Sort implements Subsystem {
 
 
         pushBallAndBack = new LambdaCommand()
-                .setStart( ()-> {
-                            new SetPositions(
-                                    servoLeft.to(-1.0),
-                                    servoRight.to(1.0)
-                            ).thenWait(0.4).then(new SetPositions(
-                                    servoLeft.to(1.0),
-                                    servoRight.to(-1.0)
-                            )).schedule();
-                        }
-                ).named("pushBallAndBack").requires(Math.abs(spindexEncoder.computeVelocity(spindexEncoder.getTotalDegrees()))<0.1);
+                .setStart(() -> {
+                    // Reset internal latch
+                    secondPressSeen = false;
+                    running=false;
+                })
+                .setUpdate(() -> {
+                    // Only execute push when spindex is stable
+                    if (spindexIsStable && !secondPressSeen&&!running) {
+                        new SetPositions(
+                                servoLeft.to(-1.0),
+                                servoRight.to(1.0)
+                        )
+                                .thenWait(0.4)
+                                .then(new SetPositions(
+                                        servoLeft.to(1.0),
+                                        servoRight.to(-1.0)
+                                ))
+                                .schedule();
+                        running = true;
+                    }
 
+                    // Detect the second press
+                    if (touchSensor.isPressed()) {
+                        secondPressSeen = true;
+                    }
+                })
+                .setIsDone(() -> secondPressSeen)
+                .named("pushBallAndBack");
         // Core Rotation Logic
         // Rotate Left (Index + 1)
-        cycleLeft = (InstantCommand) new InstantCommand(() -> {
-            moveSpindex(1);
-        }).named("cycleLeft");
+        cycleLeft = new LambdaCommand()
+                .setStart(()->{
+                     hasRunL = false;
+                 })
+                .setUpdate(() -> {
+                    if (!hasRunL && touchSensor.isPressed()) {
+                        moveSpindex(1);
+                        hasRunL = true;
+                    }
+                })
+                .setIsDone(() -> hasRunL)
+                .named("cycleLeft");
 
-        // Rotate Right (Index - 1)
-        cycleRight = (InstantCommand) new InstantCommand(() -> {
-            moveSpindex(-1);
-        }).named("cycleRight");
+        cycleRight = new LambdaCommand()
+                .setStart(()->{
+                    hasRunR = false;
+                })
+                .setUpdate(() -> {
+                    if (!hasRunR && touchSensor.isPressed()) {
+                        moveSpindex(-1);
+                        hasRunR = true;
+                    }
+                })
+                .setIsDone(() -> hasRunR)
+                .named("cycleRight");
 
 
-        positiveIntake = new LambdaCommand()
+
+                positiveIntake = new LambdaCommand()
                 .setStart(() -> intake.setPower(1.0))
                 .setInterruptible(true)
                 .setStop(interrupted -> intake.setPower(0.0))
@@ -173,19 +217,8 @@ public class Sort implements Subsystem {
             }
         }).named("shootPurp");
 
-        tripleLaunch = new SequentialGroup(
-                pushBallAndBack,
-                new Delay(0.6),
 
-                cycleLeft,
-                new Delay(1),
-                pushBallAndBack,
-                new Delay(0.6),
 
-                cycleLeft,
-                new Delay(1),
-                pushBallAndBack
-        );
 
         updateServo();
 
@@ -249,7 +282,7 @@ public class Sort implements Subsystem {
         checkColors();
         updateServo();
         spindexEncoder.updateRotations();
-
+        spindexIsStable = spindexEncoder.isStable(0.5, 3);
 
     }
 
@@ -272,6 +305,7 @@ public class Sort implements Subsystem {
             colorArray[1] = Color.EMPTY;
         }
     }
+
 
     // Getters
     public Color[] getColorArray() {

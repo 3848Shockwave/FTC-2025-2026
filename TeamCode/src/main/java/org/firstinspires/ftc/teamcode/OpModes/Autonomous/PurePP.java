@@ -68,7 +68,7 @@ public class PurePP extends NextFTCOpMode {
         {
             return new SequentialGroup(
                     Sort.INSTANCE.pushBallAndBack,
-                    new FollowPath(scorePreload).and(Turret.INSTANCE.RunTurret).thenWait(.5),
+                 //   new FollowPath(scorePreload).and(Turret.INSTANCE.RunTurret).thenWait(.5),
                     Sort.INSTANCE.pushBallAndBack.thenWait(.6),
                     new Delay(.45),
                     Sort.INSTANCE.cycleLeft.endAfter(.9),

@@ -9,6 +9,7 @@ import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathChain;
 
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
+import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotStateTracker;
 import org.firstinspires.ftc.teamcode.Subsystems.Sort;
 import org.firstinspires.ftc.teamcode.Subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
@@ -45,6 +46,7 @@ public class Autonomous extends NextFTCOpMode {
     private PathChain moveToReady0, moveToPick0, moveBackToScore0;
     private PathChain moveToReady1, moveToPick1, moveBackToScore1;
     private PathChain moveToReady2, moveToPick2, moveBackToScore2;
+    private RobotStateTracker robotStateTracker = new RobotStateTracker();
 
     Button x_button, y_button, a_button, b_button;
 
@@ -148,6 +150,7 @@ public class Autonomous extends NextFTCOpMode {
     public void onStop() {
         RobotConfig.finalMeasuredPose = follower.getPose();
         RobotConfig.finalMeasuredSpindexPosition = Sort.INSTANCE.getServoPosition();
+        RobotConfig.robotStateTracker = robotStateTracker;
         super.onStop();
     }
 

@@ -3,14 +3,18 @@ package org.firstinspires.ftc.teamcode.OpModes;
 import static dev.nextftc.bindings.Bindings.button;
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 
+import android.animation.RectEvaluator;
+
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.geometry.Pose;
+import com.qualcomm.hardware.rev.RevTouchSensor;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.robot.Robot;
 
+import org.firstinspires.ftc.teamcode.Subsystems.Commands.TripleLaunch;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotStateTracker;
 import org.firstinspires.ftc.teamcode.Subsystems.MySubsystemGroup;
@@ -37,7 +41,7 @@ import dev.nextftc.hardware.impl.MotorEx;
 @TeleOp(name = "TeleOp Program", group = "Production")
 public class TeleOpProgram extends NextFTCOpMode {
 
-    public static RobotStateTracker antiCrazy = new RobotStateTracker();
+    public static RobotStateTracker antiCrazy;
     public static double newVelocity = 1345;
 
     public static double power = 1.0;
@@ -45,6 +49,7 @@ public class TeleOpProgram extends NextFTCOpMode {
     private final boolean launchToggle = false;
     private boolean sideSelected = false;
     MotorEx intake = new MotorEx("intakeMotor").brakeMode();
+
     private final MotorEx leftBack = new MotorEx("back_left");
     private final MotorEx rightBack = new MotorEx("back_right");
     Button x_button, y_button, a_button, b_button;
@@ -82,6 +87,7 @@ public static double Lkp =0.0004;
             startPose = RobotConfig.autonomousStartEndPoses.getEndPose();
             telemetryManager.addData("Start selected: ", RobotConfig.autonomousStartEndPoses.name());
             sideSelected = true;
+            antiCrazy = RobotConfig.robotStateTracker;
             Turret.INSTANCE.initLimelightSystem();
         }
 
@@ -105,6 +111,8 @@ public static double Lkp =0.0004;
                     telemetryManager.addData("Start Selected:", " BLUE FAR SIDE autonomous");
                     telemetryManager.update(telemetry);
                     sideSelected=true;
+                    RobotConfig.robotStateTracker = new RobotStateTracker();
+                    antiCrazy = RobotConfig.robotStateTracker;
                     Turret.INSTANCE.initLimelightSystem();
                 });
                 y_button.whenBecomesTrue(() -> {
@@ -113,6 +121,8 @@ public static double Lkp =0.0004;
                     telemetryManager.addData("Start Selected:", " BLUE GOAL SIDE autonomous");
                     telemetryManager.update(telemetry);
                     sideSelected=true;
+                    RobotConfig.robotStateTracker = new RobotStateTracker();
+                    antiCrazy = RobotConfig.robotStateTracker;
                     Turret.INSTANCE.initLimelightSystem();
                 });
                 a_button.whenBecomesTrue(() -> {
@@ -121,6 +131,8 @@ public static double Lkp =0.0004;
                     telemetryManager.addData("Start Selected:", " RED FAR SIDE autonomous");
                     telemetryManager.update(telemetry);
                     sideSelected=true;
+                    RobotConfig.robotStateTracker = new RobotStateTracker();
+                    antiCrazy = RobotConfig.robotStateTracker;
                     Turret.INSTANCE.initLimelightSystem();
                 });
                 b_button.whenBecomesTrue(() -> {
@@ -129,12 +141,17 @@ public static double Lkp =0.0004;
                     telemetryManager.addData("Start Selected:", " RED GOAL SIDE autonomous");
                     telemetryManager.update(telemetry);
                     sideSelected=true;
+                    RobotConfig.robotStateTracker = new RobotStateTracker();
+                    antiCrazy = RobotConfig.robotStateTracker;
                     Turret.INSTANCE.initLimelightSystem();
                 });
             }
         }
-        antiCrazy.updateLastPose(RobotConfig.finalMeasuredPose);
+
         if(sideSelected) {
+            if(RobotConfig.finalMeasuredPose!=null) {
+                antiCrazy.updateLastPose(RobotConfig.finalMeasuredPose);
+            }
             follower().setPose(startPose);
         }
 
@@ -167,7 +184,10 @@ public static double Lkp =0.0004;
         });
 
          Button x = button(() -> gamepad1.x)
-                .whenBecomesTrue(Sort.INSTANCE.tripleLaunch);
+                .whenBecomesTrue(()->{
+                    TripleLaunch tl = new TripleLaunch();
+                    tl.schedule();
+                });
 
         Button y_button = button(() -> gamepad1.y)
                 .whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
@@ -183,10 +203,13 @@ public static double Lkp =0.0004;
                 });
 
         Button left_bumper = button(() -> gamepad1.left_bumper)
-                .whenBecomesTrue(Sort.INSTANCE.cycleLeft);
+                .whenBecomesTrue(
+                    Sort.INSTANCE.cycleLeft
+                );
 
         Button right_bumper = button(() -> gamepad1.right_bumper)
-                .whenBecomesTrue(Sort.INSTANCE.cycleRight);
+                .whenBecomesTrue(Sort.INSTANCE.cycleRight
+                );
 
         Button PTOEngage = button(() -> gamepad2.y)
                 .whenBecomesTrue(()->{
