@@ -11,6 +11,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.robot.Robot;
 
+import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ELCEncoderV2;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotStateTracker;
 import org.firstinspires.ftc.teamcode.Subsystems.MySubsystemGroup;
@@ -145,7 +146,6 @@ public static double Lkp =0.0004;
     @Override
     public void onStartButtonPressed() {
    //     Turret.INSTANCE.RunTurret.schedule();
-
         // 1. Move spindex Hardware
         Sort.INSTANCE.updateServo();
         Button dpad_up = button(() -> gamepad1.dpad_up).whenBecomesTrue(() -> {
@@ -251,6 +251,7 @@ public static double Lkp =0.0004;
         telemetryManager.addData("=== SORT SYSTEM ===", "");
         telemetryManager.addData("Current Index (0-2)", Sort.INSTANCE.getCurrentIndex());
         telemetryManager.addData("Servo Command Pos", Sort.INSTANCE.getServoPosition());
+        telemetryManager.addData("current Position", Sort.INSTANCE.getCurrentDegree());
 
         // --- Turret Telemetry ---
         Turret.INSTANCE.getRotateEncoder().updateRotations();

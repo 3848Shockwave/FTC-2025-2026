@@ -344,7 +344,7 @@ public class Turret implements Subsystem {
         rotateEncoder.updateRotations();
 
         if(ActiveOpMode.isStarted()) {
-            limelightProcessing.processTargets();
+//            limelightProcessing.processTargets();
         }
 
         // remove after tuning, no need to rebuild control system every loop
@@ -413,8 +413,8 @@ public class Turret implements Subsystem {
             power = -1;
         }
        //rotateMotor.setPower(-power);
-        launchMotorLeft.setPower(-Lpower);
-        launchMotorRight.setPower(-Lpower);
+//        launchMotorLeft.setPower(-Lpower);
+//        launchMotorRight.setPower(-Lpower);
 
 
 
