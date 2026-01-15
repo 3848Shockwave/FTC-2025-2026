@@ -10,8 +10,8 @@ import dev.nextftc.core.subsystems.SubsystemGroup;
 public class MySubsystemGroup extends SubsystemGroup {
     public static final MySubsystemGroup INSTANCE = new MySubsystemGroup();
     private boolean checkIsDone =false;
-    private Sort.Color[] colorWeHave = new Sort.Color[2];
-    private Sort.Color[] targetColor = new Sort.Color[2];
+    private Sort.Color[] colorWeHave = new Sort.Color[3];
+    private Sort.Color[] targetColor = new Sort.Color[3];
 
 
 
@@ -62,8 +62,6 @@ public class MySubsystemGroup extends SubsystemGroup {
             .setStop(checkIsDone->{
                 Turret.INSTANCE.initLimelightSystem();
             });
-
-
 
     public Sort.Color[] getTargetColor(){
         return targetColor;
