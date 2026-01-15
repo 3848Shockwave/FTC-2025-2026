@@ -50,7 +50,10 @@ public class MySubsystemGroup extends SubsystemGroup {
             .setInterruptible(false)
             .named("shootInPattern");
 
-
+    public Command detectTargetColorArray = new LambdaCommand()
+            .setStart(()->{
+                targetColor = Turret.INSTANCE.getColorArray();
+            });
 
     @Override
     public void initialize() {
@@ -60,7 +63,6 @@ public class MySubsystemGroup extends SubsystemGroup {
     @Override
     public void periodic() {
         colorWeHave = Sort.INSTANCE.getColorArray();
-        targetColor = Turret.INSTANCE.getColorArray();
     }
 
 

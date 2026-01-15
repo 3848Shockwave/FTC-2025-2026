@@ -42,7 +42,7 @@ public class Sort implements Subsystem {
     // 0.0 -> Position A
     // 0.45 -> Position C
     // 0.92 -> Position B
-    private double[] POSITIONS = {0.045, 0.494, 0.979};
+    private double[] POSITIONS = {0.045, 0.51, 0.999};
     private int currentIndex = 0; // Current slot index (0, 1, or 2)
 
     private double currentSpindexVelocity = 0.0;

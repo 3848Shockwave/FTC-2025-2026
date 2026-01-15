@@ -25,6 +25,8 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.Subsystems.Sort.Color; // Updated Import
 
 import dev.nextftc.bindings.Button;
+import dev.nextftc.core.commands.delays.Delay;
+import dev.nextftc.core.commands.groups.SequentialGroup;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.PedroComponent;
@@ -183,11 +185,34 @@ public static double Lkp =0.0004;
             }
         });
 
-         Button x = button(() -> gamepad1.x)
-                .whenBecomesTrue(()->{
-                    TripleLaunch tl = new TripleLaunch();
-                    tl.schedule();
+        Button x = button(() -> gamepad1.x)
+                .whenBecomesTrue(() -> {
+                    new SequentialGroup(
+                            Sort.INSTANCE.pushBallAndBack,
+                            new Delay(0.2),
+
+                            Sort.INSTANCE.cycleLeft,
+                            new Delay(0.2),
+
+                            Sort.INSTANCE.pushBallAndBack,
+                            new Delay(0.2),
+
+                            Sort.INSTANCE.cycleLeft,
+                            new Delay(0.2),
+
+                            Sort.INSTANCE.pushBallAndBack
+                    ).schedule();
                 });
+
+
+
+        Button dpad_right = button(()->gamepad1.dpad_right)
+                .whenBecomesTrue(MySubsystemGroup.INSTANCE.detectTargetColorArray);
+
+        Button dpad_left = button(()->gamepad1.dpad_left)
+                .whenBecomesTrue(MySubsystemGroup.INSTANCE.shootInPattern);
+
+
 
         Button y_button = button(() -> gamepad1.y)
                 .whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);

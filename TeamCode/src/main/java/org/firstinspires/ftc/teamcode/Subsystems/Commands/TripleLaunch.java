@@ -1,10 +1,13 @@
 package org.firstinspires.ftc.teamcode.Subsystems.Commands;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+
 import org.firstinspires.ftc.teamcode.Subsystems.Sort;
 
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.ftc.ActiveOpMode;
 
+@Disabled
 public class TripleLaunch extends Command {
     private final Command pushBallAndBack;
     private final Command cycleLeft;
@@ -27,6 +30,8 @@ public class TripleLaunch extends Command {
         step = 0;
         currentCommand = null;
         scheduleNext();
+
+        ActiveOpMode.telemetry().addData("TripleLaunch", "Started");
     }
 
     @Override
@@ -34,6 +39,7 @@ public class TripleLaunch extends Command {
         if (currentCommand != null && currentCommand.isDone()) {
             scheduleNext();
         }
+
     }
 
     @Override
@@ -42,6 +48,7 @@ public class TripleLaunch extends Command {
             currentCommand.stop(true);
         }
         currentCommand = null;
+        ActiveOpMode.telemetry().addData("TripleLaunch", "Stopped");
     }
 
     private void scheduleNext() {
@@ -49,22 +56,27 @@ public class TripleLaunch extends Command {
             currentCommand = pushBallAndBack;
            pushBallAndBack.schedule();
             step++;
+            ActiveOpMode.telemetry().addData("TripleLaunch", "Step " + step);
         } else if (step == 1) {
             currentCommand = cycleLeft;
             cycleLeft.schedule();
             step++;
+            ActiveOpMode.telemetry().addData("TripleLaunch", "Step " + step);
         } else if (step == 2) {
             currentCommand = pushBallAndBack;
             pushBallAndBack.schedule();
             step++;
+            ActiveOpMode.telemetry().addData("TripleLaunch", "Step " + step);
         } else if (step == 3) {
             currentCommand = cycleLeft;
             cycleLeft.schedule();
             step++;
+            ActiveOpMode.telemetry().addData("TripleLaunch", "Step " + step);
         } else if (step == 4) {
             currentCommand = pushBallAndBack;
             pushBallAndBack.schedule();
             step++;
+            ActiveOpMode.telemetry().addData("TripleLaunch", "Step " + step);
         } else {
             currentCommand = null;
         }
