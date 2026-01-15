@@ -75,7 +75,7 @@ public static double Lkp =0.0004;
                 new SubsystemComponent(Sort.INSTANCE),
                 new SubsystemComponent(Turret.INSTANCE),
                 new SubsystemComponent(PTO.INSTANCE),
-                //new SubsystemComponent(MySubsystemGroup.INSTANCE),
+                new SubsystemComponent(MySubsystemGroup.INSTANCE),
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
                 new PedroComponent(Constants::createFollower)

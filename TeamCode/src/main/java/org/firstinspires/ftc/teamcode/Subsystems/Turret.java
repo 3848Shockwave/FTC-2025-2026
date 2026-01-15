@@ -23,6 +23,7 @@ import dev.nextftc.control.KineticState;
 import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.commands.utility.LambdaCommand;
 import dev.nextftc.core.subsystems.Subsystem;
+import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.ActiveOpMode;
 import dev.nextftc.hardware.controllable.RunToState;
 import dev.nextftc.hardware.impl.MotorEx;
@@ -41,8 +42,8 @@ public class Turret implements Subsystem {
     private double xOffset = 0.0;
 
     boolean testing = false;
-    private static double Lvelocity = 1345;
-    private double testingVelocity = 1345;
+    private static double Lvelocity = 600;
+    private double testingVelocity = 600;
     private static double Lkp =0.0004;
     private static double Lki =  0.004;
     private static double Lkd =  0.0088;
@@ -179,7 +180,7 @@ public class Turret implements Subsystem {
             controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
         }
         else{
-            Lvelocity= 1345;
+            Lvelocity= 600;
             //Lvelocity = setTurretVelocity; // for manual control
             controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
         }
@@ -232,6 +233,30 @@ public class Turret implements Subsystem {
         else {
             return null;
         }
+    }
+
+    public double getBlindTrackingCoordinates(){
+        double calculatedAngle = 0;
+        double robotToGoalAngle =0;
+        if(RobotConfig.alliance == RobotConfig.Alliance.RED){
+
+            robotToGoalAngle = Math.toDegrees(Math.atan2((144-PedroComponent.follower().getPose().getY()),( 144-PedroComponent.follower().getPose().getX())));
+            if(PedroComponent.follower().getPose().getHeading()>(0)&&PedroComponent.follower().getPose().getHeading()<80){
+                double differenceBetweenReal= (robotToGoalAngle)-PedroComponent.follower().getPose().getHeading();
+                calculatedAngle =-differenceBetweenReal*5.625;
+            }
+        }
+        else if(RobotConfig.alliance == RobotConfig.Alliance.BLUE){
+
+            robotToGoalAngle =  Math.toDegrees(Math.atan2((144-PedroComponent.follower().getPose().getY()),(0- PedroComponent.follower().getPose().getX())));
+            if(PedroComponent.follower().getPose().getHeading()>(100)&&PedroComponent.follower().getPose().getHeading()<170){
+               double differenceBetweenReal= (robotToGoalAngle)-PedroComponent.follower().getPose().getHeading();
+               calculatedAngle =-differenceBetweenReal*5.625;
+            }
+        }
+
+
+        return calculatedAngle;
     }
 
 
