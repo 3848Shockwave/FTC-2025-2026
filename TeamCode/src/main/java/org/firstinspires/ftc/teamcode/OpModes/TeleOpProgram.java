@@ -68,6 +68,7 @@ public static double Lkp =0.0004;
     public static double Lkd =  0.0088;
     public static double Lkf = 0.000452;
     public static double speed =1345;
+    private boolean overrideUpdatePose = false;
 
 
     public TeleOpProgram() {
@@ -211,7 +212,12 @@ public static double Lkp =0.0004;
                 .whenBecomesTrue(MySubsystemGroup.INSTANCE.detectTargetColorArray);
 
         Button dpad_left = button(()->gamepad1.dpad_left)
-                .whenBecomesTrue(MySubsystemGroup.INSTANCE.shootInPattern);
+                .whenBecomesTrue(()->{
+                    overrideUpdatePose = true;
+                    PedroComponent.follower().setPose(new Pose(antiCrazy.getLastMeasuredPose().getX(),antiCrazy.getLastMeasuredPose().getY(),90));
+
+                });
+
 
 
 
@@ -274,10 +280,13 @@ public static double Lkp =0.0004;
     @Override
     public void onUpdate() {
         if(antiCrazy.getLastMeasuredPose()!=null) {
-            if (!follower().getPose().roughlyEquals(antiCrazy.getLastMeasuredPose(), 15)) {
+            if (!follower().getPose().roughlyEquals(antiCrazy.getLastMeasuredPose(), 15)&&!overrideUpdatePose) {
                 follower().setPose(antiCrazy.getLastMeasuredPose());
             } else {
                 antiCrazy.updateLastPose(follower().getPose());
+                if(overrideUpdatePose){
+                    overrideUpdatePose = false;
+                }
             }
         }
         else if(RobotConfig.finalMeasuredPose!=null&&ActiveOpMode.isStarted()){
