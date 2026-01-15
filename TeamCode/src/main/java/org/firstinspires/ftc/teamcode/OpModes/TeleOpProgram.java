@@ -27,6 +27,7 @@ import org.firstinspires.ftc.teamcode.Subsystems.Sort.Color; // Updated Import
 import dev.nextftc.bindings.Button;
 import dev.nextftc.core.commands.delays.Delay;
 import dev.nextftc.core.commands.groups.SequentialGroup;
+import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.PedroComponent;
@@ -295,7 +296,7 @@ public static double Lkp =0.0004;
                     colors[0] + ", " + colors[1] + ", " + colors[2]
             );
         }
-
+        telemetryManager.addData("Commands:", CommandManager.INSTANCE.snapshot());
         telemetryManager.addData("=== SORT SYSTEM ===", "");
         telemetryManager.addData("Current Index (0-2)", Sort.INSTANCE.getCurrentIndex());
         telemetryManager.addData("Servo Command Pos", Sort.INSTANCE.getServoPosition());
@@ -316,7 +317,7 @@ public static double Lkp =0.0004;
 
 
 
-         Turret.INSTANCE.rebuildControlSystem(Rkp,Rki,Rkd,Rkf,100);
+        // Turret.INSTANCE.rebuildControlSystem(Rkp,Rki,Rkd,Rkf,100);
         // --- Limelight Telemetry ---
         telemetryManager.addData("Pipeline", Turret.INSTANCE.limelightProcessing.getCurrentPipeline());
         telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
