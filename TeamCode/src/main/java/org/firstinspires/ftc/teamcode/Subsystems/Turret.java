@@ -34,7 +34,7 @@ public class Turret implements Subsystem {
     public static final Turret INSTANCE = new Turret();
     private static double Rkp = 0.003;
     private static double Rkd = 0.0004;
-    private static double Rki = .008;
+    private static double Rki = .004;
     private static double Rkf = 0.0000275;
 
     private static double maxPower =1.0;
@@ -218,17 +218,19 @@ public class Turret implements Subsystem {
     }
 
     public Sort.Color[] getColorArray() {
+        limelightProcessing.setPipeline(1);
         if(limelightProcessing.getTargetInfo(21) == null){
-           // limelightProcessing.setPipeline(1);
             if(limelightProcessing.getTargetInfo(22) ==null) {
-               // limelightProcessing.setPipeline(2);
                 if (limelightProcessing.getTargetInfo(23) != null) {
+                    initLimelightSystem();
                     return new Sort.Color[]{Sort.Color.PURPLE, Sort.Color.PURPLE, Sort.Color.GREEN};
                 }
             }else{
+                initLimelightSystem();
                 return new Sort.Color[]{Sort.Color.PURPLE, Sort.Color.GREEN, Sort.Color.PURPLE};
             }
         }else{
+            initLimelightSystem();
             return new Sort.Color[]{Sort.Color.GREEN, Sort.Color.PURPLE, Sort.Color.PURPLE};
         }
         return null;
@@ -350,13 +352,13 @@ public class Turret implements Subsystem {
         ActiveOpMode.telemetry().addData("Goal Velocity", controlSystemTurret.getGoal().component2());
         ///launchMotorLeft.getVelocity();
         //clamp power to limit during testing
-        if(Rpower>.7){
-            Rpower=.7;
+        if(Rpower>.8){
+            Rpower=.8;
         }
-        if(Rpower<-.7){
-            Rpower = -.7;
+        if(Rpower<-.8){
+            Rpower = -.8;
         }
-      // rotateMotor.setPower(Rpower);
+        rotateMotor.setPower(Rpower);
        // launchMotorLeft.setPower(-Lpower);
         //launchMotorRight.setPower(-Lpower);
 

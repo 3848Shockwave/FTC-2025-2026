@@ -14,7 +14,6 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.robot.Robot;
 
-import org.firstinspires.ftc.teamcode.Subsystems.Commands.TripleLaunch;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotStateTracker;
 import org.firstinspires.ftc.teamcode.Subsystems.MySubsystemGroup;
@@ -25,6 +24,8 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.Subsystems.Sort.Color; // Updated Import
 
 import dev.nextftc.bindings.Button;
+import dev.nextftc.core.commands.CommandManager;
+import dev.nextftc.core.commands.groups.SequentialGroup;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.PedroComponent;
@@ -185,8 +186,13 @@ public static double Lkp =0.0004;
 
          Button x = button(() -> gamepad1.x)
                 .whenBecomesTrue(()->{
-                    TripleLaunch tl = new TripleLaunch();
-                    tl.schedule();
+                   new SequentialGroup(
+                            Sort.INSTANCE.pushBallAndBack,
+                            Sort.INSTANCE.cycleLeft,
+                            Sort.INSTANCE.pushBallAndBack,
+                            Sort.INSTANCE.cycleLeft,
+                            Sort.INSTANCE.pushBallAndBack
+                     ).schedule();
                 });
 
         Button y_button = button(() -> gamepad1.y)
@@ -270,7 +276,7 @@ public static double Lkp =0.0004;
                     colors[0] + ", " + colors[1] + ", " + colors[2]
             );
         }
-
+        telemetryManager.addData("Commands:", CommandManager.INSTANCE.snapshot());
         telemetryManager.addData("=== SORT SYSTEM ===", "");
         telemetryManager.addData("Current Index (0-2)", Sort.INSTANCE.getCurrentIndex());
         telemetryManager.addData("Servo Command Pos", Sort.INSTANCE.getServoPosition());
@@ -291,7 +297,7 @@ public static double Lkp =0.0004;
 
 
 
-         Turret.INSTANCE.rebuildControlSystem(Rkp,Rki,Rkd,Rkf,100);
+        // Turret.INSTANCE.rebuildControlSystem(Rkp,Rki,Rkd,Rkf,100);
         // --- Limelight Telemetry ---
         telemetryManager.addData("Pipeline", Turret.INSTANCE.limelightProcessing.getCurrentPipeline());
         telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
