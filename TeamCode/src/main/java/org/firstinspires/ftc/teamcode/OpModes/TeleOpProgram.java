@@ -297,7 +297,6 @@ public static double Lkp =0.0004;
             );
         }
         telemetryManager.addData("Commands:", CommandManager.INSTANCE.snapshot());
-        telemetryManager.addData("=== SORT SYSTEM ===", "");
         telemetryManager.addData("Current Index (0-2)", Sort.INSTANCE.getCurrentIndex());
         telemetryManager.addData("Servo Command Pos", Sort.INSTANCE.getServoPosition());
 
@@ -313,6 +312,11 @@ public static double Lkp =0.0004;
         telemetryManager.addData("Calculate Position", Turret.INSTANCE.calculatePosition());
         telemetryManager.addData("Next Position", Turret.INSTANCE.getNextTurretPosition());
         telemetryManager.addData("Real Goal Position", Turret.INSTANCE.getControlSystemRotate().getGoal());
+
+        telemetryManager.addData("=== MYSUBSYSTEMGROUP ===", "");
+        if(MySubsystemGroup.INSTANCE.getTargetColor()!=null) {
+            telemetryManager.addData("target color array", MySubsystemGroup.INSTANCE.getTargetColor()[0]+", "+MySubsystemGroup.INSTANCE.getTargetColor()[1]+", "+MySubsystemGroup.INSTANCE.getTargetColor()[2]);
+        }
 
 
 

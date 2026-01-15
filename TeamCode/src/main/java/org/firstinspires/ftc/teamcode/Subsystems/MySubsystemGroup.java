@@ -3,14 +3,16 @@ package org.firstinspires.ftc.teamcode.Subsystems;
 import org.jetbrains.annotations.NotNull;
 
 import dev.nextftc.core.commands.Command;
+import dev.nextftc.core.commands.delays.Delay;
 import dev.nextftc.core.commands.utility.LambdaCommand;
 import dev.nextftc.core.subsystems.SubsystemGroup;
 
 public class MySubsystemGroup extends SubsystemGroup {
     public static final MySubsystemGroup INSTANCE = new MySubsystemGroup();
+    private boolean checkIsDone =false;
+    private Sort.Color[] colorWeHave = new Sort.Color[2];
+    private Sort.Color[] targetColor = new Sort.Color[2];
 
-    private Sort.Color[] colorWeHave = new Sort.Color[3];
-    private Sort.Color[] targetColor = new Sort.Color[3];
 
 
     private MySubsystemGroup() {
@@ -52,8 +54,20 @@ public class MySubsystemGroup extends SubsystemGroup {
 
     public Command detectTargetColorArray = new LambdaCommand()
             .setStart(()->{
+                checkIsDone=false;
                 targetColor = Turret.INSTANCE.getColorArray();
+                new Delay(5);
+                checkIsDone = true;
+            })
+            .setStop(checkIsDone->{
+                Turret.INSTANCE.initLimelightSystem();
             });
+
+
+
+    public Sort.Color[] getTargetColor(){
+        return targetColor;
+    }
 
     @Override
     public void initialize() {
