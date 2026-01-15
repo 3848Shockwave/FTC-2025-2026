@@ -1,8 +1,13 @@
 package org.firstinspires.ftc.teamcode.Subsystems;
 
+import com.qualcomm.robotcore.util.ElapsedTime;
+
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Timer;
+
 import dev.nextftc.core.commands.Command;
+import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.commands.delays.Delay;
 import dev.nextftc.core.commands.utility.LambdaCommand;
 import dev.nextftc.core.subsystems.SubsystemGroup;
@@ -10,6 +15,7 @@ import dev.nextftc.core.subsystems.SubsystemGroup;
 public class MySubsystemGroup extends SubsystemGroup {
     public static final MySubsystemGroup INSTANCE = new MySubsystemGroup();
     private boolean checkIsDone =false;
+    private static ElapsedTime timer = new ElapsedTime();
     private Sort.Color[] colorWeHave = new Sort.Color[3];
     private Sort.Color[] targetColor = new Sort.Color[3];
 
@@ -54,12 +60,13 @@ public class MySubsystemGroup extends SubsystemGroup {
 
     public Command detectTargetColorArray = new LambdaCommand()
             .setStart(()->{
-                checkIsDone=false;
-                targetColor = Turret.INSTANCE.getColorArray();
-                new Delay(5);
-                checkIsDone = true;
+            timer.reset();
             })
-            .setStop(checkIsDone->{
+            .setUpdate(()->{
+                targetColor = Turret.INSTANCE.getColorArray();
+            })
+            .setIsDone(() -> (timer.seconds()>2)||targetColor!=null)
+            .setStop((interrupted)->{
                 Turret.INSTANCE.initLimelightSystem();
             });
 

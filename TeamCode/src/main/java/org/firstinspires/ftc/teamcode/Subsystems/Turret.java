@@ -219,21 +219,19 @@ public class Turret implements Subsystem {
 
     public Sort.Color[] getColorArray() {
         limelightProcessing.setPipeline(1);
-        if(limelightProcessing.getTargetInfo(21) == null){
-            if(limelightProcessing.getTargetInfo(22) ==null) {
-                if (limelightProcessing.getTargetInfo(23) != null) {
-                    initLimelightSystem();
-                    return new Sort.Color[]{Sort.Color.PURPLE, Sort.Color.PURPLE, Sort.Color.GREEN};
-                }
-            }else{
-                initLimelightSystem();
-                return new Sort.Color[]{Sort.Color.PURPLE, Sort.Color.GREEN, Sort.Color.PURPLE};
-            }
-        }else{
-            initLimelightSystem();
+        if(limelightProcessing.getTargetInfo(21)!=null){
             return new Sort.Color[]{Sort.Color.GREEN, Sort.Color.PURPLE, Sort.Color.PURPLE};
         }
-        return null;
+        else if(limelightProcessing.getTargetInfo(22)!=null){
+            return new Sort.Color[]{Sort.Color.PURPLE, Sort.Color.GREEN, Sort.Color.PURPLE};
+        }
+        else if (limelightProcessing.getTargetInfo(23) != null) {
+            return new Sort.Color[]{Sort.Color.PURPLE, Sort.Color.PURPLE, Sort.Color.GREEN};
+        }
+
+        else {
+            return null;
+        }
     }
 
 
@@ -359,8 +357,8 @@ public class Turret implements Subsystem {
             Rpower = -.8;
         }
         rotateMotor.setPower(Rpower);
-       // launchMotorLeft.setPower(-Lpower);
-        //launchMotorRight.setPower(-Lpower);
+        launchMotorLeft.setPower(-Lpower);
+        launchMotorRight.setPower(-Lpower);
 
 
 
