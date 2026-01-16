@@ -1,8 +1,5 @@
 package org.firstinspires.ftc.teamcode.OpModes.Autonomous;
 
-import static org.firstinspires.ftc.teamcode.pedroPathing.Tuning.draw;
-import static dev.nextftc.bindings.Bindings.button;
-
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
@@ -14,6 +11,7 @@ import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotStateTracker;
 import org.firstinspires.ftc.teamcode.Subsystems.MySubsystemGroup; // [新增] 导入
 import org.firstinspires.ftc.teamcode.Subsystems.Sort;
+import org.firstinspires.ftc.teamcode.Subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 import dev.nextftc.bindings.Button;
@@ -54,8 +52,8 @@ public class Autonomous extends NextFTCOpMode {
     private Path simplePath;
     private Path scorePreload;
     private Path moveToCheck;
-    private PathChain moveToReady0, moveToPick0, moveBackToScore0,
-            moveToReady1, moveToPick1, moveBackToScore1,
+    private PathChain moveToReady0, moveToPick0, moveToScore0,
+            moveToReady1, moveToPick1, moveToScore1,
             moveToReady2, moveToPick2, moveToScore2,
             moveToReady3, moveToPick3, moveToScore3, moveToScore4;
 
@@ -76,6 +74,7 @@ public class Autonomous extends NextFTCOpMode {
     @Override
     public void onInit() {
         Drawing.init();
+        RobotConfig.robotStateTracker=robotStateTracker;
         follower = Constants.createFollower(hardwareMap);
     }
 
@@ -103,6 +102,7 @@ public class Autonomous extends NextFTCOpMode {
             if(follower != null) follower.update();
             telemetry.update();
         }
+
     }
 
     private void updateSelectedMode() {
@@ -122,6 +122,7 @@ public class Autonomous extends NextFTCOpMode {
             } else { // GOAL
                 selectedMode = isScore ? AutoMode.RED_GOAL_SIDE_SCORE : AutoMode.RED_GOAL_SIDE_MOVE;
                 RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.GOALSIDERED;
+                follower.setStartingPose(RobotConfig.autonomousStartEndPoses.getStartPose());
             }
             RobotConfig.alliance = RobotConfig.Alliance.RED;
         }
@@ -139,6 +140,7 @@ public class Autonomous extends NextFTCOpMode {
 
     @Override
     public void onStartButtonPressed() {
+        Turret.INSTANCE.initLimelightSystem();
         if (selectedMode == null) return;
 
         switch (selectedMode) {
@@ -187,7 +189,6 @@ public class Autonomous extends NextFTCOpMode {
     public void onStop() {
         RobotConfig.finalMeasuredPose = follower.getPose();
         RobotConfig.finalMeasuredSpindexPosition = Sort.INSTANCE.getServoPosition();
-        RobotConfig.robotStateTracker = robotStateTracker;
         super.onStop();
     }
 
@@ -269,7 +270,7 @@ public class Autonomous extends NextFTCOpMode {
                 .setLinearHeadingInterpolation(readyPose0.getHeading(), pickUpBalls0.getHeading())
                 .setVelocityConstraint(5)
                 .build();
-        moveBackToScore0 = follower.pathBuilder()
+        moveToScore0 = follower.pathBuilder()
                 .addPath(new BezierLine(pickUpBalls0, score))
                 .setLinearHeadingInterpolation(pickUpBalls0.getHeading(), score.getHeading())
                 .build();
@@ -283,7 +284,7 @@ public class Autonomous extends NextFTCOpMode {
                 .setLinearHeadingInterpolation(readyPose1.getHeading(), pickUpBalls1.getHeading())
                 .setVelocityConstraint(5)
                 .build();
-        moveBackToScore1 = follower.pathBuilder()
+        moveToScore1 = follower.pathBuilder()
                 .addPath(new BezierLine(pickUpBalls1, score))
                 .setLinearHeadingInterpolation(pickUpBalls1.getHeading(), score.getHeading())
                 .build();
@@ -303,7 +304,7 @@ public class Autonomous extends NextFTCOpMode {
                 new Delay(0.3),
                 new FollowPath(moveToPick0).and(Sort.INSTANCE.positiveIntake),
                 new Delay(0.3),
-                new FollowPath(moveBackToScore0).and(Sort.INSTANCE.positiveIntake).thenWait(0.6),
+                new FollowPath(moveToScore0).and(Sort.INSTANCE.positiveIntake).thenWait(0.6),
 
                 // Shoot Cycle 0
                 MySubsystemGroup.INSTANCE.shootInPattern,
@@ -314,7 +315,7 @@ public class Autonomous extends NextFTCOpMode {
                 new Delay(0.3),
                 new FollowPath(moveToPick1).and(Sort.INSTANCE.positiveIntake),
                 new Delay(0.35),
-                new FollowPath(moveBackToScore1).and(Sort.INSTANCE.positiveIntake).afterTime(0.2).then(Sort.INSTANCE.negativeIntake),
+                new FollowPath(moveToScore1).and(Sort.INSTANCE.positiveIntake).afterTime(0.2).then(Sort.INSTANCE.negativeIntake),
 
                 // Shoot Cycle 1
                 MySubsystemGroup.INSTANCE.shootInPattern
@@ -347,7 +348,7 @@ public class Autonomous extends NextFTCOpMode {
                 .addPath(new BezierLine(readyPose1, pickUpBalls1))
                 .setLinearHeadingInterpolation(readyPose1.getHeading(), pickUpBalls1.getHeading())
                 .build();
-        moveBackToScore1 = follower.pathBuilder()
+        moveToScore1 = follower.pathBuilder()
                 .addPath(new BezierLine(pickUpBalls1, score1))
                 .setLinearHeadingInterpolation(pickUpBalls1.getHeading(), score1.getHeading())
                 .build();
@@ -386,7 +387,7 @@ public class Autonomous extends NextFTCOpMode {
 
                 new FollowPath(moveToReady1).and (Sort.INSTANCE.positiveIntake),
                 new FollowPath(moveToPick1).and(Sort.INSTANCE.positiveIntake),
-                new FollowPath(moveBackToScore1),
+                new FollowPath(moveToScore1),
                 MySubsystemGroup.INSTANCE.shootInPattern,
 
                 new FollowPath(moveToReady2).and(Sort.INSTANCE.positiveIntake),

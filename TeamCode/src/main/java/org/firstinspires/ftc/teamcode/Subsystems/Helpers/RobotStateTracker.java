@@ -11,13 +11,11 @@ public class RobotStateTracker {
     // this is for jerry if you want we can use this to track if we
     // actually can see the aprilTag. if we can't we can use the other logic for just aiming at apriltag
     public RobotStateTracker() {
-
     }
 
     public Pose getLastMeasuredPose() {
         return lastMeasuredPose;
     }
-
     public void updateLastPose(Pose currentPose) {
         lastMeasuredPose = currentPose;
     }
