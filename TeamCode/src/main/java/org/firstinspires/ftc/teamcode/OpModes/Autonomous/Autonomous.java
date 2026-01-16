@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.OpModes.Autonomous;
 
+import static org.firstinspires.ftc.teamcode.pedroPathing.Tuning.draw;
 import static dev.nextftc.bindings.Bindings.button;
 
 import com.pedropathing.follower.Follower;
@@ -8,6 +9,7 @@ import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathChain;
 
+import org.firstinspires.ftc.teamcode.Subsystems.Helpers.Drawing;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotStateTracker;
 import org.firstinspires.ftc.teamcode.Subsystems.MySubsystemGroup; // [新增] 导入
@@ -73,6 +75,7 @@ public class Autonomous extends NextFTCOpMode {
 
     @Override
     public void onInit() {
+        Drawing.init();
         follower = Constants.createFollower(hardwareMap);
     }
 
@@ -177,6 +180,7 @@ public class Autonomous extends NextFTCOpMode {
     @Override
     public void onUpdate() {
         follower.update();
+        Drawing.drawDebug(follower);
     }
 
     @Override
