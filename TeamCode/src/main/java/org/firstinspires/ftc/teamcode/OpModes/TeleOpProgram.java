@@ -211,12 +211,12 @@ public static double Lkp =0.0004;
         Button dpad_right = button(()->gamepad1.dpad_right)
                 .whenBecomesTrue(MySubsystemGroup.INSTANCE.detectTargetColorArray);
 
-        Button dpad_left = button(()->gamepad1.dpad_left)
-                .whenBecomesTrue(()->{
-                    overrideUpdatePose = true;
-                    PedroComponent.follower().setPose(new Pose(antiCrazy.getLastMeasuredPose().getX(),antiCrazy.getLastMeasuredPose().getY(),90));
-
-                });
+//        Button dpad_left = button(()->gamepad1.dpad_left)
+//                .whenBecomesTrue(()->{
+//                    overrideUpdatePose = true;
+//                    PedroComponent.follower().setPose(new Pose(antiCrazy.getLastMeasuredPose().getX(),antiCrazy.getLastMeasuredPose().getY(),90));
+//
+//                });
 
 
 
@@ -268,9 +268,9 @@ public static double Lkp =0.0004;
         follower().startTeleopDrive();
 
         DriverControlledCommand driverControlled = new PedroDriverControlled(
-
                 Gamepads.gamepad1().leftStickX().negate(),
                 Gamepads.gamepad1().leftStickY(),
+
                 Gamepads.gamepad1().rightStickX().negate(),
                 false
         );

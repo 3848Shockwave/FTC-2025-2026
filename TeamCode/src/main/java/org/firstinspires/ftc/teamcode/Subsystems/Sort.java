@@ -283,7 +283,9 @@ public class Sort implements Subsystem {
         updateServo();
         spindexEncoder.updateRotations();
         spindexIsStable = spindexEncoder.isStable(0.5, 3);
-
+        ActiveOpMode.telemetry().addData("=====Sorting Data======", "");
+        ActiveOpMode.telemetry().addData("SpindexStable", spindexIsStable);
+        ActiveOpMode.telemetry().addData("Touchy", touchSensor.isPressed());
     }
 
     public void checkColors() {
