@@ -51,6 +51,7 @@ public class Autonomous extends NextFTCOpMode {
     // Paths variables
     private Path simplePath;
     private Path scorePreload;
+    private Path moveToCheck;
     private PathChain moveToReady0, moveToPick0, moveBackToScore0,
             moveToReady1, moveToPick1, moveBackToScore1,
             moveToReady2, moveToPick2, moveToScore2,
@@ -319,79 +320,89 @@ public class Autonomous extends NextFTCOpMode {
     // ==================== BLUE FAR SIDE (SCORE) ====================
     private void buildBlueFarSideScorePaths() {
         Pose startPose = RobotConfig.AutonomousStartEndPoses.FARSIDEBLUE.getStartPose();
-        Pose score = new Pose(144 - 70, 86, Math.toRadians(270));
-        Pose readyPose0 = new Pose(65, 81, Math.toRadians(180));
-        Pose pickUpBalls0 = new Pose(38, 83, Math.toRadians(180));
-        Pose readyPose1 = new Pose(65, 59, Math.toRadians(180));
-        Pose pickUpBalls1 = new Pose(38, 59, Math.toRadians(180));
+        Pose score1 = new Pose(60, 15, Math.toRadians(300));
+        Pose readyPose1 = new Pose(55, 35, Math.toRadians(180));
+        Pose pickUpBalls1 = new Pose(25, 35, Math.toRadians(180));
+        Pose score2 = new Pose(65, 17, Math.toRadians(300));
+        Pose ReadyPose2 = new Pose(65, 60, Math.toRadians(180));
+        Pose pickUpBalls2 = new Pose(25, 60, Math.toRadians(180));
+        Pose score3 = new Pose(50, 84, Math.toRadians(320));
+        Pose ReadyPose3 = new Pose(50, 84, Math.toRadians(180));
+        Pose pickUpBalls3 = new Pose(25, 84, Math.toRadians(180));
+        Pose score4 = new Pose(55, 105, Math.toRadians(320));
 
-        scorePreload = new Path(new BezierLine(startPose, score));
-        scorePreload.setLinearHeadingInterpolation(startPose.getHeading(), score.getHeading());
-
-        moveToReady0 = follower.pathBuilder()
-                .addPath(new BezierLine(score, readyPose0))
-                .setLinearHeadingInterpolation(score.getHeading(), readyPose0.getHeading())
-                .build();
-        moveToPick0 = follower.pathBuilder()
-                .addPath(new BezierLine(readyPose0, pickUpBalls0))
-                .setLinearHeadingInterpolation(readyPose0.getHeading(), pickUpBalls0.getHeading())
-                .setVelocityConstraint(5)
-                .build();
-        moveBackToScore0 = follower.pathBuilder()
-                .addPath(new BezierLine(pickUpBalls0, score))
-                .setLinearHeadingInterpolation(pickUpBalls0.getHeading(), score.getHeading())
-                .build();
+        scorePreload = new Path(new BezierLine(startPose, score1));
+        scorePreload.setLinearHeadingInterpolation(startPose.getHeading(), score1.getHeading());
 
         moveToReady1 = follower.pathBuilder()
-                .addPath(new BezierLine(score, readyPose1))
-                .setLinearHeadingInterpolation(score.getHeading(), readyPose1.getHeading())
+                .addPath(new BezierLine(score1, readyPose1))
+                .setLinearHeadingInterpolation(score1.getHeading(), readyPose1.getHeading())
                 .build();
+
         moveToPick1 = follower.pathBuilder()
                 .addPath(new BezierLine(readyPose1, pickUpBalls1))
                 .setLinearHeadingInterpolation(readyPose1.getHeading(), pickUpBalls1.getHeading())
-                .setVelocityConstraint(5)
                 .build();
         moveBackToScore1 = follower.pathBuilder()
-                .addPath(new BezierLine(pickUpBalls1, score))
-                .setLinearHeadingInterpolation(pickUpBalls1.getHeading(), score.getHeading())
+                .addPath(new BezierLine(pickUpBalls1, score1))
+                .setLinearHeadingInterpolation(pickUpBalls1.getHeading(), score1.getHeading())
+                .build();
+        moveToReady2 = follower.pathBuilder()
+                .addPath(new BezierLine(score1, ReadyPose2))
+                .setLinearHeadingInterpolation(score1.getHeading(), ReadyPose2.getHeading())
+                .build();
+        moveToPick2 = follower.pathBuilder()
+                .addPath(new BezierLine(ReadyPose2, pickUpBalls2))
+                .setLinearHeadingInterpolation(ReadyPose2.getHeading(), pickUpBalls2.getHeading())
+                .build();
+        moveToScore3 = follower.pathBuilder()
+                .addPath(new BezierLine(pickUpBalls2, score3))
+                .setLinearHeadingInterpolation(pickUpBalls2.getHeading(), score3.getHeading())
+                .build();
+        moveToReady3 = follower.pathBuilder()
+                .addPath(new BezierLine(score3, ReadyPose3))
+                .setLinearHeadingInterpolation(score3.getHeading(), ReadyPose3.getHeading())
+                .build();
+        moveToPick3 = follower.pathBuilder()
+                .addPath(new BezierLine(ReadyPose3, pickUpBalls3))
+                .setLinearHeadingInterpolation(ReadyPose3.getHeading(), pickUpBalls3.getHeading())
+                .build();
+        moveToScore4 = follower.pathBuilder()
+                .addPath(new BezierLine(pickUpBalls3, score4))
+                .setLinearHeadingInterpolation(pickUpBalls3.getHeading(), score4.getHeading())
                 .build();
     }
 
     private Command runBlueFarSideScoreCommands() {
         return new SequentialGroup(
-                // 1. Detect Colors First
                 MySubsystemGroup.INSTANCE.detectTargetColorArray,
 
-                // 2. Score Preload
+                new FollowPath(scorePreload),
                 MySubsystemGroup.INSTANCE.shootInPattern,
-                new Delay(0.2),
 
-                // 3. Cycle 0
-                new FollowPath(moveToReady0),
-                new Delay(0.3),
-                new FollowPath(moveToPick0).and(Sort.INSTANCE.positiveIntake),
-                new Delay(0.3),
-                new FollowPath(moveBackToScore0).and(Sort.INSTANCE.positiveIntake).thenWait(0.6),
-
-                // Shoot Cycle 0
-                MySubsystemGroup.INSTANCE.shootInPattern,
-                new Delay(0.2),
-
-                // 4. Cycle 1
-                new FollowPath(moveToReady1),
-                new Delay(0.3),
+                new FollowPath(moveToReady1).and (Sort.INSTANCE.positiveIntake),
                 new FollowPath(moveToPick1).and(Sort.INSTANCE.positiveIntake),
-                new Delay(0.35),
-                new FollowPath(moveBackToScore1).and(Sort.INSTANCE.positiveIntake).afterTime(0.2).then(Sort.INSTANCE.negativeIntake),
+                new FollowPath(moveBackToScore1),
+                MySubsystemGroup.INSTANCE.shootInPattern,
 
-                // Shoot Cycle 1
+                new FollowPath(moveToReady2).and(Sort.INSTANCE.positiveIntake),
+                new FollowPath(moveToPick2).and(Sort.INSTANCE.positiveIntake),
+                new FollowPath(moveToScore3),
+                MySubsystemGroup.INSTANCE.shootInPattern,
+
+                new FollowPath(moveToReady3).and(Sort.INSTANCE.positiveIntake),
+                new FollowPath(moveToPick3).and(Sort.INSTANCE.positiveIntake),
+                new FollowPath(moveToScore4),
                 MySubsystemGroup.INSTANCE.shootInPattern
         );
+
     }
 
     // ==================== RED GOAL SIDE (SCORE) ====================
     private void buildRedGoalSideScorePaths() {
-        Pose Score1 = new Pose(85, 100, Math.toRadians(217));
+        Pose startPose = RobotConfig.AutonomousStartEndPoses.GOALSIDERED.getStartPose();
+        Pose check = new Pose(125, 122, Math.toRadians(270));
+        Pose Score1 = new Pose(85, 96, Math.toRadians(217));
         Pose move1 = new Pose(85, 83, Math.toRadians(0));
         Pose grab1 = new Pose(120, 83, Math.toRadians(0));
         Pose Score2 = new Pose(90, 90, Math.toRadians(217));
@@ -400,10 +411,13 @@ public class Autonomous extends NextFTCOpMode {
         Pose Score3 = new Pose(87, 87, Math.toRadians(217));
         Pose move3 = new Pose(87, 35, Math.toRadians(0));
         Pose grab3 = new Pose(120, 35, Math.toRadians(0));
-        Pose Score4 = new Pose(80, 110, Math.toRadians(217));
+        Pose Score4 = new Pose(80, 80, Math.toRadians(217));
 
-        scorePreload = new Path(new BezierLine(RobotConfig.AutonomousStartEndPoses.GOALSIDERED.getStartPose(), Score1));
-        scorePreload.setLinearHeadingInterpolation(RobotConfig.AutonomousStartEndPoses.GOALSIDERED.getStartPose().getHeading(), Score1.getHeading());
+        moveToCheck = new Path(new BezierLine(startPose, check));
+        moveToCheck.setLinearHeadingInterpolation(startPose.getHeading(), check.getHeading());
+
+        scorePreload = new Path(new BezierLine(check, Score1));
+        scorePreload.setLinearHeadingInterpolation(check.getHeading(), Score1.getHeading());
 
         moveToReady1 = follower.pathBuilder()
                 .addPath(new BezierLine(Score1, move1))
@@ -453,6 +467,8 @@ public class Autonomous extends NextFTCOpMode {
 
     private Command runRedGoalSideScoreCommands() {
         return new SequentialGroup(
+
+                new FollowPath(moveToCheck),
                 // 1. Detect Colors First
                 MySubsystemGroup.INSTANCE.detectTargetColorArray,
 
@@ -464,17 +480,17 @@ public class Autonomous extends NextFTCOpMode {
                 new FollowPath(moveToReady1),
                 new FollowPath(moveToPick1).and(Sort.INSTANCE.positiveIntake),
                 new FollowPath(moveToScore2).and(Sort.INSTANCE.positiveIntake).thenWait(0.5),
-                MySubsystemGroup.INSTANCE.shootInPattern, // Replaced pushBallAndBack
+                MySubsystemGroup.INSTANCE.shootInPattern,
 
                 new FollowPath(moveToReady2),
                 new FollowPath(moveToPick2).and(Sort.INSTANCE.positiveIntake),
                 new FollowPath(moveToScore3).and(Sort.INSTANCE.positiveIntake).thenWait(0.5),
-                MySubsystemGroup.INSTANCE.shootInPattern, // Replaced pushBallAndBack
+                MySubsystemGroup.INSTANCE.shootInPattern,
 
                 new FollowPath(moveToReady3),
                 new FollowPath(moveToPick3).and(Sort.INSTANCE.positiveIntake),
                 new FollowPath(moveToScore4).and(Sort.INSTANCE.positiveIntake).thenWait(0.5),
-                MySubsystemGroup.INSTANCE.shootInPattern // Replaced pushBallAndBack
+                MySubsystemGroup.INSTANCE.shootInPattern
         );
     }
 }

@@ -158,7 +158,7 @@ public class Sort implements Subsystem {
 
 
 
-                positiveIntake = new LambdaCommand()
+        positiveIntake = new LambdaCommand()
                 .setStart(() -> intake.setPower(1.0))
                 .setInterruptible(true)
                 .setStop(interrupted -> intake.setPower(0.0))
