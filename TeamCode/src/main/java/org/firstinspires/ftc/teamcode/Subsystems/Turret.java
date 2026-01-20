@@ -44,6 +44,9 @@ public class Turret implements Subsystem {
     boolean testing = false;
     private static double Lvelocity = 600;
     private double testingVelocity = 600;
+    boolean manualControl = false;
+    double manualAngle =0.0;
+    double manualVelocity =600.0;
     private static double Lkp =0.0004;
     private static double Lki =  0.004;
     private static double Lkd =  0.0088;
@@ -103,6 +106,13 @@ public class Turret implements Subsystem {
 
      public void setXoffset(double x){
         this.xOffset = x;
+     }
+     public void setManualControl(boolean manual){
+        this.manualControl = manual;
+     }
+     public void setManualAnglePower(double angle, double velocity){
+        this.manualAngle = angle;
+        this.manualVelocity = velocity;
      }
 
     public double getRotateMotorPosition() {
@@ -323,11 +333,15 @@ public class Turret implements Subsystem {
         } else  {
             RobotConfig.robotStateTracker.setBlind(false);
         }
+        if(!manualControl) {
+            calculateLaunchStrength();
 
-        calculateLaunchStrength();
-
-        nextTurretPosition = rotateEncoder.getTotalDegrees()+ calculatePosition();
-
+            nextTurretPosition = rotateEncoder.getTotalDegrees() + calculatePosition();
+        }
+        if(manualControl){
+            nextTurretPosition = -manualAngle * 5.625;
+            controlSystemTurret.setGoal(new KineticState(0.0, manualVelocity,0.0));
+        }
 
             if (nextTurretPosition > -400 && nextTurretPosition < 0) {
                 controlSystemRotate.setGoal(new KineticState(nextTurretPosition));
@@ -340,7 +354,6 @@ public class Turret implements Subsystem {
 
                         //controlSystemRotate.setGoal(new KineticState(-220));
             }
-
 
         //controlSystemTurret.setGoal(new KineticState(0.0, testingVelocity,0.0));
 

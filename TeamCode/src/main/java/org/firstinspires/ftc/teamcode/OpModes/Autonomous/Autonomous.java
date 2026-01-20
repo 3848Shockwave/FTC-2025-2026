@@ -21,12 +21,15 @@ import dev.nextftc.bindings.Button;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.delays.Delay;
 import dev.nextftc.core.commands.groups.SequentialGroup;
+import dev.nextftc.core.commands.utility.InstantCommand;
+import dev.nextftc.core.commands.utility.LambdaCommand;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.FollowPath;
 import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
+import dev.nextftc.hardware.impl.MotorEx;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Auto (Configurable & Vision)")
 public class Autonomous extends NextFTCOpMode {
@@ -50,13 +53,13 @@ public class Autonomous extends NextFTCOpMode {
     }
 
     private AutoMode selectedMode;
-
+    MotorEx intake = new MotorEx("intakeMotor").brakeMode();
 
     // Paths variables
     private Path simplePath;
     private Path scorePreload;
     private Path moveToCheck;
-    private PathChain start, load1, score1, ready1,load2,score2,ready2,load3,score3;
+    private PathChain goTostart,start,load1,  score1, ready1,score2,ready2,load3,score3;
     private PathChain moveToReady0, moveToPick0, moveToScore0,
             moveToReady1, moveToPick1, moveToScore1,
             moveToReady2, moveToPick2, moveToScore2,
@@ -156,7 +159,7 @@ public class Autonomous extends NextFTCOpMode {
         Turret.INSTANCE.initLimelightSystem();
         if (selectedMode == null) return;
         if (RobotConfig.autonomousStartEndPoses != null) {
-            follower.setMaxPower(.9);
+            follower.setMaxPower(1);
             follower.setConstants(Constants.followerConstants);
             follower.setStartingPose(RobotConfig.autonomousStartEndPoses.getStartPose());
             follower.update();
@@ -211,6 +214,7 @@ public class Autonomous extends NextFTCOpMode {
 
     @Override
     public void onStop() {
+        Turret.INSTANCE.setManualControl(false);
         RobotConfig.finalMeasuredPose = follower.getPose();
         RobotConfig.finalMeasuredSpindexPosition = Sort.INSTANCE.getServoPosition();
         super.onStop();
@@ -351,61 +355,62 @@ public class Autonomous extends NextFTCOpMode {
 
     // ==================== BLUE FAR SIDE (SCORE) ====================
     private void buildBlueFarSideScorePaths() {
-        start = follower.pathBuilder().addPath(
+        goTostart = follower.pathBuilder().addPath(
                         new BezierLine(
-                                new Pose(56.000, 8.000),
+                                new Pose(57.696, 10.073),
 
-                                new Pose(42.094, 35.031)
+                                new Pose(54.728, 20.764)
                         )
-                ).setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
+                ).setLinearHeadingInterpolation(Math.toRadians(270), Math.toRadians(90))
+
+                .build();
+
+        start = follower.pathBuilder().addPath(
+                        new BezierCurve(
+                                new Pose(54.728, 20.764),
+                                new Pose(51.691, 37.734),
+                                new Pose(39.578, 35.573)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180),.6)
 
                 .build();
 
         load1 = follower.pathBuilder().addPath(
                         new BezierLine(
-                                new Pose(42.094, 35.031),
+                                new Pose(39.578, 35.573),
 
-                                new Pose(13.607, 35.560)
+                                new Pose(16.476, 35.770)
                         )
-                ).setTangentHeadingInterpolation()
+                ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(180))
 
                 .build();
 
         score1 = follower.pathBuilder().addPath(
                         new BezierLine(
-                                new Pose(13.607, 35.560),
+                                new Pose(16.476, 35.770),
 
-                                new Pose(60.974, 12.047)
+                                new Pose(52.492, 15.628)
                         )
                 ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(270))
 
                 .build();
 
         ready1 = follower.pathBuilder().addPath(
-                        new BezierLine(
-                                new Pose(60.974, 12.047),
-
-                                new Pose(40.476, 59.471)
+                        new BezierCurve(
+                                new Pose(52.492, 15.628),
+                                new Pose(27.462, 33.848),
+                                new Pose(75.531, 65.249),
+                                new Pose(19.876, 60.520)
                         )
-                ).setLinearHeadingInterpolation(Math.toRadians(270), Math.toRadians(180))
-
-                .build();
-
-        load2 = follower.pathBuilder().addPath(
-                        new BezierLine(
-                                new Pose(40.476, 59.471),
-
-                                new Pose(15.592, 60.105)
-                        )
-                ).setTangentHeadingInterpolation()
+                ).setLinearHeadingInterpolation(Math.toRadians(270), Math.toRadians(180),.7)
 
                 .build();
 
         score2 = follower.pathBuilder().addPath(
                         new BezierLine(
-                                new Pose(15.592, 60.105),
+                                new Pose(19.876, 60.520),
 
-                                new Pose(58.571, 85.330)
+                                new Pose(49.472, 83.681)
                         )
                 ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(315))
 
@@ -413,53 +418,68 @@ public class Autonomous extends NextFTCOpMode {
 
         ready2 = follower.pathBuilder().addPath(
                         new BezierLine(
-                                new Pose(58.571, 85.330),
+                                new Pose(49.472, 83.681),
 
-                                new Pose(36.712, 83.869)
+                                new Pose(14.673, 84.232)
                         )
-                ).setLinearHeadingInterpolation(Math.toRadians(135), Math.toRadians(180))
-
-                .build();
-
-        load3 = follower.pathBuilder().addPath(
-                        new BezierLine(
-                                new Pose(36.712, 83.869),
-
-                                new Pose(13.838, 84.058)
-                        )
-                ).setTangentHeadingInterpolation()
+                ).setLinearHeadingInterpolation(Math.toRadians(315), Math.toRadians(180),.3)
 
                 .build();
 
         score3 = follower.pathBuilder().addPath(
                         new BezierLine(
-                                new Pose(13.838, 84.058),
+                                new Pose(14.673, 84.232),
 
-                                new Pose(47.859, 96.204)
+                                new Pose(34.476, 97.335)
                         )
                 ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(315))
 
                 .build();
-
-
-
     }
 
     private Command runBlueFarSideScoreCommands() {
         return new SequentialGroup(
-                //MySubsystemGroup.INSTANCE.detectTargetColorArray,
+                new InstantCommand(()->{
+                    Turret.INSTANCE.setManualControl(true);
+                    Turret.INSTANCE.setManualAnglePower(25,600);
+                    intake.setPower(1.0);
+                }),
+                MySubsystemGroup.INSTANCE.detectTargetColorArray.thenWait(1),
 
+                new InstantCommand(()->{
+                Turret.INSTANCE.setManualAnglePower(7,1800);
+                }),
+                new Delay(4),
+
+                new InstantCommand(()->{
+                    Turret.INSTANCE.setManualAnglePower(15,600);
+
+                }),
+                new FollowPath(goTostart),
                 new FollowPath(start),
-                //  MySubsystemGroup.INSTANCE.shootInPattern,
-
-                new FollowPath(load1),//.and (Sort.INSTANCE.positiveIntake),
-                new FollowPath(score1).thenWait(3),
-                new FollowPath(ready1),
-                new FollowPath(load2),
-                new FollowPath(score2).thenWait(3),
-                new FollowPath(ready2),
-                new FollowPath(load3),
-                new FollowPath(score3)
+                new FollowPath(load1),
+                new FollowPath(score1).and(
+                        new InstantCommand(()->{
+                            Turret.INSTANCE.setManualAnglePower(15,1800);
+                        })
+                        ).thenWait(3),
+                new FollowPath(ready1).and(
+                        new InstantCommand(()->{
+                            Turret.INSTANCE.setManualAnglePower(15,600);
+                        })
+                ),
+                new FollowPath(score2).and(
+                        new InstantCommand(()->{
+                            Turret.INSTANCE.setManualAnglePower(15,1360);
+                        })
+                ).thenWait(3),
+                new FollowPath(ready2).and(
+                        new InstantCommand(()->{
+                    Turret.INSTANCE.setManualAnglePower(15,600);
+                })),
+                new FollowPath(score3).and(new InstantCommand(()->{
+                    Turret.INSTANCE.setManualAnglePower(15,1320);
+                }))
 
                 //.and(Sort.INSTANCE.positiveIntake),
              //   new FollowPath(readygrab2),

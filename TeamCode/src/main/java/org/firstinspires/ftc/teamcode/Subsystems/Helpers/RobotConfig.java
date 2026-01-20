@@ -19,7 +19,7 @@ public final class RobotConfig {
         GOALSIDERED(new Pose(124, 122, Math.toRadians(217)), new Pose(78, 110, Math.toRadians(80))),
         GOALSIDEBLUE(new Pose(20, 128, Math.toRadians(315)), new Pose(44, 110, Math.toRadians(92))),
         FARSIDERED(new Pose(88, 8, Math.toRadians(90)), new Pose(96, 86, Math.toRadians(270))),
-        FARSIDEBLUE(new Pose(55, 8, Math.toRadians(90)), new Pose(70, 86, Math.toRadians(90)));
+        FARSIDEBLUE(new Pose(59.2, 8.5, Math.toRadians(270)), new Pose(70, 86, Math.toRadians(90)));
         private final Pose startPose;
         private final Pose endPose;
 

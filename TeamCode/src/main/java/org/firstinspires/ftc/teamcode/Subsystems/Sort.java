@@ -23,7 +23,7 @@ public class Sort implements Subsystem {
 
     public static final Sort INSTANCE = new Sort();
 
-    MotorEx intake = new MotorEx("intake").brakeMode();
+    MotorEx intake = new MotorEx("intakeMotor").brakeMode();
     ELCEncoderV2 spindexEncoder = null;
     ServoEx spindexRight;
     ServoEx spindexLeft;
@@ -60,6 +60,7 @@ public class Sort implements Subsystem {
 
     // === Commands ===
     public Command pushBall = null;
+    boolean shootComplete = false;
     public LambdaCommand pushBallAndBack = null;
     public LambdaCommand positiveIntake = null;
     public LambdaCommand negativeIntake = null;
@@ -112,7 +113,7 @@ public class Sort implements Subsystem {
                                 servoLeft.to(-1.0),
                                 servoRight.to(1.0)
                         )
-                                .thenWait(0.4)
+                                .thenWait(0.25)
                                 .then(new SetPositions(
                                         servoLeft.to(1.0),
                                         servoRight.to(-1.0)
@@ -177,6 +178,7 @@ public class Sort implements Subsystem {
                         new Delay(1),
                         pushBallAndBack
                 ).schedule();
+
             }
             else if (colorArray[1] == Color.GREEN) {
                 new SequentialGroup(
@@ -184,6 +186,7 @@ public class Sort implements Subsystem {
                         new Delay(1),
                         pushBallAndBack
                 ).schedule();
+
             }
             else if (colorArray[0] == Color.GREEN) {
                 new SequentialGroup(
@@ -191,7 +194,9 @@ public class Sort implements Subsystem {
                         new Delay(1),
                         pushBallAndBack
                 ).schedule();
+
             }
+            colorArray[2]= Color.EMPTY;
         }).named("shootGreen");
 
         shootPurp = new InstantCommand(() -> {
@@ -200,6 +205,7 @@ public class Sort implements Subsystem {
                         new Delay(1),
                         pushBallAndBack
                 ).schedule();
+
             }
             else if (colorArray[1] == Color.PURPLE) {
                 new SequentialGroup(
@@ -207,6 +213,7 @@ public class Sort implements Subsystem {
                         new Delay(1),
                         pushBallAndBack
                 ).schedule();
+
             }
             else if (colorArray[0] == Color.PURPLE) {
                 new SequentialGroup(
@@ -214,7 +221,9 @@ public class Sort implements Subsystem {
                         new Delay(1),
                         pushBallAndBack
                 ).schedule();
+
             }
+            colorArray[2]= Color.EMPTY;
         }).named("shootPurp");
 
 
@@ -313,4 +322,91 @@ public class Sort implements Subsystem {
     public Color[] getColorArray() {
         return colorArray;
     }
+    public Command shootNewGreen() {
+        if(colorArray[0]==Color.GREEN||colorArray[1]==Color.GREEN||colorArray[2]==Color.GREEN) {
+
+
+            return new InstantCommand(() -> {
+                shootComplete = false;
+                if (colorArray[2] == Color.GREEN) {
+                    new SequentialGroup(
+
+                            pushBallAndBack,
+                            new Delay(.5),
+                            new InstantCommand(() -> {
+                                colorArray[2] = Color.EMPTY;
+                                shootComplete = true;
+                            })
+                    ).schedule();
+                } else if (colorArray[1] == Color.GREEN) {
+                    new SequentialGroup(
+                            cycleLeft,
+
+                            new Delay(.8),
+                            pushBallAndBack,
+                            new Delay(.5),
+                            new InstantCommand(() -> {
+                                colorArray[2] = Color.EMPTY;
+                                shootComplete = true;
+                            })
+                    ).schedule();
+                } else if (colorArray[0] == Color.GREEN) {
+                    new SequentialGroup(
+                            cycleRight,
+                            new Delay(.8),
+                            pushBallAndBack,
+                            new Delay(.5),
+                            new InstantCommand(() -> {
+                                colorArray[2] = Color.EMPTY;
+                                shootComplete = true;
+                            })
+                    ).schedule();
+                }
+            }).named("shootNewGreen");
+        }
+        return new InstantCommand(()->{});
+    }
+
+    public Command shootNewPurp() {
+        if(colorArray[0]==Color.PURPLE||colorArray[1]==Color.PURPLE||colorArray[2]==Color.PURPLE) {
+            return new InstantCommand(() -> {
+                shootComplete = false;
+                if (colorArray[2] == Color.PURPLE) {
+                    new SequentialGroup(
+
+                            pushBallAndBack,
+                            new Delay(.5),
+                            new InstantCommand(() -> {
+                                colorArray[2] = Color.EMPTY;
+                                shootComplete = true;
+                            })
+                    ).schedule();
+                } else if (colorArray[1] == Color.PURPLE) {
+                    new SequentialGroup(
+                            cycleLeft,
+                            new Delay(.8),
+                            pushBallAndBack,
+                            new Delay(.5),
+                            new InstantCommand(() -> {
+                                colorArray[2] = Color.EMPTY;
+                                shootComplete = true;
+                            })
+                    ).schedule();
+                } else if (colorArray[0] == Color.PURPLE) {
+                    new SequentialGroup(
+                            cycleRight,
+                            new Delay(.8),
+                            pushBallAndBack,
+                            new Delay(.5),
+                            new InstantCommand(() -> {
+                                colorArray[2] = Color.EMPTY;
+                                shootComplete = true;
+                            })
+                    ).schedule();
+                }
+            }).named("shootNewPurp");
+        }
+        return new InstantCommand(()->{});
+    }
 }
+
