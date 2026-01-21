@@ -13,6 +13,7 @@ import com.qualcomm.hardware.rev.RevTouchSensor;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.robot.Robot;
+import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.Subsystems.Commands.TripleLaunch;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
@@ -167,49 +168,74 @@ public static double Lkp =0.0004;
     public void onStartButtonPressed() {
    //     Turret.INSTANCE.RunTurret.schedule();
 
-        // 1. Move spindex Hardware
         Sort.INSTANCE.updateServo();
-        Button dpad_up = button(() -> gamepad1.dpad_up).whenBecomesTrue(() -> {
-            motorToggle = !motorToggle;
-            if (motorToggle) {
-                intake.setPower(1);
-            } else {
-                intake.setPower(0);
-            }
-        });
-
-        Button dpad_down = button(() -> gamepad1.dpad_down).whenBecomesTrue(() -> {
-            motorToggle = !motorToggle;
-            if (motorToggle) {
-                intake.setPower(-1);
-            } else {
-                intake.setPower(0);
-            }
-        });
-
-        Button x = button(() -> gamepad1.x)
-                .whenBecomesTrue(() -> {
-                    new SequentialGroup(
-                            Sort.INSTANCE.pushBallAndBack,
-                            new Delay(0.2),
-
-                            Sort.INSTANCE.cycleLeft,
-                            new Delay(0.2),
-
-                            Sort.INSTANCE.pushBallAndBack,
-                            new Delay(0.2),
-
-                            Sort.INSTANCE.cycleLeft,
-                            new Delay(0.2),
-
-                            Sort.INSTANCE.pushBallAndBack
-                    ).schedule();
-                });
+        Sort.INSTANCE.restartScissor();
 
 
+        //=================== GAMEPAD 1 CONTROLS =================//
 
-        Button dpad_right = button(()->gamepad1.dpad_right)
-                .whenBecomesTrue(MySubsystemGroup.INSTANCE.detectTargetColorArray);
+        //Intake IN
+                    Button dpad_up = button(() -> gamepad1.dpad_up).whenBecomesTrue(() -> {
+                        motorToggle = !motorToggle;
+                        if (motorToggle) {
+                            intake.setPower(1);
+                        } else {
+                            intake.setPower(0);
+                        }
+                    });
+
+        //Intake REVERSE
+                    Button dpad_down = button(() -> gamepad1.dpad_down).whenBecomesTrue(() -> {
+                        motorToggle = !motorToggle;
+                        if (motorToggle) {
+                            intake.setPower(-1);
+                        } else {
+                            intake.setPower(0);
+                        }
+                    });
+
+
+        //Detect Colors Manually
+                    Button dpad_right = button(()->gamepad1.dpad_right)
+                            .whenBecomesTrue(MySubsystemGroup.INSTANCE.detectTargetColorArray);
+
+
+        // Triple Launch
+                    Button x = button(() -> gamepad1.x)
+                            .whenBecomesTrue(() -> {
+                                MySubsystemGroup.INSTANCE.tripleLaunch.schedule();
+                            });
+        // Normal  Shoot
+                    Button y_button = button(() -> gamepad1.y)
+                            .whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
+        // Closest Shoot
+                    Button b_button = button(() -> gamepad1.b)
+                            .whenBecomesTrue(()->{Sort.INSTANCE.shootClosestBall().schedule();});
+        // Shoot In Pattern
+                    Button a_button = button(() -> gamepad1.a)
+                            .whenBecomesTrue(MySubsystemGroup.INSTANCE.shootInPattern);
+        // Shoot Purple
+                    Button right_trigger = button(() -> gamepad1.right_trigger > 0.5)
+                            .whenBecomesTrue(()->{
+                                Sort.INSTANCE.shootPurp.schedule();
+                            });
+        // Shoot Green
+                    Button left_trigger = button(() -> gamepad1.left_trigger > 0.5)
+                            .whenBecomesTrue(()->{
+                                Sort.INSTANCE.shootGreen.schedule();
+                            });
+        // Cycle Left
+                    Button left_bumper = button(() -> gamepad1.left_bumper)
+                            .whenBecomesTrue(
+                                    Sort.INSTANCE.cycleLeft
+                            );
+        // Cycle Right
+                    Button right_bumper = button(() -> gamepad1.right_bumper)
+                            .whenBecomesTrue(Sort.INSTANCE.cycleRight
+                            );
+
+
+
 
 //        Button dpad_left = button(()->gamepad1.dpad_left)
 //                .whenBecomesTrue(()->{
@@ -221,27 +247,8 @@ public static double Lkp =0.0004;
 
 
 
-        Button y_button = button(() -> gamepad1.y)
-                .whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
-        Button a_button = button(() -> gamepad1.a)
-                .whenBecomesTrue(MySubsystemGroup.INSTANCE.shootInPattern);
-        Button right_trigger = button(() -> gamepad1.right_trigger > 0.5)
-                .whenBecomesTrue(()->{
-                 Sort.INSTANCE.shootPurp.schedule();
-                });
-        Button left_trigger = button(() -> gamepad1.left_trigger > 0.5)
-                .whenBecomesTrue(()->{
-                    Sort.INSTANCE.shootGreen.schedule();
-                });
 
-        Button left_bumper = button(() -> gamepad1.left_bumper)
-                .whenBecomesTrue(
-                    Sort.INSTANCE.cycleLeft
-                );
 
-        Button right_bumper = button(() -> gamepad1.right_bumper)
-                .whenBecomesTrue(Sort.INSTANCE.cycleRight
-                );
 
         Button PTOEngage = button(() -> gamepad2.y)
                 .whenBecomesTrue(()->{
@@ -267,8 +274,16 @@ public static double Lkp =0.0004;
         follower().startTeleopDrive();
 
         DriverControlledCommand driverControlled = new PedroDriverControlled(
-                Gamepads.gamepad1().leftStickX().negate(),
-                Gamepads.gamepad1().leftStickY(),
+                () -> {
+                    Gamepads.gamepad1().leftStickX().update();
+                    double value = Gamepads.gamepad1().leftStickX().get();
+                    return Range.clip(Math.signum(value) * Math.pow(Math.abs(value), 3.6), -1, 1);
+                },
+                () -> {
+                    Gamepads.gamepad1().leftStickY().update();
+                    double value = Gamepads.gamepad1().leftStickY().get();
+                    return Range.clip(Math.signum(value) * Math.pow(Math.abs(value), 3.6), -1, 1);
+                },
 
                 Gamepads.gamepad1().rightStickX().negate(),
                 false
