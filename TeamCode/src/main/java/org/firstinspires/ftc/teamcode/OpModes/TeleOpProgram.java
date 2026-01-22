@@ -224,14 +224,14 @@ public static double Lkp =0.0004;
                             .whenBecomesTrue(()->{
                                 Sort.INSTANCE.shootGreen.schedule();
                             });
-        // Cycle Left
+        // Cycle Right
                     Button left_bumper = button(() -> gamepad1.left_bumper)
                             .whenBecomesTrue(
-                                    Sort.INSTANCE.cycleLeft
+                                    Sort.INSTANCE.cycleRight
                             );
-        // Cycle Right
+        // Cycle Left
                     Button right_bumper = button(() -> gamepad1.right_bumper)
-                            .whenBecomesTrue(Sort.INSTANCE.cycleRight
+                            .whenBecomesTrue(Sort.INSTANCE.cycleLeft
                             );
 
 
@@ -274,17 +274,8 @@ public static double Lkp =0.0004;
         follower().startTeleopDrive();
 
         DriverControlledCommand driverControlled = new PedroDriverControlled(
-                () -> {
-                    Gamepads.gamepad1().leftStickX().update();
-                    double value = Gamepads.gamepad1().leftStickX().get();
-                    return Range.clip(Math.signum(value) * Math.pow(Math.abs(value), 3.6), -1, 1);
-                },
-                () -> {
-                    Gamepads.gamepad1().leftStickY().update();
-                    double value = Gamepads.gamepad1().leftStickY().get();
-                    return Range.clip(Math.signum(value) * Math.pow(Math.abs(value), 3.6), -1, 1);
-                },
-
+                    Gamepads.gamepad1().leftStickX().negate(),
+                    Gamepads.gamepad1().leftStickY(),
                 Gamepads.gamepad1().rightStickX().negate(),
                 false
         );
