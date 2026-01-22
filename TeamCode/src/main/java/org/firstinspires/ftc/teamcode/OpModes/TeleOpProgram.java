@@ -3,15 +3,18 @@ package org.firstinspires.ftc.teamcode.OpModes;
 import static dev.nextftc.bindings.Bindings.button;
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 
+import android.animation.RectEvaluator;
+
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.geometry.Pose;
+import com.qualcomm.hardware.rev.RevTouchSensor;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.robot.Robot;
 
-import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ELCEncoderV2;
+import org.firstinspires.ftc.teamcode.Subsystems.Commands.TripleLaunch;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotStateTracker;
 import org.firstinspires.ftc.teamcode.Subsystems.MySubsystemGroup;
@@ -22,6 +25,9 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.Subsystems.Sort.Color; // Updated Import
 
 import dev.nextftc.bindings.Button;
+import dev.nextftc.core.commands.delays.Delay;
+import dev.nextftc.core.commands.groups.SequentialGroup;
+import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.PedroComponent;
@@ -38,7 +44,7 @@ import dev.nextftc.hardware.impl.MotorEx;
 @TeleOp(name = "TeleOp Program", group = "Production")
 public class TeleOpProgram extends NextFTCOpMode {
 
-    public static RobotStateTracker antiCrazy = new RobotStateTracker();
+    public static RobotStateTracker antiCrazy;
     public static double newVelocity = 1345;
 
     public static double power = 1.0;
@@ -46,21 +52,23 @@ public class TeleOpProgram extends NextFTCOpMode {
     private final boolean launchToggle = false;
     private boolean sideSelected = false;
     MotorEx intake = new MotorEx("intakeMotor").brakeMode();
+
     private final MotorEx leftBack = new MotorEx("back_left");
     private final MotorEx rightBack = new MotorEx("back_right");
     Button x_button, y_button, a_button, b_button;
     Pose startPose = null;
     private boolean motorToggle = false;
     private TelemetryManager telemetryManager;
-//    public static double Rkp = 0.004;
-//    public static double Rkd = 0.00026;
-//    public static double Rki = 0.004;
-//    public static double Rkf = 0.0000275;
+    public static double Rkp = 0.004;
+    public static double Rkd = 0.00026;
+    public static double Rki = 0.004;
+    public static double Rkf = 0.0000275;
 public static double Lkp =0.0004;
     public static double Lki =  0.004;
     public static double Lkd =  0.0088;
     public static double Lkf = 0.000452;
     public static double speed =1345;
+    private boolean overrideUpdatePose = false;
 
 
     public TeleOpProgram() {
@@ -68,7 +76,7 @@ public static double Lkp =0.0004;
                 new SubsystemComponent(Sort.INSTANCE),
                 new SubsystemComponent(Turret.INSTANCE),
                 new SubsystemComponent(PTO.INSTANCE),
-                //new SubsystemComponent(MySubsystemGroup.INSTANCE),
+                new SubsystemComponent(MySubsystemGroup.INSTANCE),
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
                 new PedroComponent(Constants::createFollower)
@@ -83,6 +91,7 @@ public static double Lkp =0.0004;
             startPose = RobotConfig.autonomousStartEndPoses.getEndPose();
             telemetryManager.addData("Start selected: ", RobotConfig.autonomousStartEndPoses.name());
             sideSelected = true;
+            antiCrazy = RobotConfig.robotStateTracker;
             Turret.INSTANCE.initLimelightSystem();
         }
 
@@ -106,6 +115,8 @@ public static double Lkp =0.0004;
                     telemetryManager.addData("Start Selected:", " BLUE FAR SIDE autonomous");
                     telemetryManager.update(telemetry);
                     sideSelected=true;
+                    RobotConfig.robotStateTracker = new RobotStateTracker();
+                    antiCrazy = RobotConfig.robotStateTracker;
                     Turret.INSTANCE.initLimelightSystem();
                 });
                 y_button.whenBecomesTrue(() -> {
@@ -114,6 +125,8 @@ public static double Lkp =0.0004;
                     telemetryManager.addData("Start Selected:", " BLUE GOAL SIDE autonomous");
                     telemetryManager.update(telemetry);
                     sideSelected=true;
+                    RobotConfig.robotStateTracker = new RobotStateTracker();
+                    antiCrazy = RobotConfig.robotStateTracker;
                     Turret.INSTANCE.initLimelightSystem();
                 });
                 a_button.whenBecomesTrue(() -> {
@@ -122,6 +135,8 @@ public static double Lkp =0.0004;
                     telemetryManager.addData("Start Selected:", " RED FAR SIDE autonomous");
                     telemetryManager.update(telemetry);
                     sideSelected=true;
+                    RobotConfig.robotStateTracker = new RobotStateTracker();
+                    antiCrazy = RobotConfig.robotStateTracker;
                     Turret.INSTANCE.initLimelightSystem();
                 });
                 b_button.whenBecomesTrue(() -> {
@@ -130,12 +145,17 @@ public static double Lkp =0.0004;
                     telemetryManager.addData("Start Selected:", " RED GOAL SIDE autonomous");
                     telemetryManager.update(telemetry);
                     sideSelected=true;
+                    RobotConfig.robotStateTracker = new RobotStateTracker();
+                    antiCrazy = RobotConfig.robotStateTracker;
                     Turret.INSTANCE.initLimelightSystem();
                 });
             }
         }
-        antiCrazy.updateLastPose(RobotConfig.finalMeasuredPose);
+
         if(sideSelected) {
+            if(RobotConfig.finalMeasuredPose!=null) {
+                antiCrazy.updateLastPose(RobotConfig.finalMeasuredPose);
+            }
             follower().setPose(startPose);
         }
 
@@ -146,6 +166,7 @@ public static double Lkp =0.0004;
     @Override
     public void onStartButtonPressed() {
    //     Turret.INSTANCE.RunTurret.schedule();
+
         // 1. Move spindex Hardware
         Sort.INSTANCE.updateServo();
         Button dpad_up = button(() -> gamepad1.dpad_up).whenBecomesTrue(() -> {
@@ -166,8 +187,39 @@ public static double Lkp =0.0004;
             }
         });
 
-         Button x = button(() -> gamepad1.x)
-                .whenBecomesTrue(Sort.INSTANCE.tripleLaunch);
+        Button x = button(() -> gamepad1.x)
+                .whenBecomesTrue(() -> {
+                    new SequentialGroup(
+                            Sort.INSTANCE.pushBallAndBack,
+                            new Delay(0.2),
+
+                            Sort.INSTANCE.cycleLeft,
+                            new Delay(0.2),
+
+                            Sort.INSTANCE.pushBallAndBack,
+                            new Delay(0.2),
+
+                            Sort.INSTANCE.cycleLeft,
+                            new Delay(0.2),
+
+                            Sort.INSTANCE.pushBallAndBack
+                    ).schedule();
+                });
+
+
+
+        Button dpad_right = button(()->gamepad1.dpad_right)
+                .whenBecomesTrue(MySubsystemGroup.INSTANCE.detectTargetColorArray);
+
+//        Button dpad_left = button(()->gamepad1.dpad_left)
+//                .whenBecomesTrue(()->{
+//                    overrideUpdatePose = true;
+//                    PedroComponent.follower().setPose(new Pose(antiCrazy.getLastMeasuredPose().getX(),antiCrazy.getLastMeasuredPose().getY(),90));
+//
+//                });
+
+
+
 
         Button y_button = button(() -> gamepad1.y)
                 .whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
@@ -183,10 +235,13 @@ public static double Lkp =0.0004;
                 });
 
         Button left_bumper = button(() -> gamepad1.left_bumper)
-                .whenBecomesTrue(Sort.INSTANCE.cycleLeft);
+                .whenBecomesTrue(
+                    Sort.INSTANCE.cycleLeft
+                );
 
         Button right_bumper = button(() -> gamepad1.right_bumper)
-                .whenBecomesTrue(Sort.INSTANCE.cycleRight);
+                .whenBecomesTrue(Sort.INSTANCE.cycleRight
+                );
 
         Button PTOEngage = button(() -> gamepad2.y)
                 .whenBecomesTrue(()->{
@@ -209,13 +264,12 @@ public static double Lkp =0.0004;
         });
         PTORightSide.whenBecomesFalse(()->rightBack.setPower(0.0));
 
-
         follower().startTeleopDrive();
 
         DriverControlledCommand driverControlled = new PedroDriverControlled(
-
                 Gamepads.gamepad1().leftStickX().negate(),
                 Gamepads.gamepad1().leftStickY(),
+
                 Gamepads.gamepad1().rightStickX().negate(),
                 false
         );
@@ -225,10 +279,13 @@ public static double Lkp =0.0004;
     @Override
     public void onUpdate() {
         if(antiCrazy.getLastMeasuredPose()!=null) {
-            if (!follower().getPose().roughlyEquals(antiCrazy.getLastMeasuredPose(), 15)) {
+            if (!follower().getPose().roughlyEquals(antiCrazy.getLastMeasuredPose(), 15)&&!overrideUpdatePose) {
                 follower().setPose(antiCrazy.getLastMeasuredPose());
             } else {
                 antiCrazy.updateLastPose(follower().getPose());
+                if(overrideUpdatePose){
+                    overrideUpdatePose = false;
+                }
             }
         }
         else if(RobotConfig.finalMeasuredPose!=null&&ActiveOpMode.isStarted()){
@@ -247,11 +304,9 @@ public static double Lkp =0.0004;
                     colors[0] + ", " + colors[1] + ", " + colors[2]
             );
         }
-
-        telemetryManager.addData("=== SORT SYSTEM ===", "");
+        telemetryManager.addData("Commands:", CommandManager.INSTANCE.snapshot());
         telemetryManager.addData("Current Index (0-2)", Sort.INSTANCE.getCurrentIndex());
         telemetryManager.addData("Servo Command Pos", Sort.INSTANCE.getServoPosition());
-        telemetryManager.addData("current Position", Sort.INSTANCE.getCurrentDegree());
 
         // --- Turret Telemetry ---
         Turret.INSTANCE.getRotateEncoder().updateRotations();
@@ -261,11 +316,20 @@ public static double Lkp =0.0004;
 
         telemetryManager.addData("=== ROTATION TRACKING ===", "");
         telemetryManager.addData("Rotations", Turret.INSTANCE.getRotateEncoder().getRotations());
-        telemetryManager.addData("Total Degrees", String.format("%.2f°", Turret.INSTANCE.getRotateEncoder().getTotalDegrees()));
-        telemetryManager.addData("Total Radians", String.format("%.3f rad", Turret.INSTANCE.getRotateEncoder().getTotalRadians()));
-        telemetryManager.addData("Position",Turret.INSTANCE.getRealTurretPosition());
-        telemetryManager.addData("Goal Position", Turret.INSTANCE.calculatePosition());
-       // Turret.INSTANCE.rebuildControlSystem(Lkp,Lki,Lkd,Lkf,100);
+        telemetryManager.addData("Position",Turret.INSTANCE.getRotateEncoder().getTotalDegrees());
+        telemetryManager.addData("Calculate Position", Turret.INSTANCE.calculatePosition());
+        telemetryManager.addData("Next Position", Turret.INSTANCE.getNextTurretPosition());
+        telemetryManager.addData("Real Goal Position", Turret.INSTANCE.getControlSystemRotate().getGoal());
+
+        telemetryManager.addData("=== MYSUBSYSTEMGROUP ===", "");
+        if(MySubsystemGroup.INSTANCE.getTargetColor()!=null) {
+            telemetryManager.addData("target color array", MySubsystemGroup.INSTANCE.getTargetColor()[0]+", "+MySubsystemGroup.INSTANCE.getTargetColor()[1]+", "+MySubsystemGroup.INSTANCE.getTargetColor()[2]);
+        }
+
+
+
+
+        // Turret.INSTANCE.rebuildControlSystem(Rkp,Rki,Rkd,Rkf,100);
         // --- Limelight Telemetry ---
         telemetryManager.addData("Pipeline", Turret.INSTANCE.limelightProcessing.getCurrentPipeline());
         telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());

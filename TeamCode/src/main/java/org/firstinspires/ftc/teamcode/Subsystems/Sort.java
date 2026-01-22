@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.Subsystems;
 
+import com.qualcomm.hardware.rev.RevTouchSensor;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -9,6 +10,7 @@ import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ELCEncoderV2;
 
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.delays.Delay;
+import dev.nextftc.core.commands.delays.WaitUntil;
 import dev.nextftc.core.commands.groups.SequentialGroup;
 import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.commands.utility.LambdaCommand;
@@ -17,12 +19,11 @@ import dev.nextftc.ftc.ActiveOpMode;
 import dev.nextftc.hardware.impl.MotorEx;
 import dev.nextftc.hardware.impl.ServoEx;
 import dev.nextftc.hardware.positionable.SetPositions;
-
 public class Sort implements Subsystem {
 
     public static final Sort INSTANCE = new Sort();
 
-    MotorEx intake = new MotorEx("intake").brakeMode();
+    MotorEx intake = new MotorEx("intakeMotor").brakeMode();
     ELCEncoderV2 spindexEncoder = null;
     ServoEx spindexRight;
     ServoEx spindexLeft;
@@ -36,46 +37,57 @@ public class Sort implements Subsystem {
     HardwareMap hardwareMap;
     Telemetry telemetry;
 
-    private int currentIndex = 0;
+    // === Constants ===
+    // Positions defined based on Test code (A, C, B)
+    // 0.0 -> Position A
+    // 0.45 -> Position C
+    // 0.92 -> Position B
+    private double[] POSITIONS = {0.045, 0.51, 0.999};
+    private int currentIndex = 0; // Current slot index (0, 1, or 2)
+
     private double currentSpindexVelocity = 0.0;
+    boolean hasRunL = false;
+    boolean hasRunR = false;
+    private boolean secondPressSeen = false;
+
 
     public enum Color {
         GREEN, PURPLE, EMPTY
     }
-
+    // Assuming index 0 is Right side, index 1 is Left side (Adjust based on physical mounting)
     private Color[] colorArray = {Color.EMPTY, Color.EMPTY, Color.EMPTY};
     private boolean intakeOn = true;
 
+    // === Commands ===
     public Command pushBall = null;
+    boolean shootComplete = false;
     public LambdaCommand pushBallAndBack = null;
     public LambdaCommand positiveIntake = null;
     public LambdaCommand negativeIntake = null;
-    public InstantCommand cycleLeft;
-    public InstantCommand cycleRight;
+
+    public LambdaCommand cycleLeft ;
+    public LambdaCommand cycleRight;
     public Command shootGreen = null;
     public Command shootPurp = null;
-    public Command tripleLaunch = null;
-    public Command waitForPosition = null;
-
-
-
-    private double[] POSITIONS = {0.045, 0.51, 0.999};
-
-    private double[] TARGET_DEGREES = {122, 238, 3.5};
-    private double ALLOWED_ERROR = 5.0;
+    public SequentialGroup tripleLaunch = null;
+    private boolean spindexIsStable = false;
+    private boolean running = false;
+    RevTouchSensor touchSensor = null;
 
     public InstantCommand stopIntake = new InstantCommand(() -> {
         intakeOn = false;
     });
 
-    private Sort() {}
+    private Sort() {
+    }
 
     @Override
+
     public void initialize() {
         hardwareMap = ActiveOpMode.hardwareMap();
         telemetry = ActiveOpMode.telemetry();
         spindexEncoder = new ELCEncoderV2(ActiveOpMode.hardwareMap(),"spindexEncoder");
-
+        touchSensor = ActiveOpMode.hardwareMap().get(RevTouchSensor.class, "touchSensor");
         servoLeft = new ServoEx(hardwareMap.get(Servo.class, "scissorLeft"));
         servoRight = new ServoEx(hardwareMap.get(Servo.class, "scissorRight"));
 
@@ -87,119 +99,175 @@ public class Sort implements Subsystem {
         spindexRight = new ServoEx(hardwareMap.get(Servo.class, "spindexRight"));
         spindexLeft = new ServoEx(hardwareMap.get(Servo.class, "spindexLeft"));
 
-        // Fix: Use conditional logic inside execution, fix requires(this)
+
         pushBallAndBack = new LambdaCommand()
                 .setStart(() -> {
-                    if (Math.abs(spindexEncoder.computeVelocity(spindexEncoder.getTotalDegrees())) < 0.1) {
+                    // Reset internal latch
+                    secondPressSeen = false;
+                    running=false;
+                })
+                .setUpdate(() -> {
+                    // Only execute push when spindex is stable
+                    if (spindexIsStable && !secondPressSeen&&!running) {
                         new SetPositions(
                                 servoLeft.to(-1.0),
                                 servoRight.to(1.0)
-                        ).thenWait(0.4).then(new SetPositions(
-                                servoLeft.to(1.0),
-                                servoRight.to(-1.0)
-                        )).schedule();
+                        )
+                                .thenWait(0.25)
+                                .then(new SetPositions(
+                                        servoLeft.to(1.0),
+                                        servoRight.to(-1.0)
+                                ))
+                                .schedule();
+                        running = true;
+                    }
+
+                    // Detect the second press
+                    if (touchSensor.isPressed()) {
+                        secondPressSeen = true;
                     }
                 })
-                .named("pushBallAndBack")
-                .requires(this);
-
-        cycleLeft = (InstantCommand) new InstantCommand(() -> {
-            moveSpindex(1);
-        }).named("cycleLeft");
-
-        cycleRight = (InstantCommand) new InstantCommand(() -> {
-            moveSpindex(-1);
-        }).named("cycleRight");
-
-        // Fix: logic inside start, requires(this)
-        positiveIntake = new LambdaCommand()
-                .setStart(() -> {
-                    if (intakeOn) intake.setPower(1.0);
+                .setIsDone(() -> secondPressSeen)
+                .named("pushBallAndBack");
+        // Core Rotation Logic
+        // Rotate Left (Index + 1)
+        cycleLeft = new LambdaCommand()
+                .setStart(()->{
+                     hasRunL = false;
+                 })
+                .setUpdate(() -> {
+                    if (!hasRunL && touchSensor.isPressed()) {
+                        moveSpindex(1);
+                        hasRunL = true;
+                    }
                 })
+                .setIsDone(() -> hasRunL)
+                .named("cycleLeft");
+
+        cycleRight = new LambdaCommand()
+                .setStart(()->{
+                    hasRunR = false;
+                })
+                .setUpdate(() -> {
+                    if (!hasRunR && touchSensor.isPressed()) {
+                        moveSpindex(-1);
+                        hasRunR = true;
+                    }
+                })
+                .setIsDone(() -> hasRunR)
+                .named("cycleRight");
+
+
+
+        positiveIntake = new LambdaCommand()
+                .setStart(() -> intake.setPower(1.0))
                 .setInterruptible(true)
                 .setStop(interrupted -> intake.setPower(0.0))
-                .requires(this);
+                .requires(intakeOn, this);
 
         negativeIntake = new LambdaCommand()
-                .setStart(() -> {
-                    if (intakeOn) intake.setPower(-1.0);
-                })
+                .setStart(() -> intake.setPower(-1.0))
                 .setInterruptible(true)
                 .setStop(interrupted -> intake.setPower(0.0))
-                .requires(this);
+                .requires(intakeOn, this);
+
 
         shootGreen = new InstantCommand(() -> {
             if (colorArray[2] == Color.GREEN) {
-                new SequentialGroup(new Delay(1), pushBallAndBack).schedule();
-            } else if (colorArray[1] == Color.GREEN) {
-                new SequentialGroup(cycleLeft, new Delay(1), pushBallAndBack).schedule();
-            } else if (colorArray[0] == Color.GREEN) {
-                new SequentialGroup(cycleRight, new Delay(1), pushBallAndBack).schedule();
+                new SequentialGroup(
+                        new Delay(1),
+                        pushBallAndBack
+                ).schedule();
+
             }
+            else if (colorArray[1] == Color.GREEN) {
+                new SequentialGroup(
+                        cycleLeft,
+                        new Delay(1),
+                        pushBallAndBack
+                ).schedule();
+
+            }
+            else if (colorArray[0] == Color.GREEN) {
+                new SequentialGroup(
+                        cycleRight,
+                        new Delay(1),
+                        pushBallAndBack
+                ).schedule();
+
+            }
+            colorArray[2]= Color.EMPTY;
         }).named("shootGreen");
 
         shootPurp = new InstantCommand(() -> {
             if (colorArray[2] == Color.PURPLE) {
-                new SequentialGroup(new Delay(1), pushBallAndBack).schedule();
-            } else if (colorArray[1] == Color.PURPLE) {
-                new SequentialGroup(cycleLeft, new Delay(1), pushBallAndBack).schedule();
-            } else if (colorArray[0] == Color.PURPLE) {
-                new SequentialGroup(cycleRight, new Delay(1), pushBallAndBack).schedule();
+                new SequentialGroup(
+                        new Delay(1),
+                        pushBallAndBack
+                ).schedule();
+
             }
+            else if (colorArray[1] == Color.PURPLE) {
+                new SequentialGroup(
+                        cycleLeft,
+                        new Delay(1),
+                        pushBallAndBack
+                ).schedule();
+
+            }
+            else if (colorArray[0] == Color.PURPLE) {
+                new SequentialGroup(
+                        cycleRight,
+                        new Delay(1),
+                        pushBallAndBack
+                ).schedule();
+
+            }
+            colorArray[2]= Color.EMPTY;
         }).named("shootPurp");
 
-        waitForPosition = new InstantCommand(() -> {
-            while (!waitToStable()) {
-                telemetry.addData("Current Index", currentIndex);
-                telemetry.addData("Current Velocity", currentSpindexVelocity);
-                telemetry.update();
-            }
-        }).named("waitForPosition");
 
 
-
-        tripleLaunch = new SequentialGroup(
-                pushBallAndBack,
-                new Delay(0.7),
-                cycleLeft,
-                waitForPosition,
-                new Delay(0.7),
-                cycleLeft,
-                waitForPosition,
-                pushBallAndBack
-        ).named("tripleLaunch");
 
         updateServo();
-    }
 
-    private void moveSpindex(int direction) {
-        currentIndex += direction;
 
-        if (currentIndex > 2) {
-            currentIndex = 0;
-        } else if (currentIndex < 0) {
-            currentIndex = 2;
-        }
-
-        Color temp;
-        if (direction == 1) {
-            temp = colorArray[2];
-            colorArray[2] = colorArray[1];
-            colorArray[1] = colorArray[0];
-            colorArray[0] = temp;
-        } else {
-            temp = colorArray[0];
-            colorArray[0] = colorArray[1];
-            colorArray[1] = colorArray[2];
-            colorArray[2] = temp;
-        }
     }
 
 
 
+     // direction 1 for clockwise (Next slot), -1 for counter-clockwise (Previous slot)
+     private void moveSpindex(int direction) {
+         currentIndex += direction;
 
+         if (currentIndex > 2) {
+             currentIndex = 0;
+         } else if (currentIndex < 0) {
+             currentIndex = 2;
+         }
+
+         //Memory Shifting (Virtual Rotation)
+         Color temp;
+         if (direction == 1) {
+             // Rotating Left (1->2, 0->1, 2->0)
+             temp = colorArray[2];
+             colorArray[2] = colorArray[1];
+             colorArray[1] = colorArray[0];
+             colorArray[0] = temp;
+         } else {
+             // Rotating Right (0->2, 1->0, 2->1)
+             temp = colorArray[0];
+             colorArray[0] = colorArray[1];
+             colorArray[1] = colorArray[2];
+             colorArray[2] = temp;
+         }
+
+     }
+    Command waitForStableCmd = new LambdaCommand()
+            .setIsDone(this::waitToStable)
+            .named("WaitForStable");
     public boolean waitToStable(){
-        return Math.abs(currentSpindexVelocity) == 0; // Note: currentSpindexVelocity needs to be updated in periodic
+        return Math.abs(currentSpindexVelocity) == 0;
     }
 
     public void updateServo() {
@@ -209,25 +277,24 @@ public class Sort implements Subsystem {
     }
 
     public double getServoPosition() {
+        // Returns the last position set (e.g., 0.0, 0.45, or 0.92)
         return spindexRight.getPosition();
     }
 
     public int getCurrentIndex() {
+        // Returns the logical slot number (0, 1, or 2)
         return currentIndex;
-    }
-
-    public double getCurrentDegree(){
-        return spindexEncoder.getDegrees();
     }
 
     @Override
     public void periodic() {
-        spindexEncoder.updateRotations();
         checkColors();
         updateServo();
         spindexEncoder.updateRotations();
-        // Added to support waitToStable
-        currentSpindexVelocity = spindexEncoder.computeVelocity(spindexEncoder.getTotalDegrees());
+        spindexIsStable = spindexEncoder.isStable(0.5, 3);
+        ActiveOpMode.telemetry().addData("=====Sorting Data======", "");
+        ActiveOpMode.telemetry().addData("SpindexStable", spindexIsStable);
+        ActiveOpMode.telemetry().addData("Touchy", touchSensor.isPressed());
     }
 
     public void checkColors() {
@@ -236,17 +303,110 @@ public class Sort implements Subsystem {
         int greenNumR = (colorSensorR1.green() + colorSensorR2.green()) / 2;
         int blueNumR = (colorSensorR1.blue() + colorSensorR2.blue()) / 2;
 
-        // Fix: Do not overwrite with EMPTY if sensors are blank (prevents clearing memory during rotation)
-        if (greenNumR > 100 && blueNumR > 100) {
+        // Color determination logic
+        if (greenNumR > 100 && blueNumR > 100      ) {
             colorArray[0] = (greenNumR > blueNumR) ? Color.GREEN : Color.PURPLE;
+        } else {
+            colorArray[0] = Color.EMPTY;
         }
 
         if (greenNumL > 100 && blueNumL > 100) {
             colorArray[1] = (greenNumL > blueNumL) ? Color.GREEN : Color.PURPLE;
+        } else {
+            colorArray[1] = Color.EMPTY;
         }
     }
 
+
+    // Getters
     public Color[] getColorArray() {
         return colorArray;
     }
+    public Command shootNewGreen() {
+        if(colorArray[0]==Color.GREEN||colorArray[1]==Color.GREEN||colorArray[2]==Color.GREEN) {
+
+
+            return new InstantCommand(() -> {
+                shootComplete = false;
+                if (colorArray[2] == Color.GREEN) {
+                    new SequentialGroup(
+
+                            pushBallAndBack,
+                            new Delay(.5),
+                            new InstantCommand(() -> {
+                                colorArray[2] = Color.EMPTY;
+                                shootComplete = true;
+                            })
+                    ).schedule();
+                } else if (colorArray[1] == Color.GREEN) {
+                    new SequentialGroup(
+                            cycleLeft,
+
+                            new Delay(.8),
+                            pushBallAndBack,
+                            new Delay(.5),
+                            new InstantCommand(() -> {
+                                colorArray[2] = Color.EMPTY;
+                                shootComplete = true;
+                            })
+                    ).schedule();
+                } else if (colorArray[0] == Color.GREEN) {
+                    new SequentialGroup(
+                            cycleRight,
+                            new Delay(.8),
+                            pushBallAndBack,
+                            new Delay(.5),
+                            new InstantCommand(() -> {
+                                colorArray[2] = Color.EMPTY;
+                                shootComplete = true;
+                            })
+                    ).schedule();
+                }
+            }).named("shootNewGreen");
+        }
+        return new InstantCommand(()->{});
+    }
+
+    public Command shootNewPurp() {
+        if(colorArray[0]==Color.PURPLE||colorArray[1]==Color.PURPLE||colorArray[2]==Color.PURPLE) {
+            return new InstantCommand(() -> {
+                shootComplete = false;
+                if (colorArray[2] == Color.PURPLE) {
+                    new SequentialGroup(
+
+                            pushBallAndBack,
+                            new Delay(.5),
+                            new InstantCommand(() -> {
+                                colorArray[2] = Color.EMPTY;
+                                shootComplete = true;
+                            })
+                    ).schedule();
+                } else if (colorArray[1] == Color.PURPLE) {
+                    new SequentialGroup(
+                            cycleLeft,
+                            new Delay(.8),
+                            pushBallAndBack,
+                            new Delay(.5),
+                            new InstantCommand(() -> {
+                                colorArray[2] = Color.EMPTY;
+                                shootComplete = true;
+                            })
+                    ).schedule();
+                } else if (colorArray[0] == Color.PURPLE) {
+                    new SequentialGroup(
+                            cycleRight,
+                            new Delay(.8),
+                            pushBallAndBack,
+                            new Delay(.5),
+                            new InstantCommand(() -> {
+                                colorArray[2] = Color.EMPTY;
+                                shootComplete = true;
+                            })
+                    ).schedule();
+                }
+            }).named("shootNewPurp");
+        }
+        return new InstantCommand(()->{});
+    }
 }
+
