@@ -9,16 +9,13 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ELCEncoderV2;
 
 import dev.nextftc.core.commands.Command;
-import dev.nextftc.core.commands.delays.Delay;
-import dev.nextftc.core.commands.delays.WaitUntil;
-import dev.nextftc.core.commands.groups.SequentialGroup;
 import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.commands.utility.LambdaCommand;
 import dev.nextftc.core.subsystems.Subsystem;
 import dev.nextftc.ftc.ActiveOpMode;
 import dev.nextftc.hardware.impl.MotorEx;
 import dev.nextftc.hardware.impl.ServoEx;
-import dev.nextftc.hardware.positionable.SetPositions;
+
 public class Sort implements Subsystem {
 
     public static final Sort INSTANCE = new Sort();
@@ -69,7 +66,6 @@ public class Sort implements Subsystem {
     public LambdaCommand cycleRight;
     public Command shootGreen = null;
     public Command shootPurp = null;
-    public SequentialGroup tripleLaunch = null;
     private boolean spindexIsStable = false;
     private boolean running = false;
     RevTouchSensor touchSensor = null;
@@ -77,6 +73,18 @@ public class Sort implements Subsystem {
     public InstantCommand stopIntake = new InstantCommand(() -> {
         intakeOn = false;
     });
+
+    // --- New internal sequence state machine fields ---
+    private enum SequenceKind { NONE, SHOOT_GREEN, SHOOT_PURP, SHOOT_CLOSEST }
+    private SequenceKind activeSequence = SequenceKind.NONE;
+    private int seqTargetIndex = -1; // index of the ball we want to handle (0..2)
+    private int seqPhase = 0;
+    private long seqPhaseStartMs = 0;
+
+    // push internal state (used both by pushBallAndBack if scheduled standalone or by sequence)
+    private boolean pushRunning = false;
+    private int pushStage = 0; // 0 none, 1 pushed, 2 retracted
+    private long pushStartMs = 0;
 
     private Sort() {
     }
@@ -100,29 +108,37 @@ public class Sort implements Subsystem {
         spindexLeft = new ServoEx(hardwareMap.get(Servo.class, "spindexLeft"));
 
 
+        // Re-implement pushBallAndBack without scheduling other commands.
+        // This LambdaCommand manages its own push/retract timing and completes when the second press is seen.
         pushBallAndBack = new LambdaCommand()
                 .setStart(() -> {
-                    // Reset internal latch
                     secondPressSeen = false;
-                    running=false;
+                    running = false;
+                    pushRunning = false;
+                    pushStage = 0;
+                    pushStartMs = 0;
                 })
                 .setUpdate(() -> {
-                    // Only execute push when spindex is stable
-                    if (spindexIsStable && !secondPressSeen&&!running) {
-                        new SetPositions(
-                                servoLeft.to(-1.0),
-                                servoRight.to(1.0)
-                        )
-                                .thenWait(0.25)
-                                .then(new SetPositions(
-                                        servoLeft.to(1.0),
-                                        servoRight.to(-1.0)
-                                ))
-                                .schedule();
-                        running = true;
+                    // If spindex is stable and we haven't started the push, begin it
+                    if (spindexIsStable && !secondPressSeen && !pushRunning) {
+                        // begin push: set servos to push positions
+                        servoLeft.setPosition(-1.0);
+                        servoRight.setPosition(1.0);
+                        pushStartMs = System.currentTimeMillis();
+                        pushRunning = true;
+                        pushStage = 1;
                     }
 
-                    // Detect the second press
+                    // After 250 ms, retract
+                    if (pushRunning && pushStage == 1) {
+                        if (System.currentTimeMillis() - pushStartMs >= 250) {
+                            servoLeft.setPosition(1.0);
+                            servoRight.setPosition(-1.0);
+                            pushStage = 2;
+                        }
+                    }
+
+                    // Detect the second press at any time
                     if (touchSensor.isPressed()) {
                         secondPressSeen = true;
                     }
@@ -172,58 +188,31 @@ public class Sort implements Subsystem {
                 .requires(intakeOn, this);
 
 
+        // Instead of creating SequentialGroup(...) and scheduling it here (which would call commands from within
+        // a command), we start an internal sequence handled by periodic()/processSequence(). The InstantCommand
+        // below merely requests the sequence start.
         shootGreen = new InstantCommand(() -> {
-            if (colorArray[2] == Color.GREEN) {
-                new SequentialGroup(
-                        new Delay(1),
-                        pushBallAndBack
-                ).schedule();
-
+            // choose nearest GREEN slot (prefer index 2, then 1, then 0)
+            int target = -1;
+            if (colorArray[2] == Color.GREEN) target = 2;
+            else if (colorArray[1] == Color.GREEN) target = 1;
+            else if (colorArray[0] == Color.GREEN) target = 0;
+            if (target != -1) {
+                startSequence(SequenceKind.SHOOT_GREEN, target);
             }
-            else if (colorArray[1] == Color.GREEN) {
-                new SequentialGroup(
-                        cycleLeft,
-                        new Delay(1),
-                        pushBallAndBack
-                ).schedule();
-
-            }
-            else if (colorArray[0] == Color.GREEN) {
-                new SequentialGroup(
-                        cycleRight,
-                        new Delay(1),
-                        pushBallAndBack
-                ).schedule();
-
-            }
-            colorArray[2]= Color.EMPTY;
+            // keep original behavior of marking the current top as empty immediately
+            if (target == 2) colorArray[2] = Color.EMPTY;
         }).named("shootGreen");
 
         shootPurp = new InstantCommand(() -> {
-            if (colorArray[2] == Color.PURPLE) {
-                new SequentialGroup(
-                        new Delay(1),
-                        pushBallAndBack
-                ).schedule();
-
+            int target = -1;
+            if (colorArray[2] == Color.PURPLE) target = 2;
+            else if (colorArray[1] == Color.PURPLE) target = 1;
+            else if (colorArray[0] == Color.PURPLE) target = 0;
+            if (target != -1) {
+                startSequence(SequenceKind.SHOOT_PURP, target);
             }
-            else if (colorArray[1] == Color.PURPLE) {
-                new SequentialGroup(
-                        cycleLeft,
-                        new Delay(1),
-                        pushBallAndBack
-                ).schedule();
-
-            }
-            else if (colorArray[0] == Color.PURPLE) {
-                new SequentialGroup(
-                        cycleRight,
-                        new Delay(1),
-                        pushBallAndBack
-                ).schedule();
-
-            }
-            colorArray[2]= Color.EMPTY;
+            if (target == 2) colorArray[2] = Color.EMPTY;
         }).named("shootPurp");
 
 
@@ -296,6 +285,241 @@ public class Sort implements Subsystem {
         ActiveOpMode.telemetry().addData("=====Sorting Data======", "");
         ActiveOpMode.telemetry().addData("SpindexStable", spindexIsStable);
         ActiveOpMode.telemetry().addData("Touchy", touchSensor.isPressed());
+
+        // Run any active sequence state machine
+        processSequence();
+    }
+
+    // Internal sequence processing: replicates the former SequentialGroup flows without scheduling commands.
+    private void processSequence() {
+        if (activeSequence == SequenceKind.NONE) return;
+        long now = System.currentTimeMillis();
+
+        switch (activeSequence) {
+            case SHOOT_GREEN:
+            case SHOOT_PURP: {
+                // Behavior depends on seqTargetIndex
+                if (seqPhase == 0) {
+                    // initial phase before any action
+                    if (seqTargetIndex == 2) {
+                        // previously: Delay(1) then pushBallAndBack
+                        seqPhaseStartMs = now;
+                        seqPhase = 10; // wait delay then push
+                    } else if (seqTargetIndex == 1) {
+                        // previously: cycleLeft, Delay(1), pushBallAndBack (but cycleLeft waited for touch press)
+                        seqPhase = 20; // wait for touch to cycle left
+                    } else if (seqTargetIndex == 0) {
+                        seqPhase = 30; // wait for touch to cycle right
+                    }
+                }
+
+                // Target at top (2)
+                if (seqPhase == 10) {
+                    // wait 1 second then start push sequence
+                    if (now - seqPhaseStartMs >= 1000) {
+                        // start push sequence: ensure spindex is stable first
+                        if (spindexIsStable) {
+                            // begin push
+                            servoLeft.setPosition(-1.0);
+                            servoRight.setPosition(1.0);
+                            pushStartMs = now;
+                            pushRunning = true;
+                            pushStage = 1;
+                            seqPhase = 11;
+                        }
+                    }
+                }
+                if (seqPhase == 11) {
+                    // handle push timing: retract after 250ms then wait for second press to finish
+                    if (pushRunning && pushStage == 1) {
+                        if (now - pushStartMs >= 250) {
+                            servoLeft.setPosition(1.0);
+                            servoRight.setPosition(-1.0);
+                            pushStage = 2;
+                        }
+                    }
+                    if (pushStage == 2 && touchSensor.isPressed()) {
+                        // finish sequence
+                        colorArray[2] = Color.EMPTY;
+                        activeSequence = SequenceKind.NONE;
+                        seqPhase = 0;
+                        pushRunning = false;
+                        pushStage = 0;
+                        shootComplete = true;
+                    }
+                }
+
+                // Target at index 1: need to wait for touch press to cycle left
+                if (seqPhase == 20) {
+                    if (touchSensor.isPressed()) {
+                        moveSpindex(1);
+                        // after moving, wait until spindex is stable then delay .1 then push
+                        seqPhase = 21;
+                        seqPhaseStartMs = now;
+                    }
+                }
+                if (seqPhase == 21) {
+                    if (spindexIsStable) {
+                        // small delay 100ms then push
+                        if (now - seqPhaseStartMs >= 100) {
+                            // start push
+                            servoLeft.setPosition(-1.0);
+                            servoRight.setPosition(1.0);
+                            pushStartMs = now;
+                            pushRunning = true;
+                            pushStage = 1;
+                            seqPhase = 22;
+                        }
+                    }
+                }
+                if (seqPhase == 22) {
+                    if (pushRunning && pushStage == 1) {
+                        if (now - pushStartMs >= 250) {
+                            servoLeft.setPosition(1.0);
+                            servoRight.setPosition(-1.0);
+                            pushStage = 2;
+                        }
+                    }
+                    if (pushStage == 2 && touchSensor.isPressed()) {
+                        colorArray[2] = Color.EMPTY;
+                        activeSequence = SequenceKind.NONE;
+                        seqPhase = 0;
+                        pushRunning = false;
+                        pushStage = 0;
+                        shootComplete = true;
+                    }
+                }
+
+                // Target at index 0: rotate right then same as above
+                if (seqPhase == 30) {
+                    if (touchSensor.isPressed()) {
+                        moveSpindex(-1);
+                        seqPhase = 31;
+                        seqPhaseStartMs = now;
+                    }
+                }
+                if (seqPhase == 31) {
+                    if (spindexIsStable) {
+                        if (now - seqPhaseStartMs >= 100) {
+                            servoLeft.setPosition(-1.0);
+                            servoRight.setPosition(1.0);
+                            pushStartMs = now;
+                            pushRunning = true;
+                            pushStage = 1;
+                            seqPhase = 32;
+                        }
+                    }
+                }
+                if (seqPhase == 32) {
+                    if (pushRunning && pushStage == 1) {
+                        if (now - pushStartMs >= 250) {
+                            servoLeft.setPosition(1.0);
+                            servoRight.setPosition(-1.0);
+                            pushStage = 2;
+                        }
+                    }
+                    if (pushStage == 2 && touchSensor.isPressed()) {
+                        colorArray[2] = Color.EMPTY;
+                        activeSequence = SequenceKind.NONE;
+                        seqPhase = 0;
+                        pushRunning = false;
+                        pushStage = 0;
+                        shootComplete = true;
+                    }
+                }
+
+                break;
+            }
+
+            case SHOOT_CLOSEST: {
+                // Similar to earlier shootClosestBall: prefer 2, then 1, then 0, but with different delay values
+                if (seqPhase == 0) {
+                    if (seqTargetIndex == 2) {
+                        seqPhase = 100;
+                        seqPhaseStartMs = now;
+                    } else if (seqTargetIndex == 1) {
+                        seqPhase = 200; // cycle left then short delay then push
+                    } else if (seqTargetIndex == 0) {
+                        seqPhase = 300; // cycle right then short delay then push
+                    }
+                }
+                if (seqPhase == 100) {
+                    // wait 500ms then push
+                    if (now - seqPhaseStartMs >= 500) {
+                        if (spindexIsStable) {
+                            servoLeft.setPosition(-1.0);
+                            servoRight.setPosition(1.0);
+                            pushStartMs = now; pushRunning = true; pushStage = 1; seqPhase = 101;
+                        }
+                    }
+                }
+                if (seqPhase == 101) {
+                    if (pushRunning && pushStage == 1 && now - pushStartMs >= 250) {
+                        servoLeft.setPosition(1.0); servoRight.setPosition(-1.0); pushStage = 2;
+                    }
+                    if (pushStage == 2) {
+                        colorArray[2] = Color.EMPTY;
+                        activeSequence = SequenceKind.NONE; seqPhase = 0; pushRunning=false; pushStage=0;
+                    }
+                }
+
+                if (seqPhase == 200) {
+                    if (touchSensor.isPressed()) {
+                        moveSpindex(1); seqPhase = 201; seqPhaseStartMs = now;
+                    }
+                }
+                if (seqPhase == 201) {
+                    if (now - seqPhaseStartMs >= 500 && spindexIsStable) {
+                        // push
+                        servoLeft.setPosition(-1.0); servoRight.setPosition(1.0);
+                        pushStartMs = now; pushRunning = true; pushStage = 1; seqPhase = 202;
+                    }
+                }
+                if (seqPhase == 202) {
+                    if (pushRunning && pushStage == 1 && now - pushStartMs >= 250) {
+                        servoLeft.setPosition(1.0); servoRight.setPosition(-1.0); pushStage = 2;
+                    }
+                    if (pushStage == 2) {
+                        colorArray[2] = Color.EMPTY; activeSequence = SequenceKind.NONE; seqPhase=0; pushRunning=false; pushStage=0;
+                    }
+                }
+
+                if (seqPhase == 300) {
+                    if (touchSensor.isPressed()) {
+                        moveSpindex(-1); seqPhase = 301; seqPhaseStartMs = now;
+                    }
+                }
+                if (seqPhase == 301) {
+                    if (now - seqPhaseStartMs >= 500 && spindexIsStable) {
+                        servoLeft.setPosition(-1.0); servoRight.setPosition(1.0);
+                        pushStartMs = now; pushRunning = true; pushStage = 1; seqPhase = 302;
+                    }
+                }
+                if (seqPhase == 302) {
+                    if (pushRunning && pushStage == 1 && now - pushStartMs >= 250) {
+                        servoLeft.setPosition(1.0); servoRight.setPosition(-1.0); pushStage = 2;
+                    }
+                    if (pushStage == 2) {
+                        colorArray[2] = Color.EMPTY; activeSequence = SequenceKind.NONE; seqPhase=0; pushRunning=false; pushStage=0;
+                    }
+                }
+
+                break;
+            }
+
+        }
+    }
+
+    // Helper to start a sequence from commands. This avoids scheduling any commands inside another command.
+    private void startSequence(SequenceKind kind, int targetIndex) {
+        this.activeSequence = kind;
+        this.seqTargetIndex = targetIndex;
+        this.seqPhase = 0;
+        this.seqPhaseStartMs = System.currentTimeMillis();
+        this.pushRunning = false;
+        this.pushStage = 0;
+        this.pushStartMs = 0;
+        this.shootComplete = false;
     }
 
     public void checkColors() {
@@ -328,43 +552,12 @@ public class Sort implements Subsystem {
 
 
             return new InstantCommand(() -> {
-                shootComplete = false;
-                if (colorArray[2] == Color.GREEN) {
-                    new SequentialGroup(
-
-                            pushBallAndBack,
-                            new Delay(.6),
-                            new InstantCommand(() -> {
-                                colorArray[2] = Color.EMPTY;
-                                shootComplete = true;
-                            })
-                    ).schedule();
-                } else if (colorArray[1] == Color.GREEN) {
-                    new SequentialGroup(
-                            cycleLeft,
-
-                            new WaitUntil(()-> Sort.INSTANCE.spindexIsStable),
-                            new Delay(.1),
-                            pushBallAndBack,
-                            new Delay(.6),
-                            new InstantCommand(() -> {
-                                colorArray[2] = Color.EMPTY;
-                                shootComplete = true;
-                            })
-                    ).schedule();
-                } else if (colorArray[0] == Color.GREEN) {
-                    new SequentialGroup(
-                            cycleRight,
-                            new WaitUntil(()-> Sort.INSTANCE.spindexIsStable),
-                            new Delay(.1),
-                            pushBallAndBack,
-                            new Delay(.6),
-                            new InstantCommand(() -> {
-                                colorArray[2] = Color.EMPTY;
-                                shootComplete = true;
-                            })
-                    ).schedule();
-                }
+                // Start internal shoot green sequence (preserves previous behavior but without scheduling commands)
+                int target = -1;
+                if (colorArray[2] == Color.GREEN) target = 2;
+                else if (colorArray[1] == Color.GREEN) target = 1;
+                else if (colorArray[0] == Color.GREEN) target = 0;
+                if (target != -1) startSequence(SequenceKind.SHOOT_GREEN, target);
             }).named("shootNewGreen");
         }
         return new InstantCommand(()->{});
@@ -373,72 +566,29 @@ public class Sort implements Subsystem {
     public Command shootNewPurp() {
         if(colorArray[0]==Color.PURPLE||colorArray[1]==Color.PURPLE||colorArray[2]==Color.PURPLE) {
             return new InstantCommand(() -> {
-                shootComplete = false;
-                if (colorArray[2] == Color.PURPLE) {
-                    new SequentialGroup(
-
-                            pushBallAndBack,
-                            new Delay(.5),
-                            new InstantCommand(() -> {
-                                colorArray[2] = Color.EMPTY;
-                                shootComplete = true;
-                            })
-                    ).schedule();
-                } else if (colorArray[1] == Color.PURPLE) {
-                    new SequentialGroup(
-                            cycleLeft,
-                            new WaitUntil(()-> Sort.INSTANCE.spindexIsStable),
-                            new Delay(.1),
-                            pushBallAndBack,
-                            new Delay(.5),
-                            new InstantCommand(() -> {
-                                colorArray[2] = Color.EMPTY;
-                                shootComplete = true;
-                            })
-                    ).schedule();
-                } else if (colorArray[0] == Color.PURPLE) {
-                    new SequentialGroup(
-                            cycleRight,
-                            new WaitUntil(()-> Sort.INSTANCE.spindexIsStable),
-                            new Delay(.1),
-                            pushBallAndBack,
-                            new Delay(.5),
-                            new InstantCommand(() -> {
-                                colorArray[2] = Color.EMPTY;
-                                shootComplete = true;
-                            })
-                    ).schedule();
-                }
+                int target = -1;
+                if (colorArray[2] == Color.PURPLE) target = 2;
+                else if (colorArray[1] == Color.PURPLE) target = 1;
+                else if (colorArray[0] == Color.PURPLE) target = 0;
+                if (target != -1) startSequence(SequenceKind.SHOOT_PURP, target);
             }).named("shootNewPurp");
         }
         return new InstantCommand(()->{});
     }
     public Command shootClosestBall() {
-        if (colorArray[2] != Color.EMPTY || colorArray[1] != Color.EMPTY || colorArray[0] != Color.EMPTY) {
+        // Determine closest occupied slot and start a SHOOT_CLOSEST sequence which handles the required delays
+        int target = -1;
+        if (colorArray[2] != Color.EMPTY) target = 2;
+        else if (colorArray[1] != Color.EMPTY) target = 1;
+        else if (colorArray[0] != Color.EMPTY) target = 0;
+
+        if (target != -1) {
             return new InstantCommand(() -> {
-                if (colorArray[2] != Color.EMPTY) {
-                    new SequentialGroup(
-                            pushBallAndBack,
-                            new Delay(0.5),
-                            new InstantCommand(() -> colorArray[2] = Color.EMPTY)
-                    ).schedule();
-                } else if (colorArray[1] != Color.EMPTY) {
-                    new SequentialGroup(
-                            cycleLeft,
-                            new Delay(0.5),
-                            pushBallAndBack,
-                            new Delay(0.5),
-                            new InstantCommand(() -> colorArray[2] = Color.EMPTY)
-                    ).schedule();
-                } else if (colorArray[0] != Color.EMPTY) {
-                    new SequentialGroup(
-                            cycleRight,
-                            new Delay(0.5),
-                            pushBallAndBack,
-                            new Delay(0.5),
-                            new InstantCommand(() -> colorArray[2] = Color.EMPTY)
-                    ).schedule();
-                }
+                int t = -1;
+                if (colorArray[2] != Color.EMPTY) t = 2;
+                else if (colorArray[1] != Color.EMPTY) t = 1;
+                else if (colorArray[0] != Color.EMPTY) t = 0;
+                if (t != -1) startSequence(SequenceKind.SHOOT_CLOSEST, t);
             }).named("shootClosestBall");
         }
         return new InstantCommand(() -> {}).named("shootClosestBall");
