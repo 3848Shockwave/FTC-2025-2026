@@ -113,7 +113,7 @@ public class Sort implements Subsystem {
                                 servoLeft.to(-1.0),
                                 servoRight.to(1.0)
                         )
-                                .thenWait(0.25)
+                                .thenWait(0.5)
                                 .then(new SetPositions(
                                         servoLeft.to(1.0),
                                         servoRight.to(-1.0)
@@ -332,7 +332,16 @@ public class Sort implements Subsystem {
                 if (colorArray[2] == Color.GREEN) {
                     new SequentialGroup(
 
-                            pushBallAndBack,
+                               new SetPositions(
+                                servoLeft.to(-1.0),
+                                servoRight.to(1.0)
+                        )
+                                .thenWait(0.25)
+                                .then(new SetPositions(
+                                        servoLeft.to(1.0),
+                                        servoRight.to(-1.0)
+                                ))
+                                ,
                             new Delay(.6),
                             new InstantCommand(() -> {
                                 colorArray[2] = Color.EMPTY;
@@ -345,7 +354,16 @@ public class Sort implements Subsystem {
 
                             new WaitUntil(()-> Sort.INSTANCE.spindexIsStable),
                             new Delay(.1),
-                            pushBallAndBack,
+                               new SetPositions(
+                                servoLeft.to(-1.0),
+                                servoRight.to(1.0)
+                        )
+                                .thenWait(0.25)
+                                .then(new SetPositions(
+                                        servoLeft.to(1.0),
+                                        servoRight.to(-1.0)
+                                ))
+                            ,
                             new Delay(.6),
                             new InstantCommand(() -> {
                                 colorArray[2] = Color.EMPTY;
@@ -357,7 +375,16 @@ public class Sort implements Subsystem {
                             cycleRight,
                             new WaitUntil(()-> Sort.INSTANCE.spindexIsStable),
                             new Delay(.1),
-                            pushBallAndBack,
+                               new SetPositions(
+                                servoLeft.to(-1.0),
+                                servoRight.to(1.0)
+                        )
+                                .thenWait(0.25)
+                                .then(new SetPositions(
+                                        servoLeft.to(1.0),
+                                        servoRight.to(-1.0)
+                                ))
+                            ,
                             new Delay(.6),
                             new InstantCommand(() -> {
                                 colorArray[2] = Color.EMPTY;
@@ -377,7 +404,16 @@ public class Sort implements Subsystem {
                 if (colorArray[2] == Color.PURPLE) {
                     new SequentialGroup(
 
-                            pushBallAndBack,
+                               new SetPositions(
+                                servoLeft.to(-1.0),
+                                servoRight.to(1.0)
+                        )
+                                .thenWait(0.25)
+                                .then(new SetPositions(
+                                        servoLeft.to(1.0),
+                                        servoRight.to(-1.0)
+                                ))
+                            ,
                             new Delay(.5),
                             new InstantCommand(() -> {
                                 colorArray[2] = Color.EMPTY;
@@ -389,7 +425,16 @@ public class Sort implements Subsystem {
                             cycleLeft,
                             new WaitUntil(()-> Sort.INSTANCE.spindexIsStable),
                             new Delay(.1),
-                            pushBallAndBack,
+                               new SetPositions(
+                                servoLeft.to(-1.0),
+                                servoRight.to(1.0)
+                        )
+                                .thenWait(0.25)
+                                .then(new SetPositions(
+                                        servoLeft.to(1.0),
+                                        servoRight.to(-1.0)
+                                ))
+                            ,
                             new Delay(.5),
                             new InstantCommand(() -> {
                                 colorArray[2] = Color.EMPTY;
@@ -401,7 +446,16 @@ public class Sort implements Subsystem {
                             cycleRight,
                             new WaitUntil(()-> Sort.INSTANCE.spindexIsStable),
                             new Delay(.1),
-                            pushBallAndBack,
+                               new SetPositions(
+                                servoLeft.to(-1.0),
+                                servoRight.to(1.0)
+                        )
+                                .thenWait(0.25)
+                                .then(new SetPositions(
+                                        servoLeft.to(1.0),
+                                        servoRight.to(-1.0)
+                                ))
+                            ,
                             new Delay(.5),
                             new InstantCommand(() -> {
                                 colorArray[2] = Color.EMPTY;
@@ -418,7 +472,16 @@ public class Sort implements Subsystem {
             return new InstantCommand(() -> {
                 if (colorArray[2] != Color.EMPTY) {
                     new SequentialGroup(
-                            pushBallAndBack,
+                               new SetPositions(
+                                servoLeft.to(-1.0),
+                                servoRight.to(1.0)
+                        )
+                                .thenWait(0.25)
+                                .then(new SetPositions(
+                                        servoLeft.to(1.0),
+                                        servoRight.to(-1.0)
+                                ))
+                            ,
                             new Delay(0.5),
                             new InstantCommand(() -> colorArray[2] = Color.EMPTY)
                     ).schedule();
@@ -426,7 +489,16 @@ public class Sort implements Subsystem {
                     new SequentialGroup(
                             cycleLeft,
                             new Delay(0.5),
-                            pushBallAndBack,
+                               new SetPositions(
+                                servoLeft.to(-1.0),
+                                servoRight.to(1.0)
+                        )
+                                .thenWait(0.25)
+                                .then(new SetPositions(
+                                        servoLeft.to(1.0),
+                                        servoRight.to(-1.0)
+                                ))
+                            ,
                             new Delay(0.5),
                             new InstantCommand(() -> colorArray[2] = Color.EMPTY)
                     ).schedule();
@@ -434,7 +506,16 @@ public class Sort implements Subsystem {
                     new SequentialGroup(
                             cycleRight,
                             new Delay(0.5),
-                            pushBallAndBack,
+                               new SetPositions(
+                                servoLeft.to(-1.0),
+                                servoRight.to(1.0)
+                        )
+                                .thenWait(0.25)
+                                .then(new SetPositions(
+                                        servoLeft.to(1.0),
+                                        servoRight.to(-1.0)
+                                ))
+                            ,
                             new Delay(0.5),
                             new InstantCommand(() -> colorArray[2] = Color.EMPTY)
                     ).schedule();
