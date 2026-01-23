@@ -227,12 +227,9 @@ public class Sort implements Subsystem {
         }).named("shootPurp");
 
 
-
-
-        updateServo();
-
-
     }
+    public boolean getSecondPressSeen(){
+        return secondPressSeen;}
 
 
 
@@ -274,6 +271,10 @@ public class Sort implements Subsystem {
         double targetPos = POSITIONS[currentIndex];
         spindexRight.setPosition(targetPos);
         spindexLeft.setPosition(targetPos);
+    }
+    public void restartScissor() {
+        servoLeft.setPosition(1.0);
+        servoRight.setPosition(-1.0);
     }
 
     public double getServoPosition() {
@@ -332,7 +333,7 @@ public class Sort implements Subsystem {
                     new SequentialGroup(
 
                             pushBallAndBack,
-                            new Delay(.5),
+                            new Delay(.6),
                             new InstantCommand(() -> {
                                 colorArray[2] = Color.EMPTY;
                                 shootComplete = true;
@@ -342,9 +343,10 @@ public class Sort implements Subsystem {
                     new SequentialGroup(
                             cycleLeft,
 
-                            new Delay(.8),
+                            new WaitUntil(()-> Sort.INSTANCE.spindexIsStable),
+                            new Delay(.1),
                             pushBallAndBack,
-                            new Delay(.5),
+                            new Delay(.6),
                             new InstantCommand(() -> {
                                 colorArray[2] = Color.EMPTY;
                                 shootComplete = true;
@@ -353,9 +355,10 @@ public class Sort implements Subsystem {
                 } else if (colorArray[0] == Color.GREEN) {
                     new SequentialGroup(
                             cycleRight,
-                            new Delay(.8),
+                            new WaitUntil(()-> Sort.INSTANCE.spindexIsStable),
+                            new Delay(.1),
                             pushBallAndBack,
-                            new Delay(.5),
+                            new Delay(.6),
                             new InstantCommand(() -> {
                                 colorArray[2] = Color.EMPTY;
                                 shootComplete = true;
@@ -384,7 +387,8 @@ public class Sort implements Subsystem {
                 } else if (colorArray[1] == Color.PURPLE) {
                     new SequentialGroup(
                             cycleLeft,
-                            new Delay(.8),
+                            new WaitUntil(()-> Sort.INSTANCE.spindexIsStable),
+                            new Delay(.1),
                             pushBallAndBack,
                             new Delay(.5),
                             new InstantCommand(() -> {
@@ -395,7 +399,8 @@ public class Sort implements Subsystem {
                 } else if (colorArray[0] == Color.PURPLE) {
                     new SequentialGroup(
                             cycleRight,
-                            new Delay(.8),
+                            new WaitUntil(()-> Sort.INSTANCE.spindexIsStable),
+                            new Delay(.1),
                             pushBallAndBack,
                             new Delay(.5),
                             new InstantCommand(() -> {
@@ -408,5 +413,36 @@ public class Sort implements Subsystem {
         }
         return new InstantCommand(()->{});
     }
+    public Command shootClosestBall() {
+        if (colorArray[2] != Color.EMPTY || colorArray[1] != Color.EMPTY || colorArray[0] != Color.EMPTY) {
+            return new InstantCommand(() -> {
+                if (colorArray[2] != Color.EMPTY) {
+                    new SequentialGroup(
+                            pushBallAndBack,
+                            new Delay(0.5),
+                            new InstantCommand(() -> colorArray[2] = Color.EMPTY)
+                    ).schedule();
+                } else if (colorArray[1] != Color.EMPTY) {
+                    new SequentialGroup(
+                            cycleLeft,
+                            new Delay(0.5),
+                            pushBallAndBack,
+                            new Delay(0.5),
+                            new InstantCommand(() -> colorArray[2] = Color.EMPTY)
+                    ).schedule();
+                } else if (colorArray[0] != Color.EMPTY) {
+                    new SequentialGroup(
+                            cycleRight,
+                            new Delay(0.5),
+                            pushBallAndBack,
+                            new Delay(0.5),
+                            new InstantCommand(() -> colorArray[2] = Color.EMPTY)
+                    ).schedule();
+                }
+            }).named("shootClosestBall");
+        }
+        return new InstantCommand(() -> {}).named("shootClosestBall");
+    }
+
 }
 

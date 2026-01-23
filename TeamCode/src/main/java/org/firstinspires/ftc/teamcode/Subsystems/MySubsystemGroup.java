@@ -4,6 +4,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Timer;
 
@@ -97,6 +99,53 @@ public class MySubsystemGroup extends SubsystemGroup {
             .setStop((interrupted)->{
                 Turret.INSTANCE.initLimelightSystem();
             });
+   public Command tripleLaunch
+          = new InstantCommand(() -> {
+              Command[] commands = new Command[6];
+              int counters = 0;
+       for (Sort.Color color:colorWeHave) {
+           if(color!= Sort.Color.EMPTY) {
+               if (color == Sort.Color.GREEN) {
+                   commands[counters] = Sort.INSTANCE.shootNewGreen();
+                   counters++;
+                   commands[counters] = new WaitUntil(() -> Sort.INSTANCE.shootComplete);
+                   counters++;
+               } else if (color == Sort.Color.PURPLE) {
+                   commands[counters] = Sort.INSTANCE.shootNewPurp();
+                   counters++;
+                   commands[counters] = new WaitUntil(() -> Sort.INSTANCE.shootComplete);
+                   counters++;
+
+               }
+           }
+       }
+       Command[] commandsFinal = Arrays.copyOf(commands, counters);
+
+           new SequentialGroup(commandsFinal
+           ).schedule();
+
+
+    })
+            .named("tripleLaunch");
+//    public Command tripleLaunch = new InstantCommand(() -> {
+//        ArrayList<Command> commands = new ArrayList<>();
+//        if (colorWeHave == null) return;
+//        for (Sort.Color color : colorWeHave) {
+//            if (color == null) continue;
+//            if (color == Sort.Color.GREEN) {
+//                commands.add(Sort.INSTANCE.shootNewGreen());
+//                commands.add(new WaitUntil(() -> Sort.INSTANCE.shootComplete));
+//            } else if (color == Sort.Color.PURPLE) {
+//                commands.add(Sort.INSTANCE.shootNewPurp());
+//                commands.add(new WaitUntil(() -> Sort.INSTANCE.shootComplete));
+//            }
+//        }
+//        if (!commands.isEmpty()) {
+//            new SequentialGroup(commands.toArray(new Command[0])).schedule();
+//        }
+//    }).named("tripleLaunch");
+   //write a method which takes in an array of commands and iterates through them recusively scheduling them one after another using the .then feature
+
 
     public Sort.Color[] getTargetColor(){
         return targetColor;
