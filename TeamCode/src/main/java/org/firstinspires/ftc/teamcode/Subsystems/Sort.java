@@ -16,12 +16,42 @@ import dev.nextftc.ftc.ActiveOpMode;
 import dev.nextftc.hardware.impl.MotorEx;
 import dev.nextftc.hardware.impl.ServoEx;
 
+/**
+ * Sort subsystem
+ * ----------------
+ * Overview:
+ * This class controls a 3-slot spindex (rotating indexer) and a two-servo pusher (scissor) used to
+ * eject balls. It was refactored to avoid scheduling commands from within other commands. Instead,
+ * higher-level requesters trigger short InstantCommands which call `startSequence(...)` to configure
+ * an internal state machine. The state machine is then advanced from `periodic()` via `processSequence()`.
+ *
+ * Key design changes and rationale:
+ *  - No command schedules another command. Scheduling a command from inside another command causes
+ *    nested lifecycle complexity and can lead to unexpected concurrency/ordering bugs. To eliminate
+ *    that, sequences that previously used SequentialGroup(...) are implemented as an internal state
+ *    machine: commands only request a sequence start (via InstantCommand) and `periodic()` executes
+ *    the multi-step behavior.
+ *  - Timing-sensitive operations (delays, push durations) are implemented with timestamps (ms) and
+ *    simple phase variables rather than blocking waits. This works well inside the periodic loop and
+ *    preserves responsiveness.
+ *
+ * State-machine contract (how external commands should interact):
+ *  - External commands should NOT directly move the servos or call moveSpindex() while a sequence
+ *    is active. Instead, they should call an InstantCommand that calls startSequence(...).
+ *  - Commands that drive the intake should be implemented as short-lived LambdaCommands that set
+ *    power on start and clear it on stop; they should use `requires(...)` appropriately.
+ *  - If you must observe sequence completion, poll `activeSequence == SequenceKind.NONE` or expose
+ *    a helper that returns whether the sequence is active. The state machine uses `shootComplete` and
+ *    internal fields to track completion state.
+ */
 public class Sort implements Subsystem {
 
     public static final Sort INSTANCE = new Sort();
 
     MotorEx intake = new MotorEx("intakeMotor").brakeMode();
+
     ELCEncoderV2 spindexEncoder = null;
+
     ServoEx spindexRight;
     ServoEx spindexLeft;
 
@@ -34,17 +64,36 @@ public class Sort implements Subsystem {
     HardwareMap hardwareMap;
     Telemetry telemetry;
 
-    // === Constants ===
-    // Positions defined based on Test code (A, C, B)
-    // 0.0 -> Position A
-    // 0.45 -> Position C
-    // 0.92 -> Position B
     private double[] POSITIONS = {0.045, 0.51, 0.999};
     private int currentIndex = 0; // Current slot index (0, 1, or 2)
 
+    /**
+     * currentSpindexVelocity
+     * - Type: double
+     * - Purpose: last measured angular velocity of the spindex (kept for external use if needed)
+     * - Units: depends on encoder (rotations/sec or similar)
+     * - Note: this field is updated elsewhere via the encoder; used to determine stability in waitToStable()
+     */
     private double currentSpindexVelocity = 0.0;
+
+    /**
+     * hasRunL / hasRunR
+     * - Type: boolean
+     * - Purpose: 1-shot guards for cycleLeft and cycleRight LambdaCommands. They prevent repeated
+     *   triggering on a single touch press.
+     */
     boolean hasRunL = false;
     boolean hasRunR = false;
+
+    /**
+     * secondPressSeen
+     * - Type: boolean
+     * - Purpose: used by pushBallAndBack and sequences to detect the second touch press that signals
+     *   the completion of a push/retract action. It is set when touchSensor.isPressed() is observed.
+     * - Concurrency: touched by both the LambdaCommand update and the processSequence state machine;
+     *   reading it should be considered racy only if accessed outside the periodic loop; prefer exposing
+     *   getters if external code must poll it.
+     */
     private boolean secondPressSeen = false;
 
 
@@ -57,6 +106,12 @@ public class Sort implements Subsystem {
 
     // === Commands ===
     public Command pushBall = null;
+
+    /**
+     * shootComplete
+     * - Type: boolean
+     * - Purpose: simple flag set when an internal shoot sequence finishes. Mainly for telemetry or tests.
+     */
     boolean shootComplete = false;
     public LambdaCommand pushBallAndBack = null;
     public LambdaCommand positiveIntake = null;
@@ -75,15 +130,72 @@ public class Sort implements Subsystem {
     });
 
     // --- New internal sequence state machine fields ---
+    /**
+     * SequenceKind
+     * - Enum of supported internal sequences. These represent high-level multi-step flows that were
+     *   previously implemented as nested command groups. Keeping them internal allows predictable execution
+     *   order and avoids the complexity of nested command lifecycles.
+     */
     private enum SequenceKind { NONE, SHOOT_GREEN, SHOOT_PURP, SHOOT_CLOSEST }
+
+    /**
+     * activeSequence
+     * - Type: SequenceKind
+     * - Purpose: currently executing sequence. NONE indicates idle.
+     * - Concurrency: only modified by startSequence() and processSequence() (both called from the main
+     *   thread/periodic loop or InstantCommand invocation). External code should call startSequence via
+     *   InstantCommands and may query activeSequence for status.
+     */
     private SequenceKind activeSequence = SequenceKind.NONE;
+
+    /**
+     * seqTargetIndex
+     * - Type: int
+     * - Purpose: the logical slot index (0..2) that the active sequence will act upon.
+     * - Valid values: -1 (none) or 0..2
+     */
     private int seqTargetIndex = -1; // index of the ball we want to handle (0..2)
+
+    /**
+     * seqPhase
+     * - Type: int
+     * - Purpose: small-phase integer used to represent the sub-state within a SequenceKind. We use
+     *   numeric phases (e.g., 10/11 for top push, 20/21/22 for left rotate+push) to keep the code
+     *   compact and deterministic. Each phase has clear transitions and associated timeouts.
+     */
     private int seqPhase = 0;
+
+    /**
+     * seqPhaseStartMs
+     * - Type: long
+     * - Purpose: timestamp (System.currentTimeMillis()) when the current seqPhase started. Used to
+     *   implement non-blocking delays.
+     */
     private long seqPhaseStartMs = 0;
 
     // push internal state (used both by pushBallAndBack if scheduled standalone or by sequence)
+    /**
+     * pushRunning
+     * - Type: boolean
+     * - Purpose: guard for the push mechanics to indicate an ongoing push-retract cycle.
+     */
     private boolean pushRunning = false;
+
+    /**
+     * pushStage
+     * - Type: int
+     * - Purpose: small integer indicating the stage of the push cycle:
+     *     0 -> idle
+     *     1 -> pusher deployed (pushing)
+     *     2 -> pusher retracted (waiting for touch to confirm)
+     */
     private int pushStage = 0; // 0 none, 1 pushed, 2 retracted
+
+    /**
+     * pushStartMs
+     * - Type: long
+     * - Purpose: timestamp when the pusher was deployed; used to enforce the deploy duration (e.g., 250ms)
+     */
     private long pushStartMs = 0;
 
     private Sort() {
@@ -110,6 +222,14 @@ public class Sort implements Subsystem {
 
         // Re-implement pushBallAndBack without scheduling other commands.
         // This LambdaCommand manages its own push/retract timing and completes when the second press is seen.
+        // COMMAND: pushBallAndBack
+        // Purpose: perform a deploy->retract push cycle and finish when a second touch-sensor press confirms
+        // completion. This command is self-contained: it will not schedule other commands and it will
+        // only operate the pusher servos. It uses pushRunning/pushStage/pushStartMs to track progress.
+        // Usage notes:
+        //  - Designed to run only when the spindex is stable (spindexIsStable == true)
+        //  - It sets secondPressSeen when touch sensor reports a press; callers can query that via
+        //    getSecondPressSeen() if needed.
         pushBallAndBack = new LambdaCommand()
                 .setStart(() -> {
                     secondPressSeen = false;
@@ -119,34 +239,46 @@ public class Sort implements Subsystem {
                     pushStartMs = 0;
                 })
                 .setUpdate(() -> {
-                    // If spindex is stable and we haven't started the push, begin it
+                    // Start the push only when the spindex is stable and we haven't seen a confirmation press.
                     if (spindexIsStable && !secondPressSeen && !pushRunning) {
-                        // begin push: set servos to push positions
+                        // Deploy push (pusher down) - these positions are mechanically defined elsewhere
                         servoLeft.setPosition(-1.0);
                         servoRight.setPosition(1.0);
                         pushStartMs = System.currentTimeMillis();
                         pushRunning = true;
-                        pushStage = 1;
+                        pushStage = 1; // now in deployed stage
                     }
 
-                    // After 250 ms, retract
+                    // After a fixed deploy duration (250ms) retract the pusher. This timing ensures the ball
+                    // is fully contacted before retraction starts.
                     if (pushRunning && pushStage == 1) {
                         if (System.currentTimeMillis() - pushStartMs >= 250) {
+                            // Retract pusher
                             servoLeft.setPosition(1.0);
                             servoRight.setPosition(-1.0);
-                            pushStage = 2;
+                            pushStage = 2; // waiting for touch confirmation
                         }
                     }
 
-                    // Detect the second press at any time
+                    // If the touch sensor is pressed at any time after the push, mark the second press seen
+                    // which signals completion of the push cycle for other logic.
                     if (touchSensor.isPressed()) {
                         secondPressSeen = true;
                     }
                 })
                 .setIsDone(() -> secondPressSeen)
                 .named("pushBallAndBack");
+
+
+
+
         // Core Rotation Logic
-        // Rotate Left (Index + 1)
+
+        // COMMAND: cycleLeft
+        // Purpose: single-press driven rotation to the left (logical +1). This command is intentionally
+        // simple: it listens for a touch press and calls moveSpindex(1) once, then completes.
+        // Important: it uses hasRunL as a one-shot guard so repeated periodic() updates don't move the
+        // spindex multiple times for a single press. The command should be scheduled only when desired.
         cycleLeft = new LambdaCommand()
                 .setStart(()->{
                      hasRunL = false;
@@ -160,6 +292,8 @@ public class Sort implements Subsystem {
                 .setIsDone(() -> hasRunL)
                 .named("cycleLeft");
 
+        // COMMAND: cycleRight
+        // Purpose: symmetric to cycleLeft but rotates the spindex right (logical -1).
         cycleRight = new LambdaCommand()
                 .setStart(()->{
                     hasRunR = false;
@@ -174,13 +308,18 @@ public class Sort implements Subsystem {
                 .named("cycleRight");
 
 
-
+        // COMMAND: positiveIntake
+        // Purpose: run the intake motor inward while the command is active. The command sets power on
+        // start and clears it on stop. It uses requires(intakeOn, this) gating so other logic can disable
+        // the intake via stopIntake.
         positiveIntake = new LambdaCommand()
                 .setStart(() -> intake.setPower(1.0))
                 .setInterruptible(true)
                 .setStop(interrupted -> intake.setPower(0.0))
                 .requires(intakeOn, this);
 
+        // COMMAND: negativeIntake
+        // Purpose: run the intake motor outward (reverse) while the command is active.
         negativeIntake = new LambdaCommand()
                 .setStart(() -> intake.setPower(-1.0))
                 .setInterruptible(true)
@@ -191,6 +330,10 @@ public class Sort implements Subsystem {
         // Instead of creating SequentialGroup(...) and scheduling it here (which would call commands from within
         // a command), we start an internal sequence handled by periodic()/processSequence(). The InstantCommand
         // below merely requests the sequence start.
+        // COMMAND: shootGreen (InstantCommand)
+        // Purpose: select the nearest green ball (prefers top -> middle -> bottom) and request the
+        // SHOOT_GREEN internal sequence. It does not execute the sequence itself; it only populates
+        // the sequence state via startSequence(...) so processSequence() can execute it safely.
         shootGreen = new InstantCommand(() -> {
             // choose nearest GREEN slot (prefer index 2, then 1, then 0)
             int target = -1;
@@ -204,6 +347,7 @@ public class Sort implements Subsystem {
             if (target == 2) colorArray[2] = Color.EMPTY;
         }).named("shootGreen");
 
+        // COMMAND: shootPurp (InstantCommand) - symmetric to shootGreen for purple balls
         shootPurp = new InstantCommand(() -> {
             int target = -1;
             if (colorArray[2] == Color.PURPLE) target = 2;
@@ -292,54 +436,79 @@ public class Sort implements Subsystem {
 
     // Internal sequence processing: replicates the former SequentialGroup flows without scheduling commands.
     private void processSequence() {
+        // The state machine is the single-authority executor for sequences. It consumes `activeSequence`,
+        // `seqPhase`, `seqTargetIndex` and uses timestamps (`seqPhaseStartMs`, `pushStartMs`) to
+        // perform time-based transitions. All actions that change hardware (servo positions, moveSpindex)
+        // happen here so that sequences cannot be concurrently partially-executed by other code.
+
+        // High-level design notes for the phases used below:
+        //  - Each named sequence (e.g. SHOOT_GREEN) uses seqPhase to represent compact sub-states.
+        //  - Numeric ranges are grouped by purpose to make it easy to identify behavior in logs:
+        //      10..19  : immediate-top push flow (target index 2)
+        //      20..29  : rotate-left then push flow (target index 1)
+        //      30..39  : rotate-right then push flow (target index 0)
+        //      100..199: SHOOT_CLOSEST top flow
+        //      200..299: SHOOT_CLOSEST rotate-left flow
+        //      300..399: SHOOT_CLOSEST rotate-right flow
+        //  - Transitions are driven by time (seqPhaseStartMs), encoder stability (spindexIsStable),
+        //    and touch sensor events. Each transition contains guards to avoid unsafe hardware writes.
+
         if (activeSequence == SequenceKind.NONE) return;
         long now = System.currentTimeMillis();
 
         switch (activeSequence) {
             case SHOOT_GREEN:
             case SHOOT_PURP: {
-                // Behavior depends on seqTargetIndex
+                // These two sequences are identical in physical actions; they differ only in which
+                // color triggered them. The state machine therefore handles both in the same branch.
+
                 if (seqPhase == 0) {
-                    // initial phase before any action
+                    // Entry: decide which sub-flow to take based on seqTargetIndex.
                     if (seqTargetIndex == 2) {
-                        // previously: Delay(1) then pushBallAndBack
+                        // Target already at top: wait a short delay, then push.
                         seqPhaseStartMs = now;
-                        seqPhase = 10; // wait delay then push
+                        seqPhase = 10; // top flow: initial wait
                     } else if (seqTargetIndex == 1) {
-                        // previously: cycleLeft, Delay(1), pushBallAndBack (but cycleLeft waited for touch press)
-                        seqPhase = 20; // wait for touch to cycle left
+                        // Target in middle: wait for physical confirmation via touch press that a
+                        // rotation can be performed (the original code waited for a touch event before
+                        // rotating). We mirror that: wait for a press to call moveSpindex(1).
+                        seqPhase = 20; // middle flow: wait-for-press-to-rotate-left
                     } else if (seqTargetIndex == 0) {
-                        seqPhase = 30; // wait for touch to cycle right
+                        // Target in bottom: symmetric to middle but rotate right (-1)
+                        seqPhase = 30; // bottom flow: wait-for-press-to-rotate-right
                     }
                 }
 
-                // Target at top (2)
+                // ------- Top flow (target index 2) -------
                 if (seqPhase == 10) {
-                    // wait 1 second then start push sequence
+                    // Safety Delay: let the mechanism settle (1 second) before pushing. This mimics
+                    // the prior Delay(1) behavior but does not block; it uses timestamps instead.
                     if (now - seqPhaseStartMs >= 1000) {
-                        // start push sequence: ensure spindex is stable first
+                        // Ensure spindex is stable before mechanically interacting with the pusher.
                         if (spindexIsStable) {
-                            // begin push
+                            // Deploy pusher and start timing for the deploy duration
                             servoLeft.setPosition(-1.0);
                             servoRight.setPosition(1.0);
                             pushStartMs = now;
                             pushRunning = true;
                             pushStage = 1;
-                            seqPhase = 11;
+                            seqPhase = 11; // deployed, awaiting retract & confirmation
                         }
                     }
                 }
+
                 if (seqPhase == 11) {
-                    // handle push timing: retract after 250ms then wait for second press to finish
+                    // Retract once deploy time has elapsed, then wait for touch confirmation (second press)
                     if (pushRunning && pushStage == 1) {
+                        // After the deploy duration (250ms) start retract sequence
                         if (now - pushStartMs >= 250) {
                             servoLeft.setPosition(1.0);
                             servoRight.setPosition(-1.0);
-                            pushStage = 2;
+                            pushStage = 2; // retracted, now expect a touch press to confirm
                         }
                     }
                     if (pushStage == 2 && touchSensor.isPressed()) {
-                        // finish sequence
+                        // Touch confirms the ball left the system. Update memory and finish sequence.
                         colorArray[2] = Color.EMPTY;
                         activeSequence = SequenceKind.NONE;
                         seqPhase = 0;
@@ -349,20 +518,25 @@ public class Sort implements Subsystem {
                     }
                 }
 
-                // Target at index 1: need to wait for touch press to cycle left
+                // ------- Middle flow (target index 1) -------
                 if (seqPhase == 20) {
+                    // Wait for an operator/automation to press the touch sensor indicating the spindex
+                    // can rotate left. This preserves original behavior that used cycleLeft which
+                    // depended on a press event.
                     if (touchSensor.isPressed()) {
                         moveSpindex(1);
-                        // after moving, wait until spindex is stable then delay .1 then push
+                        // After moving we rely on the encoder stability check before pushing.
                         seqPhase = 21;
-                        seqPhaseStartMs = now;
+                        seqPhaseStartMs = now; // mark when rotation happened
                     }
                 }
                 if (seqPhase == 21) {
+                    // Wait for encoder-stability and a very short buffer (100ms) to allow mechanical
+                    // settling before initiating a push. We explicitly require spindexIsStable to avoid
+                    // pushing while the indexer is still moving.
                     if (spindexIsStable) {
-                        // small delay 100ms then push
                         if (now - seqPhaseStartMs >= 100) {
-                            // start push
+                            // Deploy pusher
                             servoLeft.setPosition(-1.0);
                             servoRight.setPosition(1.0);
                             pushStartMs = now;
@@ -373,6 +547,7 @@ public class Sort implements Subsystem {
                     }
                 }
                 if (seqPhase == 22) {
+                    // Same deploy/retract/confirm pattern as top flow
                     if (pushRunning && pushStage == 1) {
                         if (now - pushStartMs >= 250) {
                             servoLeft.setPosition(1.0);
@@ -390,8 +565,9 @@ public class Sort implements Subsystem {
                     }
                 }
 
-                // Target at index 0: rotate right then same as above
+                // ------- Bottom flow (target index 0) -------
                 if (seqPhase == 30) {
+                    // Wait for a press to rotate right (operator-assisted rotation), matching original semantics.
                     if (touchSensor.isPressed()) {
                         moveSpindex(-1);
                         seqPhase = 31;
@@ -399,6 +575,7 @@ public class Sort implements Subsystem {
                     }
                 }
                 if (seqPhase == 31) {
+                    // After rotation, wait for stability then push with the same timings used above
                     if (spindexIsStable) {
                         if (now - seqPhaseStartMs >= 100) {
                             servoLeft.setPosition(-1.0);
@@ -432,7 +609,10 @@ public class Sort implements Subsystem {
             }
 
             case SHOOT_CLOSEST: {
-                // Similar to earlier shootClosestBall: prefer 2, then 1, then 0, but with different delay values
+                // SHOOT_CLOSEST chooses the nearest non-empty slot and performs a similar push flow but with
+                // different timing semantics (shorter initial delays). The phases are grouped so it's clear
+                // which chunk belongs to which physical action.
+
                 if (seqPhase == 0) {
                     if (seqTargetIndex == 2) {
                         seqPhase = 100;
@@ -444,7 +624,7 @@ public class Sort implements Subsystem {
                     }
                 }
                 if (seqPhase == 100) {
-                    // wait 500ms then push
+                    // Shorter wait (500ms) for momentum to die before pushing
                     if (now - seqPhaseStartMs >= 500) {
                         if (spindexIsStable) {
                             servoLeft.setPosition(-1.0);
@@ -455,22 +635,26 @@ public class Sort implements Subsystem {
                 }
                 if (seqPhase == 101) {
                     if (pushRunning && pushStage == 1 && now - pushStartMs >= 250) {
+                        // Retract after deploy duration
                         servoLeft.setPosition(1.0); servoRight.setPosition(-1.0); pushStage = 2;
                     }
                     if (pushStage == 2) {
+                        // No touch-confirm required for SHOOT_CLOSEST flow; assume success and clear top
                         colorArray[2] = Color.EMPTY;
                         activeSequence = SequenceKind.NONE; seqPhase = 0; pushRunning=false; pushStage=0;
                     }
                 }
 
                 if (seqPhase == 200) {
+                    // Rotate-left branch for SHOOT_CLOSEST - requires a press to rotate
                     if (touchSensor.isPressed()) {
                         moveSpindex(1); seqPhase = 201; seqPhaseStartMs = now;
                     }
                 }
                 if (seqPhase == 201) {
+                    // After rotation, wait 500ms + stability check then push
                     if (now - seqPhaseStartMs >= 500 && spindexIsStable) {
-                        // push
+                        // Deploy
                         servoLeft.setPosition(-1.0); servoRight.setPosition(1.0);
                         pushStartMs = now; pushRunning = true; pushStage = 1; seqPhase = 202;
                     }
