@@ -4,6 +4,7 @@ import com.qualcomm.hardware.rev.RevTouchSensor;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ELCEncoderV2;
@@ -33,6 +34,7 @@ public class Sort implements Subsystem {
 
     ColorSensor colorSensorL1, colorSensorL2;
     ColorSensor colorSensorR1, colorSensorR2;
+    ColorSensor colorSensorFront;
 
     HardwareMap hardwareMap;
     Telemetry telemetry;
@@ -72,7 +74,9 @@ public class Sort implements Subsystem {
     public SequentialGroup tripleLaunch = null;
     private boolean spindexIsStable = false;
     private boolean running = false;
+
     RevTouchSensor touchSensor = null;
+    final ElapsedTime timer = new ElapsedTime();
 
     public InstantCommand stopIntake = new InstantCommand(() -> {
         intakeOn = false;
@@ -95,6 +99,7 @@ public class Sort implements Subsystem {
         colorSensorL2 = hardwareMap.get(ColorSensor.class, "colorSensorL2");
         colorSensorR1 = hardwareMap.get(ColorSensor.class, "colorSensorR1");
         colorSensorR2 = hardwareMap.get(ColorSensor.class, "colorSensorR2");
+        colorSensorFront = hardwareMap.get(ColorSensor.class, "colorSensorFront");
 
         spindexRight = new ServoEx(hardwareMap.get(Servo.class, "spindexRight"));
         spindexLeft = new ServoEx(hardwareMap.get(Servo.class, "spindexLeft"));
@@ -260,17 +265,19 @@ public class Sort implements Subsystem {
          }
 
      }
-    Command waitForStableCmd = new LambdaCommand()
-            .setIsDone(this::waitToStable)
-            .named("WaitForStable");
-    public boolean waitToStable(){
-        return Math.abs(currentSpindexVelocity) == 0;
+
+    public boolean isSpindexStable(){
+        return spindexIsStable;
+    }
+    public boolean isTouchPressed(){
+        return touchSensor.isPressed();
     }
 
     public void updateServo() {
         double targetPos = POSITIONS[currentIndex];
         spindexRight.setPosition(targetPos);
         spindexLeft.setPosition(targetPos);
+
     }
     public void restartScissor() {
         servoLeft.setPosition(1.0);
@@ -292,10 +299,7 @@ public class Sort implements Subsystem {
         checkColors();
         updateServo();
         spindexEncoder.updateRotations();
-        spindexIsStable = spindexEncoder.isStable(0.5, 3);
-        ActiveOpMode.telemetry().addData("=====Sorting Data======", "");
-        ActiveOpMode.telemetry().addData("SpindexStable", spindexIsStable);
-        ActiveOpMode.telemetry().addData("Touchy", touchSensor.isPressed());
+        spindexIsStable = spindexEncoder.isStable(.25, 4);
     }
 
     public void checkColors() {
@@ -303,7 +307,8 @@ public class Sort implements Subsystem {
         int blueNumL = (colorSensorL1.blue() + colorSensorL2.blue()) / 2;
         int greenNumR = (colorSensorR1.green() + colorSensorR2.green()) / 2;
         int blueNumR = (colorSensorR1.blue() + colorSensorR2.blue()) / 2;
-
+        int greenNumF = colorSensorFront.green();
+        int blueNumF = colorSensorFront.blue();
         // Color determination logic
         if (greenNumR > 100 && blueNumR > 100      ) {
             colorArray[0] = (greenNumR > blueNumR) ? Color.GREEN : Color.PURPLE;
@@ -316,6 +321,11 @@ public class Sort implements Subsystem {
         } else {
             colorArray[1] = Color.EMPTY;
         }
+        if (greenNumF > 100 && blueNumF > 100) {
+            colorArray[2] = (greenNumF > blueNumF) ? Color.GREEN : Color.PURPLE;
+        } else {
+            colorArray[2] = Color.EMPTY;
+        }
     }
 
 
@@ -323,204 +333,214 @@ public class Sort implements Subsystem {
     public Color[] getColorArray() {
         return colorArray;
     }
+    
+   private enum State { CHECK, WAIT_STABLE, PUSH, WAIT_RETRACT, DONE }
+
     public Command shootNewGreen() {
-        if(colorArray[0]==Color.GREEN||colorArray[1]==Color.GREEN||colorArray[2]==Color.GREEN) {
+        if (colorArray[0] == Color.GREEN || colorArray[1] == Color.GREEN || colorArray[2] == Color.GREEN) {
+            final State[] state = { State.CHECK };
+            final int[] targetIndex = { -1 };
 
+            final double retractDelay = 0.6;
 
-            return new InstantCommand(() -> {
-                shootComplete = false;
-                if (colorArray[2] == Color.GREEN) {
-                    new SequentialGroup(
-
-                               new SetPositions(
-                                servoLeft.to(-1.0),
-                                servoRight.to(1.0)
-                        )
-                                .thenWait(0.25)
-                                .then(new SetPositions(
-                                        servoLeft.to(1.0),
-                                        servoRight.to(-1.0)
-                                ))
-                                ,
-                            new Delay(.6),
-                            new InstantCommand(() -> {
-                                colorArray[2] = Color.EMPTY;
-                                shootComplete = true;
-                            })
-                    ).schedule();
-                } else if (colorArray[1] == Color.GREEN) {
-                    new SequentialGroup(
-                            cycleLeft,
-
-                            new WaitUntil(()-> Sort.INSTANCE.spindexIsStable),
-                            new Delay(.1),
-                               new SetPositions(
-                                servoLeft.to(-1.0),
-                                servoRight.to(1.0)
-                        )
-                                .thenWait(0.25)
-                                .then(new SetPositions(
-                                        servoLeft.to(1.0),
-                                        servoRight.to(-1.0)
-                                ))
-                            ,
-                            new Delay(.6),
-                            new InstantCommand(() -> {
-                                colorArray[2] = Color.EMPTY;
-                                shootComplete = true;
-                            })
-                    ).schedule();
-                } else if (colorArray[0] == Color.GREEN) {
-                    new SequentialGroup(
-                            cycleRight,
-                            new WaitUntil(()-> Sort.INSTANCE.spindexIsStable),
-                            new Delay(.1),
-                               new SetPositions(
-                                servoLeft.to(-1.0),
-                                servoRight.to(1.0)
-                        )
-                                .thenWait(0.25)
-                                .then(new SetPositions(
-                                        servoLeft.to(1.0),
-                                        servoRight.to(-1.0)
-                                ))
-                            ,
-                            new Delay(.6),
-                            new InstantCommand(() -> {
-                                colorArray[2] = Color.EMPTY;
-                                shootComplete = true;
-                            })
-                    ).schedule();
-                }
-            }).named("shootNewGreen");
+            return new LambdaCommand()
+                    .setStart(() -> {
+                        shootComplete = false;
+                        state[0] = State.CHECK;
+                        targetIndex[0] = -1;
+                        timer.reset();
+                    })
+                    .setUpdate(() -> {
+                        switch (state[0]) {
+                            case CHECK:
+                                if (colorArray[2] == Color.GREEN) {
+                                    targetIndex[0] = 2;
+                                    state[0] = State.PUSH;
+                                } else if (colorArray[1] == Color.GREEN) {
+                                    targetIndex[0] = 1;
+                                    cycleLeft.schedule();
+                                    state[0] = State.WAIT_STABLE;
+                                } else if (colorArray[0] == Color.GREEN) {
+                                    targetIndex[0] = 0;
+                                    cycleRight.schedule();
+                                    state[0] = State.WAIT_STABLE;
+                                } else {
+                                    state[0] = State.DONE;
+                                }
+                                break;
+                            case WAIT_STABLE:
+                                if (Sort.INSTANCE.spindexIsStable) {
+                                    // small settle
+                                    timer.reset();
+                                    state[0] = State.PUSH;
+                                }
+                                break;
+                            case PUSH:
+                                // schedule the push/retract sequence
+                                new SetPositions(
+                                        servoLeft.to(-1.0),
+                                        servoRight.to(1.0)
+                                )
+                                        .thenWait(0.25)
+                                        .then(new SetPositions(
+                                                servoLeft.to(1.0),
+                                                servoRight.to(-1.0)
+                                        ))
+                                        .schedule();
+                                timer.reset();
+                                state[0] = State.WAIT_RETRACT;
+                                break;
+                            case WAIT_RETRACT:
+                                if (timer.seconds() >= retractDelay) {
+                                    colorArray[2] = Color.EMPTY;
+                                    shootComplete = true;
+                                    state[0] = State.DONE;
+                                }
+                                break;
+                            case DONE:
+                                // no-op
+                                break;
+                        }
+                    })
+                    .setIsDone(() -> state[0] == State.DONE).setInterruptible(true)
+                    .named("shootNewGreen");
         }
-        return new InstantCommand(()->{});
+        return new InstantCommand(() -> {});
     }
 
     public Command shootNewPurp() {
-        if(colorArray[0]==Color.PURPLE||colorArray[1]==Color.PURPLE||colorArray[2]==Color.PURPLE) {
-            return new InstantCommand(() -> {
-                shootComplete = false;
-                if (colorArray[2] == Color.PURPLE) {
-                    new SequentialGroup(
+        if (colorArray[0] == Color.PURPLE || colorArray[1] == Color.PURPLE || colorArray[2] == Color.PURPLE) {
+            final State[] state = { State.CHECK };
+            final int[] targetIndex = { -1 };
+            final double retractDelay = 0.5;
 
-                               new SetPositions(
-                                servoLeft.to(-1.0),
-                                servoRight.to(1.0)
-                        )
-                                .thenWait(0.25)
-                                .then(new SetPositions(
-                                        servoLeft.to(1.0),
-                                        servoRight.to(-1.0)
-                                ))
-                            ,
-                            new Delay(.5),
-                            new InstantCommand(() -> {
-                                colorArray[2] = Color.EMPTY;
-                                shootComplete = true;
-                            })
-                    ).schedule();
-                } else if (colorArray[1] == Color.PURPLE) {
-                    new SequentialGroup(
-                            cycleLeft,
-                            new WaitUntil(()-> Sort.INSTANCE.spindexIsStable),
-                            new Delay(.1),
-                               new SetPositions(
-                                servoLeft.to(-1.0),
-                                servoRight.to(1.0)
-                        )
-                                .thenWait(0.25)
-                                .then(new SetPositions(
-                                        servoLeft.to(1.0),
-                                        servoRight.to(-1.0)
-                                ))
-                            ,
-                            new Delay(.5),
-                            new InstantCommand(() -> {
-                                colorArray[2] = Color.EMPTY;
-                                shootComplete = true;
-                            })
-                    ).schedule();
-                } else if (colorArray[0] == Color.PURPLE) {
-                    new SequentialGroup(
-                            cycleRight,
-                            new WaitUntil(()-> Sort.INSTANCE.spindexIsStable),
-                            new Delay(.1),
-                               new SetPositions(
-                                servoLeft.to(-1.0),
-                                servoRight.to(1.0)
-                        )
-                                .thenWait(0.25)
-                                .then(new SetPositions(
-                                        servoLeft.to(1.0),
-                                        servoRight.to(-1.0)
-                                ))
-                            ,
-                            new Delay(.5),
-                            new InstantCommand(() -> {
-                                colorArray[2] = Color.EMPTY;
-                                shootComplete = true;
-                            })
-                    ).schedule();
-                }
-            }).named("shootNewPurp");
+            return new LambdaCommand()
+                    .setStart(() -> {
+                        shootComplete = false;
+                        state[0] = State.CHECK;
+                        targetIndex[0] = -1;
+                        timer.reset();
+                    })
+                    .setUpdate(() -> {
+                        switch (state[0]) {
+                            case CHECK:
+                                if (colorArray[2] == Color.PURPLE) {
+                                    targetIndex[0] = 2;
+                                    state[0] = State.PUSH;
+                                } else if (colorArray[1] == Color.PURPLE) {
+                                    targetIndex[0] = 1;
+                                    cycleLeft.schedule();
+                                    state[0] = State.WAIT_STABLE;
+                                } else if (colorArray[0] == Color.PURPLE) {
+                                    targetIndex[0] = 0;
+                                    cycleRight.schedule();
+                                    state[0] = State.WAIT_STABLE;
+                                } else {
+                                    state[0] = State.DONE;
+                                }
+                                break;
+                            case WAIT_STABLE:
+                                if (Sort.INSTANCE.spindexIsStable) {
+                                    timer.reset();
+                                    state[0] = State.PUSH;
+                                }
+                                break;
+                            case PUSH:
+                                new SetPositions(
+                                        servoLeft.to(-1.0),
+                                        servoRight.to(1.0)
+                                )
+                                        .thenWait(0.25)
+                                        .then(new SetPositions(
+                                                servoLeft.to(1.0),
+                                                servoRight.to(-1.0)
+                                        ))
+                                        .schedule();
+                                timer.reset();
+                                state[0] = State.WAIT_RETRACT;
+                                break;
+                            case WAIT_RETRACT:
+                                if (timer.seconds() >= retractDelay) {
+                                    colorArray[2] = Color.EMPTY;
+                                    shootComplete = true;
+                                    state[0] = State.DONE;
+                                }
+                                break;
+                            case DONE:
+                                // no-op
+                                break;
+                        }
+                    })
+                    .setIsDone(() -> state[0] == State.DONE).setInterruptible(true)
+                    .named("shootNewPurp");
         }
-        return new InstantCommand(()->{});
+        return new InstantCommand(() -> {});
     }
+
     public Command shootClosestBall() {
         if (colorArray[2] != Color.EMPTY || colorArray[1] != Color.EMPTY || colorArray[0] != Color.EMPTY) {
-            return new InstantCommand(() -> {
-                if (colorArray[2] != Color.EMPTY) {
-                    new SequentialGroup(
-                               new SetPositions(
-                                servoLeft.to(-1.0),
-                                servoRight.to(1.0)
-                        )
-                                .thenWait(0.25)
-                                .then(new SetPositions(
-                                        servoLeft.to(1.0),
-                                        servoRight.to(-1.0)
-                                ))
-                            ,
-                            new Delay(0.5),
-                            new InstantCommand(() -> colorArray[2] = Color.EMPTY)
-                    ).schedule();
-                } else if (colorArray[1] != Color.EMPTY) {
-                    new SequentialGroup(
-                            cycleLeft,
-                            new Delay(0.5),
-                               new SetPositions(
-                                servoLeft.to(-1.0),
-                                servoRight.to(1.0)
-                        )
-                                .thenWait(0.25)
-                                .then(new SetPositions(
-                                        servoLeft.to(1.0),
-                                        servoRight.to(-1.0)
-                                ))
-                            ,
-                            new Delay(0.5),
-                            new InstantCommand(() -> colorArray[2] = Color.EMPTY)
-                    ).schedule();
-                } else if (colorArray[0] != Color.EMPTY) {
-                    new SequentialGroup(
-                            cycleRight,
-                            new Delay(0.5),
-                               new SetPositions(
-                                servoLeft.to(-1.0),
-                                servoRight.to(1.0)
-                        )
-                                .thenWait(0.25)
-                                .then(new SetPositions(
-                                        servoLeft.to(1.0),
-                                        servoRight.to(-1.0)
-                                ))
-                            ,
-                            new Delay(0.5),
-                            new InstantCommand(() -> colorArray[2] = Color.EMPTY)
-                    ).schedule();
-                }
-            }).named("shootClosestBall");
+            final State[] state = { State.CHECK };
+            final int[] targetIndex = { -1 };
+
+            final double retractDelay = 0.5;
+
+            return new LambdaCommand()
+                    .setStart(() -> {
+                        state[0] = State.CHECK;
+                        targetIndex[0] = -1;
+                        timer.reset();
+                    })
+                    .setUpdate(() -> {
+                        switch (state[0]) {
+                            case CHECK:
+                                if (colorArray[2] != Color.EMPTY) {
+                                    targetIndex[0] = 2;
+                                    state[0] = State.PUSH;
+                                } else if (colorArray[1] != Color.EMPTY) {
+                                    targetIndex[0] = 1;
+                                    cycleLeft.schedule();
+                                    state[0] = State.WAIT_STABLE;
+                                } else if (colorArray[0] != Color.EMPTY) {
+                                    targetIndex[0] = 0;
+                                    cycleRight.schedule();
+                                    state[0] = State.WAIT_STABLE;
+                                } else {
+                                    state[0] = State.DONE;
+                                }
+                                break;
+                            case WAIT_STABLE:
+                                if (Sort.INSTANCE.spindexIsStable) {
+                                    timer.reset();
+                                    state[0] = State.PUSH;
+                                }
+                                break;
+                            case PUSH:
+                                new SetPositions(
+                                        servoLeft.to(-1.0),
+                                        servoRight.to(1.0)
+                                )
+                                        .thenWait(0.25)
+                                        .then(new SetPositions(
+                                                servoLeft.to(1.0),
+                                                servoRight.to(-1.0)
+                                        ))
+                                        .schedule();
+                                timer.reset();
+                                state[0] = State.WAIT_RETRACT;
+                                break;
+                            case WAIT_RETRACT:
+                                if (timer.seconds() >= retractDelay) {
+                                    colorArray[2] = Color.EMPTY;
+                                    state[0] = State.DONE;
+                                }
+                                break;
+                            case DONE:
+                                // no-op
+                                break;
+                        }
+                    })
+                    .setIsDone(() -> state[0] == State.DONE).setInterruptible(true)
+                    .named("shootClosestBall");
         }
         return new InstantCommand(() -> {}).named("shootClosestBall");
     }

@@ -8,6 +8,7 @@ import android.animation.RectEvaluator;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
+import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.rev.RevTouchSensor;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -103,10 +104,10 @@ public static double Lkp =0.0004;
             a_button = button(() -> gamepad1.a);
             b_button = button(() -> gamepad1.b);
             telemetryManager.addData("You need to select an Auto/Alliance",
-                    "\nPress X for BLUE FAR SIDE autonomous" +
-                            "\nPress Y for BLUE GOAL SIDE autonomous" +
-                            "\nPress A for RED FAR SIDE autonomous" +
-                            "\nPress B for RED GOAL SIDE autonomous");
+                    "\nPress SQUARE for BLUE FAR SIDE autonomous" +
+                            "\nPress TRIANGLE for BLUE GOAL SIDE autonomous" +
+                            "\nPress X for RED FAR SIDE autonomous" +
+                            "\nPress CIRCLE for RED GOAL SIDE autonomous");
             telemetryManager.update(telemetry);
 
             if (ActiveOpMode.opModeInInit()) {
@@ -300,47 +301,62 @@ public static double Lkp =0.0004;
 
         double turretWant = Turret.INSTANCE.getRealTurretPosition() + Turret.INSTANCE.calculatePosition();
         Turret.INSTANCE.setXoffset(xOffset);
+        telemetryManager.addLine("-----------------------------");
+        telemetryManager.addLine("General TeleOp Info:");
+        telemetryManager.addLine("-----------------------------");
+        telemetryManager.addData("Commands:", CommandManager.INSTANCE.snapshot());
+        telemetryManager.addData("Side Selected: ", RobotConfig.alliance.name());
+        telemetryManager.addData("Pose X & Y:", follower().getPose().getX()+" , "+follower().getPose().getY());
 
-
+        telemetryManager.addLine("-----------------------------");
+        telemetryManager.addLine("===== SORTING SYSTEM ======");
+        telemetryManager.addLine("-----------------------------");
         if(Sort.INSTANCE.getColorArray() != null) {
             Color[] colors = Sort.INSTANCE.getColorArray();
-            telemetryManager.addData("=== SORTING SYSTEM ===", "");
-            // Note: Index 2 might not update automatically in new logic unless specifically set
-            telemetryManager.addData("Colors (R/L/Shoot)",
+            telemetryManager.addData("Colors indexed (Right/Left/Shoot)",
                     colors[0] + ", " + colors[1] + ", " + colors[2]
             );
         }
-        telemetryManager.addData("Commands:", CommandManager.INSTANCE.snapshot());
-        telemetryManager.addData("Current Index (0-2)", Sort.INSTANCE.getCurrentIndex());
-        telemetryManager.addData("Servo Command Pos", Sort.INSTANCE.getServoPosition());
-
-        // --- Turret Telemetry ---
-        Turret.INSTANCE.getRotateEncoder().updateRotations();
-        telemetryManager.addData("goalvel", newVelocity);
-        telemetryManager.addData("turretMotorPosition", Turret.INSTANCE.getRealTurretPosition());
-        telemetryManager.addData("TurretNextPosition", turretWant);
-
-        telemetryManager.addData("=== ROTATION TRACKING ===", "");
-        telemetryManager.addData("Rotations", Turret.INSTANCE.getRotateEncoder().getRotations());
-        telemetryManager.addData("Position",Turret.INSTANCE.getRotateEncoder().getTotalDegrees());
-        telemetryManager.addData("Calculate Position", Turret.INSTANCE.calculatePosition());
-        telemetryManager.addData("Next Position", Turret.INSTANCE.getNextTurretPosition());
-        telemetryManager.addData("Real Goal Position", Turret.INSTANCE.getControlSystemRotate().getGoal());
-
-        telemetryManager.addData("=== MYSUBSYSTEMGROUP ===", "");
         if(MySubsystemGroup.INSTANCE.getTargetColor()!=null) {
-            telemetryManager.addData("target color array", MySubsystemGroup.INSTANCE.getTargetColor()[0]+", "+MySubsystemGroup.INSTANCE.getTargetColor()[1]+", "+MySubsystemGroup.INSTANCE.getTargetColor()[2]);
+            telemetryManager.addData("Target Colors: ", MySubsystemGroup.INSTANCE.getTargetColor()[0]+", "+MySubsystemGroup.INSTANCE.getTargetColor()[1]+", "+MySubsystemGroup.INSTANCE.getTargetColor()[2]);
         }
+        telemetryManager.addData("Current Spindex Index (0-2)", Sort.INSTANCE.getCurrentIndex());
+        telemetryManager.addData("Spindex Stability", Sort.INSTANCE.isSpindexStable());
+        telemetryManager.addData("ScissorLift Staus",Sort.INSTANCE.isTouchPressed());
 
-
-
-
-        // Turret.INSTANCE.rebuildControlSystem(Rkp,Rki,Rkd,Rkf,100);
-        // --- Limelight Telemetry ---
+        telemetryManager.addLine("-----------------------------");
+        telemetryManager.addLine("===== LAUNCH SYSTEM ======");
+        telemetryManager.addLine("-----------------------------");
         telemetryManager.addData("Pipeline", Turret.INSTANCE.limelightProcessing.getCurrentPipeline());
-        telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
-        telemetryManager.addData("turretVelocity", Turret.INSTANCE.getTurretVelocity());
-        Turret.INSTANCE.setTestSpeed(speed);
+        telemetryManager.addData("Limelight Status: ", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
+
+//        telemetryManager.addData("Servo Command Pos", Sort.INSTANCE.getServoPosition());
+//
+//        // --- Turret Telemetry ---
+//        Turret.INSTANCE.getRotateEncoder().updateRotations();
+//        telemetryManager.addData("goalvel", newVelocity);
+//        telemetryManager.addData("turretMotorPosition", Turret.INSTANCE.getRealTurretPosition());
+//        telemetryManager.addData("TurretNextPosition", turretWant);
+//
+//        telemetryManager.addData("=== ROTATION TRACKING ===", "");
+//        telemetryManager.addData("Rotations", Turret.INSTANCE.getRotateEncoder().getRotations());
+//        telemetryManager.addData("Position",Turret.INSTANCE.getRotateEncoder().getTotalDegrees());
+//        telemetryManager.addData("Calculate Position", Turret.INSTANCE.calculatePosition());
+//        telemetryManager.addData("Next Position", Turret.INSTANCE.getNextTurretPosition());
+//        telemetryManager.addData("Real Goal Position", Turret.INSTANCE.getControlSystemRotate().getGoal());
+//
+//        telemetryManager.addData("=== MYSUBSYSTEMGROUP ===", "");
+
+//
+//
+//
+//
+//        // Turret.INSTANCE.rebuildControlSystem(Rkp,Rki,Rkd,Rkf,100);
+//        // --- Limelight Telemetry ---
+//        telemetryManager.addData("Pipeline", Turret.INSTANCE.limelightProcessing.getCurrentPipeline());
+//        telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
+//        telemetryManager.addData("turretVelocity", Turret.INSTANCE.getTurretVelocity());
+//        Turret.INSTANCE.setTestSpeed(speed);
 
         telemetryManager.update(telemetry);
     }

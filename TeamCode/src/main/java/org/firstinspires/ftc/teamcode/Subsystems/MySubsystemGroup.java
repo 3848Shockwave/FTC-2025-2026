@@ -85,7 +85,7 @@ public class MySubsystemGroup extends SubsystemGroup {
         }
 
 
-            })
+            }).setInterruptible(true)
             .named("shootInPattern");
 
     public Command detectTargetColorArray = new LambdaCommand()
@@ -101,31 +101,32 @@ public class MySubsystemGroup extends SubsystemGroup {
             });
    public Command tripleLaunch
           = new InstantCommand(() -> {
-              Command[] commands = new Command[6];
-              int counters = 0;
-       for (Sort.Color color:colorWeHave) {
-           if(color!= Sort.Color.EMPTY) {
-               if (color == Sort.Color.GREEN) {
-                   commands[counters] = Sort.INSTANCE.shootNewGreen();
-                   counters++;
-                   commands[counters] = new WaitUntil(() -> Sort.INSTANCE.shootComplete);
-                   counters++;
-               } else if (color == Sort.Color.PURPLE) {
-                   commands[counters] = Sort.INSTANCE.shootNewPurp();
-                   counters++;
-                   commands[counters] = new WaitUntil(() -> Sort.INSTANCE.shootComplete);
-                   counters++;
 
-               }
-           }
-       }
-       Command[] commandsFinal = Arrays.copyOf(commands, counters);
+                  Command[] commands = new Command[6];
+                  int counters = 0;
+                  for (Sort.Color color : colorWeHave) {
+                      if (color != Sort.Color.EMPTY) {
+                          if (color == Sort.Color.GREEN) {
+                              commands[counters] = Sort.INSTANCE.shootNewGreen();
+                              counters++;
+                              commands[counters] = new WaitUntil(() -> Sort.INSTANCE.shootComplete);
+                              counters++;
+                          } else if (color == Sort.Color.PURPLE) {
+                              commands[counters] = Sort.INSTANCE.shootNewPurp();
+                              counters++;
+                              commands[counters] = new WaitUntil(() -> Sort.INSTANCE.shootComplete);
+                              counters++;
 
-           new SequentialGroup(commandsFinal
-           ).schedule();
+                          }
+                      }
+                  }
+                  Command[] commandsFinal = Arrays.copyOf(commands, counters);
+                if (commandsFinal.length !=0) {
+                    new SequentialGroup(commandsFinal
+                    ).schedule();
+                }
 
-
-    })
+    }).setInterruptible(true)
             .named("tripleLaunch");
 //    public Command tripleLaunch = new InstantCommand(() -> {
 //        ArrayList<Command> commands = new ArrayList<>();

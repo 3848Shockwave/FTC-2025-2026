@@ -4,10 +4,14 @@ package org.firstinspires.ftc.teamcode.Subsystems;
 import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.ticksPerDegreeOfRotation;
 import dev.nextftc.core.commands.Command;
 
+import com.pedropathing.math.Vector;
 import com.qualcomm.hardware.rev.RevTouchSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.OpModes.TeleOpProgram;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ELCEncoderV2;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.LimelightProcessing;
@@ -187,6 +191,11 @@ public class Turret implements Subsystem {
                      (7.13468 * distance)
                     + 589.24871;
             //Lvelocity = setTurretVelocity;// for manual control
+          Vector velocity = PedroComponent.follower().getVelocity();
+
+            double velocityCompensation = calculateVelocityCompensation(velocity, distance);
+
+            Lvelocity = Lvelocity;// + velocityCompensation;
             controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
         }
         else{
@@ -195,6 +204,29 @@ public class Turret implements Subsystem {
             controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
         }
     }
+    private double calculateVelocityCompensation(Vector robotVelocity, double distance) {
+        // Get target position/bearing
+        double targetBearing = limelightProcessing.getTargetInfo().getTargetX();// adjust to your method
+
+        // Create unit vector pointing toward target
+        Pose2D targetDirection = new Pose2D(
+                DistanceUnit.MM,
+                Math.cos(Math.toRadians(targetBearing)),
+                Math.sin(Math.toRadians(targetBearing)), AngleUnit.DEGREES,
+                0
+        );
+
+        // Dot product to get velocity component along shooting direction
+        double velocityTowardTarget = (robotVelocity.getXComponent() * targetDirection.getX(DistanceUnit.INCH))
+                + (robotVelocity.getYComponent() * targetDirection.getY(DistanceUnit.INCH));
+
+        // Compensation scales with velocity component
+        double compensationFactor = 0.3; // tune empirically
+        double distanceScaling = 1.0 / (1.0 + distance / 100.0);
+
+        return velocityTowardTarget * compensationFactor * distanceScaling;
+    }
+
     public void setLaunchMotorSpeed(double power){
         launchMotorLeft.setPower(power);
     }
@@ -335,8 +367,13 @@ public class Turret implements Subsystem {
         }
         if(!manualControl) {
             calculateLaunchStrength();
-
-            nextTurretPosition = rotateEncoder.getTotalDegrees() + calculatePosition();
+            if(!limelightProcessing.processTargets().isEmpty() ){
+                nextTurretPosition = rotateEncoder.getTotalDegrees() +
+                        calculatePosition();
+            }
+            else if(limelightProcessing.processTargets().isEmpty()){
+                nextTurretPosition = -35 * 5.625;
+            }
         }
         if(manualControl){
             nextTurretPosition = -manualAngle * 5.625;
@@ -356,9 +393,6 @@ public class Turret implements Subsystem {
             }
 
         //controlSystemTurret.setGoal(new KineticState(0.0, testingVelocity,0.0));
-
-
-        ActiveOpMode.telemetry().addData("RunningLoop","");
         // periodic logic (runs every loop)
 
 
@@ -371,23 +405,23 @@ public class Turret implements Subsystem {
 
 
         double Lpower = controlSystemTurret.calculate(new KineticState(launchMotorLeft.getCurrentPosition(), getTurretVelocity()));
-        ActiveOpMode.telemetry().addData("Calculated Power",controlSystemTurret.calculate(launchMotorLeft.getState()));
-        ActiveOpMode.telemetry().addData("LaunchMotorState", launchMotorLeft.getState().component2());
-        ActiveOpMode.telemetry().addData("PowerRotate",Rpower);
-        ActiveOpMode.telemetry().addData("Power Turret",Lpower);
-        ActiveOpMode.telemetry().addData("calcLVelocity", Lvelocity);
-        ActiveOpMode.telemetry().addData("calcmovement",calculatePosition());
-        ActiveOpMode.telemetry().addData("calcnext",nextTurretPosition);
-        ActiveOpMode.telemetry().addData("Magic Math Calculation",nextTurretPosition+getBlindTrackingCoordinates());
-
-        if(!limelightProcessing.processTargets().isEmpty()) {
-            ActiveOpMode.telemetry().addData("distance in CM", limelightProcessing.getTargetInfo().getDistance());
-            ActiveOpMode.telemetry().addData("X offset", limelightProcessing.getTargetInfo().getTargetX());
-
-        }
-
-        ActiveOpMode.telemetry().addData("Goal Velocity", controlSystemTurret.getGoal().component2());
-        ///launchMotorLeft.getVelocity();
+//        ActiveOpMode.telemetry().addData("Calculated Power",controlSystemTurret.calculate(launchMotorLeft.getState()));
+//        ActiveOpMode.telemetry().addData("LaunchMotorState", launchMotorLeft.getState().component2());
+//        ActiveOpMode.telemetry().addData("PowerRotate",Rpower);
+//        ActiveOpMode.telemetry().addData("Power Turret",Lpower);
+//        ActiveOpMode.telemetry().addData("calcLVelocity", Lvelocity);
+//        ActiveOpMode.telemetry().addData("calcmovement",calculatePosition());
+//        ActiveOpMode.telemetry().addData("calcnext",nextTurretPosition);
+//        ActiveOpMode.telemetry().addData("Magic Math Calculation",nextTurretPosition+getBlindTrackingCoordinates());
+//
+//        if(!limelightProcessing.processTargets().isEmpty()) {
+//            ActiveOpMode.telemetry().addData("distance in CM", limelightProcessing.getTargetInfo().getDistance());
+//            ActiveOpMode.telemetry().addData("X offset", limelightProcessing.getTargetInfo().getTargetX());
+//
+//        }
+//
+//        ActiveOpMode.telemetry().addData("Goal Velocity", controlSystemTurret.getGoal().component2());
+//        ///launchMotorLeft.getVelocity();
         //clamp power to limit during testing
         if(Rpower>.8){
             Rpower=.8;

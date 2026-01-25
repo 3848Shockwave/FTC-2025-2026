@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.OpModes.Autonomous;
 
+import static dev.nextftc.bindings.Bindings.button;
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 
 import com.pedropathing.follower.Follower;
@@ -53,6 +54,8 @@ public class Autonomous extends NextFTCOpMode {
     }
 
     private AutoMode selectedMode;
+    private boolean confirmed = false;
+    private boolean readyToGo = false;
     MotorEx intake = new MotorEx("intakeMotor").brakeMode();
 
     // Paths variables
@@ -91,30 +94,82 @@ public class Autonomous extends NextFTCOpMode {
     public void onWaitForStart() {
 
         boolean lastX = false, lastY = false, lastA = false;
-
+        confirmed = false;
         while (!isStarted() && !isStopRequested()) {
-            boolean currentX = gamepad1.x;
-            boolean currentY = gamepad1.y;
-            boolean currentA = gamepad1.a;
+            if(!confirmed) {
+                boolean currentX = gamepad1.x;
+                boolean currentY = gamepad1.y;
+                boolean currentA = gamepad1.a;
 
-            if (currentX && !lastX) isRed = !isRed;
+                if (currentX && !lastX) isRed = !isRed;
 
-            if (currentY && !lastY) isFar = !isFar;
+                if (currentY && !lastY) isFar = !isFar;
 
-            if (currentA && !lastA) isScore = !isScore;
+                if (currentA && !lastA) isScore = !isScore;
+                if(gamepad1.b) {
+                    confirmed = true;
+                    gamepad1.rumble(250);
+                }
+                lastX = currentX;
+                lastY = currentY;
+                lastA = currentA;
 
-            lastX = currentX;
-            lastY = currentY;
-            lastA = currentA;
+                updateSelectedMode();
+                updateTelemetry();
 
-            updateSelectedMode();
-            updateTelemetry();
-
-            if (follower != null) {
-                follower.update();
+                if (follower != null) {
+                    follower.update();
+                }
+                telemetry.update();
             }
-            telemetry.update();
+            if(confirmed&&!readyToGo){
+                telemetry.addLine("Configuration Confirmed!");
+                telemetry.addData("Selected Mode", selectedMode);
+                telemetry.update();
+                if (selectedMode == null) return;
+                if (RobotConfig.autonomousStartEndPoses != null) {
+                    follower.setMaxPower(1);
+                    follower.setConstants(Constants.followerConstants);
+                    follower.setStartingPose(RobotConfig.autonomousStartEndPoses.getStartPose());
+                    follower.update();
+                }
+                switch (selectedMode) {
+                    case BLUE_FAR_SIDE_SCORE:
+                        buildBlueFarSideScorePaths();
+                        readyToGo = true;
+                        break;
+                    case BLUE_FAR_SIDE_MOVE:
+                        buildBlueFarMovingPaths();
+
+                        break;
+                    case BLUE_GOAL_SIDE_MOVE:
+                        buildBlueGoalMovingPaths();
+                        readyToGo = true;
+                        break;
+                    case BLUE_GOAL_SIDE_SCORE:
+                        //WRITE THIS
+                        readyToGo = true;
+                        break;
+                    case RED_FAR_SIDE_SCORE:
+                        buildRedFarSideScorePaths();
+                        readyToGo = true;
+                        break;
+                    case RED_FAR_SIDE_MOVE:
+                        buildRedFarMovingPaths();
+                        readyToGo = true;
+                        break;
+                    case RED_GOAL_SIDE_MOVE:
+                        buildRedGoalMovingPaths();
+                        readyToGo = true;
+                        break;
+                    case RED_GOAL_SIDE_SCORE:
+                        buildRedGoalSideScorePaths();
+                        readyToGo = true;
+                        break;
+                }
+            }
         }
+
 
     }
 
@@ -145,9 +200,11 @@ public class Autonomous extends NextFTCOpMode {
 
     private void updateTelemetry() {
         telemetry.addLine("=== AUTO CONFIGURATION ===");
-        telemetry.addData("Alliance (X)", isRed ? "RED" : "BLUE");
-        telemetry.addData("Side     (Y)", isFar ? "FAR" : "GOAL");
-        telemetry.addData("Action   (A)", isScore ? "SCORE" : "MOVE");
+        telemetry.addData("Alliance (Square)", isRed ? "RED" : "BLUE");
+        telemetry.addData("Side     (Triangle)", isFar ? "FAR" : "GOAL");
+        telemetry.addData("Action   (X)", isScore ? "SCORE" : "MOVE");
+        telemetry.addData("Confirmation   (Circle)", confirmed ? "CONFIRMED" : "NOT CONFIRMED");
+
         telemetry.addLine("--------------------------");
         telemetry.addData("SELECTED MODE", selectedMode);
         telemetry.update();
@@ -157,26 +214,16 @@ public class Autonomous extends NextFTCOpMode {
     @Override
     public void onStartButtonPressed() {
         Turret.INSTANCE.initLimelightSystem();
-        if (selectedMode == null) return;
-        if (RobotConfig.autonomousStartEndPoses != null) {
-            follower.setMaxPower(1);
-            follower.setConstants(Constants.followerConstants);
-            follower.setStartingPose(RobotConfig.autonomousStartEndPoses.getStartPose());
-            follower.update();
-        }
 
 
         switch (selectedMode) {
             case BLUE_FAR_SIDE_SCORE:
-                buildBlueFarSideScorePaths();
                 runBlueFarSideScoreCommands().schedule();
                 break;
             case BLUE_FAR_SIDE_MOVE:
-                buildBlueFarMovingPaths();
                 runBlueFarMovingCommands().schedule();
                 break;
             case BLUE_GOAL_SIDE_MOVE:
-                buildBlueGoalMovingPaths();
                 runBlueGoalMovingCommands().schedule();
                 break;
             case BLUE_GOAL_SIDE_SCORE:
@@ -184,19 +231,15 @@ public class Autonomous extends NextFTCOpMode {
                 telemetry.addData("Warning", "Blue Goal Score Path not implemented yet!");
                 break;
             case RED_FAR_SIDE_SCORE:
-                buildRedFarSideScorePaths();
                 runRedFarSideScoreCommands().schedule();
                 break;
             case RED_FAR_SIDE_MOVE:
-                buildRedFarMovingPaths();
                 runRedFarMovingCommands().schedule();
                 break;
             case RED_GOAL_SIDE_MOVE:
-                buildRedGoalMovingPaths();
                 runRedGoalMovingCommands().schedule();
                 break;
             case RED_GOAL_SIDE_SCORE:
-                buildRedGoalSideScorePaths();
                 runRedGoalSideScoreCommands().schedule();
                 break;
         }
@@ -258,6 +301,8 @@ public class Autonomous extends NextFTCOpMode {
         simplePath.setLinearHeadingInterpolation(
                 RobotConfig.AutonomousStartEndPoses.FARSIDEBLUE.getStartPose().getHeading(), // Fixed: was using Red start in original code, but keeping user code as requested if needed. Wait, in prompt it was FARSIDEBLUE. keeping prompt version.
                 endpose.getHeading());
+        telemetry.addLine("Paths Built");
+        telemetry.update();
     }
 
     private Command runBlueFarMovingCommands() {
@@ -273,6 +318,8 @@ public class Autonomous extends NextFTCOpMode {
         simplePath.setLinearHeadingInterpolation(
                 RobotConfig.AutonomousStartEndPoses.FARSIDERED.getStartPose().getHeading(),
                 endpose.getHeading());
+        telemetry.addLine("Paths Built");
+        telemetry.update();
     }
 
     private Command runRedFarMovingCommands() {
@@ -319,6 +366,8 @@ public class Autonomous extends NextFTCOpMode {
                 .addPath(new BezierLine(pickUpBalls1, score))
                 .setLinearHeadingInterpolation(pickUpBalls1.getHeading(), score.getHeading())
                 .build();
+        telemetry.addLine("Paths Built");
+        telemetry.update();
     }
 
     private Command runRedFarSideScoreCommands() {
@@ -435,6 +484,8 @@ public class Autonomous extends NextFTCOpMode {
                 ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(315))
 
                 .build();
+        telemetry.addLine("Paths Built");
+        telemetry.update();
     }
 
     private Command runBlueFarSideScoreCommands() {
@@ -560,6 +611,8 @@ public class Autonomous extends NextFTCOpMode {
                 .addPath(new BezierLine(grab3, Score4))
                 .setLinearHeadingInterpolation(grab3.getHeading(), Score4.getHeading())
                 .build();
+        telemetry.addLine("Paths Built");
+        telemetry.update();
     }
 
     private Command runRedGoalSideScoreCommands() {
