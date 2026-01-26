@@ -381,7 +381,7 @@ public class Sort implements Subsystem {
                                         servoLeft.to(-1.0),
                                         servoRight.to(1.0)
                                 )
-                                        .thenWait(0.25)
+                                        .thenWait(0.35)
                                         .then(new SetPositions(
                                                 servoLeft.to(1.0),
                                                 servoRight.to(-1.0)
@@ -412,7 +412,7 @@ public class Sort implements Subsystem {
         if (colorArray[0] == Color.PURPLE || colorArray[1] == Color.PURPLE || colorArray[2] == Color.PURPLE) {
             final State[] state = { State.CHECK };
             final int[] targetIndex = { -1 };
-            final double retractDelay = 0.5;
+            final double retractDelay = 0.6;
 
             return new LambdaCommand()
                     .setStart(() -> {
@@ -482,7 +482,7 @@ public class Sort implements Subsystem {
             final State[] state = { State.CHECK };
             final int[] targetIndex = { -1 };
 
-            final double retractDelay = 0.5;
+            final double retractDelay = 0.6;
 
             return new LambdaCommand()
                     .setStart(() -> {
@@ -519,7 +519,7 @@ public class Sort implements Subsystem {
                                         servoLeft.to(-1.0),
                                         servoRight.to(1.0)
                                 )
-                                        .thenWait(0.25)
+                                        .thenWait(0.35)
                                         .then(new SetPositions(
                                                 servoLeft.to(1.0),
                                                 servoRight.to(-1.0)

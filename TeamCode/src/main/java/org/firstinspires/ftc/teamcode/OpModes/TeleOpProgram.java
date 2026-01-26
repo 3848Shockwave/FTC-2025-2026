@@ -3,32 +3,24 @@ package org.firstinspires.ftc.teamcode.OpModes;
 import static dev.nextftc.bindings.Bindings.button;
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 
-import android.animation.RectEvaluator;
-
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
-import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
-import com.qualcomm.hardware.rev.RevTouchSensor;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.robot.Robot;
-import com.qualcomm.robotcore.util.Range;
 
-import org.firstinspires.ftc.teamcode.Subsystems.Commands.TripleLaunch;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotStateTracker;
 import org.firstinspires.ftc.teamcode.Subsystems.MySubsystemGroup;
 import org.firstinspires.ftc.teamcode.Subsystems.PTO;
 import org.firstinspires.ftc.teamcode.Subsystems.Sort;
+import org.firstinspires.ftc.teamcode.Subsystems.Sort.Color;
 import org.firstinspires.ftc.teamcode.Subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-import org.firstinspires.ftc.teamcode.Subsystems.Sort.Color; // Updated Import
 
 import dev.nextftc.bindings.Button;
-import dev.nextftc.core.commands.delays.Delay;
-import dev.nextftc.core.commands.groups.SequentialGroup;
+import dev.nextftc.bindings.Variable;
 import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
@@ -70,6 +62,7 @@ public static double Lkp =0.0004;
     public static double Lkd =  0.0088;
     public static double Lkf = 0.000452;
     public static double speed =1345;
+    public boolean PTOEngaged = false;
     private boolean overrideUpdatePose = false;
 
 
@@ -109,47 +102,54 @@ public static double Lkp =0.0004;
                             "\nPress X for RED FAR SIDE autonomous" +
                             "\nPress CIRCLE for RED GOAL SIDE autonomous");
             telemetryManager.update(telemetry);
-
-            if (ActiveOpMode.opModeInInit()) {
+            if (ActiveOpMode.opModeInInit()&&!sideSelected) {
                 x_button.whenBecomesTrue(() -> {
-                    RobotConfig.alliance = RobotConfig.Alliance.BLUE;
-                    RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.FARSIDEBLUE;
-                    telemetryManager.addData("Start Selected:", " BLUE FAR SIDE autonomous");
-                    telemetryManager.update(telemetry);
-                    sideSelected=true;
-                    RobotConfig.robotStateTracker = new RobotStateTracker();
-                    antiCrazy = RobotConfig.robotStateTracker;
-                    Turret.INSTANCE.initLimelightSystem();
+                    if (ActiveOpMode.opModeInInit()&&!sideSelected) {
+                        RobotConfig.alliance = RobotConfig.Alliance.BLUE;
+                        RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.FARSIDEBLUEMOVE;
+                        telemetryManager.addData("Start Selected:", " BLUE FAR SIDE autonomous");
+                        telemetryManager.update(telemetry);
+                        sideSelected = true;
+                        RobotConfig.robotStateTracker = new RobotStateTracker();
+                        antiCrazy = RobotConfig.robotStateTracker;
+                        Turret.INSTANCE.initLimelightSystem();
+                    }
                 });
                 y_button.whenBecomesTrue(() -> {
-                    RobotConfig.alliance = RobotConfig.Alliance.BLUE;
-                    RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.GOALSIDEBLUE;
-                    telemetryManager.addData("Start Selected:", " BLUE GOAL SIDE autonomous");
-                    telemetryManager.update(telemetry);
-                    sideSelected=true;
-                    RobotConfig.robotStateTracker = new RobotStateTracker();
-                    antiCrazy = RobotConfig.robotStateTracker;
-                    Turret.INSTANCE.initLimelightSystem();
+                    if (ActiveOpMode.opModeInInit()&&!sideSelected) {
+                        RobotConfig.alliance = RobotConfig.Alliance.BLUE;
+                        RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.GOALSIDEBLUE;
+                        telemetryManager.addData("Start Selected:", " BLUE GOAL SIDE autonomous");
+                        telemetryManager.update(telemetry);
+                        sideSelected = true;
+                        RobotConfig.robotStateTracker = new RobotStateTracker();
+                        antiCrazy = RobotConfig.robotStateTracker;
+                        Turret.INSTANCE.initLimelightSystem();
+                    }
                 });
                 a_button.whenBecomesTrue(() -> {
-                    RobotConfig.alliance = RobotConfig.Alliance.RED;
-                    RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.FARSIDERED;
-                    telemetryManager.addData("Start Selected:", " RED FAR SIDE autonomous");
-                    telemetryManager.update(telemetry);
-                    sideSelected=true;
-                    RobotConfig.robotStateTracker = new RobotStateTracker();
-                    antiCrazy = RobotConfig.robotStateTracker;
-                    Turret.INSTANCE.initLimelightSystem();
+                    if (ActiveOpMode.opModeInInit()&&!sideSelected) {
+                        RobotConfig.alliance = RobotConfig.Alliance.RED;
+                        RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.FARSIDEREDMOVE;
+                        telemetryManager.addData("Start Selected:", " RED FAR SIDE autonomous");
+                        telemetryManager.update(telemetry);
+                        sideSelected = true;
+                        RobotConfig.robotStateTracker = new RobotStateTracker();
+                        antiCrazy = RobotConfig.robotStateTracker;
+                        Turret.INSTANCE.initLimelightSystem();
+                    }
                 });
                 b_button.whenBecomesTrue(() -> {
-                    RobotConfig.alliance = RobotConfig.Alliance.RED;
-                    RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.GOALSIDERED;
-                    telemetryManager.addData("Start Selected:", " RED GOAL SIDE autonomous");
-                    telemetryManager.update(telemetry);
-                    sideSelected=true;
-                    RobotConfig.robotStateTracker = new RobotStateTracker();
-                    antiCrazy = RobotConfig.robotStateTracker;
-                    Turret.INSTANCE.initLimelightSystem();
+                    if (ActiveOpMode.opModeInInit()&&!sideSelected) {
+                        RobotConfig.alliance = RobotConfig.Alliance.RED;
+                        RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.GOALSIDERED;
+                        telemetryManager.addData("Start Selected:", " RED GOAL SIDE autonomous");
+                        telemetryManager.update(telemetry);
+                        sideSelected = true;
+                        RobotConfig.robotStateTracker = new RobotStateTracker();
+                        antiCrazy = RobotConfig.robotStateTracker;
+                        Turret.INSTANCE.initLimelightSystem();
+                    }
                 });
             }
         }
@@ -171,6 +171,7 @@ public static double Lkp =0.0004;
 
         Sort.INSTANCE.updateServo();
         Sort.INSTANCE.restartScissor();
+
 
 
         //=================== GAMEPAD 1 CONTROLS =================//
@@ -255,22 +256,10 @@ public static double Lkp =0.0004;
                 .whenBecomesTrue(()->{
                     follower().breakFollowing();
                     PTO.INSTANCE.engage.schedule();
+                    PTOEngaged = true;
                 });
 
-        Button PTOLeftSide =  button(() -> gamepad2.left_bumper);
-        Button PTORightSide =  button(() -> gamepad2.right_bumper);
 
-        PTOLeftSide.whenTrue(()->{
-            leftBack.setPower(1.0);
-            PTO.INSTANCE.engageL.schedule();
-        });
-        PTOLeftSide.whenBecomesFalse(()->leftBack.setPower(0.0));
-
-        PTORightSide.whenTrue(()->{
-            rightBack.setPower(-1.0);
-            PTO.INSTANCE.engageR.schedule();
-        });
-        PTORightSide.whenBecomesFalse(()->rightBack.setPower(0.0));
 
         follower().startTeleopDrive();
 
@@ -285,6 +274,18 @@ public static double Lkp =0.0004;
 
     @Override
     public void onUpdate() {
+        if(PTOEngaged) {
+            if (gamepad2.left_trigger > 0.5) {
+                leftBack.setPower(-gamepad2.left_trigger);
+            }  else if(gamepad2.left_trigger < .5){
+                leftBack.setPower(0.0);
+            }
+            if (gamepad2.right_trigger > .5) {
+                rightBack.setPower(gamepad2.right_trigger);
+            } else if(gamepad2.right_trigger < .5){
+                rightBack.setPower(0.0);
+            }
+        }
         if(antiCrazy.getLastMeasuredPose()!=null) {
             if (!follower().getPose().roughlyEquals(antiCrazy.getLastMeasuredPose(), 15)&&!overrideUpdatePose) {
                 follower().setPose(antiCrazy.getLastMeasuredPose());
@@ -340,7 +341,7 @@ public static double Lkp =0.0004;
 //
 //        telemetryManager.addData("=== ROTATION TRACKING ===", "");
 //        telemetryManager.addData("Rotations", Turret.INSTANCE.getRotateEncoder().getRotations());
-//        telemetryManager.addData("Position",Turret.INSTANCE.getRotateEncoder().getTotalDegrees());
+        //telemetryManager.addData("Position",Turret.INSTANCE.getRotateEncoder().getTotalDegrees());
 //        telemetryManager.addData("Calculate Position", Turret.INSTANCE.calculatePosition());
 //        telemetryManager.addData("Next Position", Turret.INSTANCE.getNextTurretPosition());
 //        telemetryManager.addData("Real Goal Position", Turret.INSTANCE.getControlSystemRotate().getGoal());
