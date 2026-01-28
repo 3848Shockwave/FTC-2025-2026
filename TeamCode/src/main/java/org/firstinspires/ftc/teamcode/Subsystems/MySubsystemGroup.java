@@ -27,12 +27,6 @@ public class MySubsystemGroup extends SubsystemGroup {
     private Sort.Color[] colorWeHave = new Sort.Color[3];
     private Sort.Color[] targetColor = new Sort.Color[3];
 
-    // --- Internal pattern state machine ---
-    private enum Action { SHOOT_GREEN, SHOOT_PURP }
-    private ArrayList<Action> patternActions = new ArrayList<>();
-    private int patternIndex = 0;
-    private boolean patternWaitingForComplete = false;
-    private boolean patternActive = false;
 
 
     private MySubsystemGroup() {
@@ -52,49 +46,46 @@ public class MySubsystemGroup extends SubsystemGroup {
     }
 
     public Command shootInPattern = new InstantCommand(() -> {
-            // Instead of building and scheduling a SequentialGroup here (which would schedule commands from
-            // inside a command), we prepare an internal patternActions list and mark the pattern active.
             if(Arrays.equals(
                     targetColor,
                     new Sort.Color[]{Sort.Color.GREEN, Sort.Color.PURPLE, Sort.Color.PURPLE}
             )){
-                patternActions.clear();
-                patternActions.add(Action.SHOOT_GREEN);
-                patternActions.add(Action.SHOOT_PURP);
-                patternActions.add(Action.SHOOT_PURP);
-                patternIndex = 0;
-                patternWaitingForComplete = false;
-                patternActive = true;
-                return;
+                new SequentialGroup(
+                        Sort.INSTANCE.shootNewGreen(),
+                        new WaitUntil(() -> Sort.INSTANCE.shootComplete),
+                        Sort.INSTANCE.shootNewPurp(),
+                        new WaitUntil(() -> Sort.INSTANCE.shootComplete),
+                        Sort.INSTANCE.shootNewPurp()
+                ).schedule();
+
                 }
         else if(Arrays.equals(
                 targetColor,
                 new Sort.Color[]{Sort.Color.PURPLE, Sort.Color.PURPLE, Sort.Color.GREEN}
         )){
-                patternActions.clear();
-                patternActions.add(Action.SHOOT_PURP);
-                patternActions.add(Action.SHOOT_PURP);
-                patternActions.add(Action.SHOOT_GREEN);
-                patternIndex = 0;
-                patternWaitingForComplete = false;
-                patternActive = true;
-                return;
+                new SequentialGroup(
+                        Sort.INSTANCE.shootNewPurp(),
+                        new WaitUntil(() -> Sort.INSTANCE.shootComplete),
+                        Sort.INSTANCE.shootNewPurp(),
+                        new WaitUntil(() -> Sort.INSTANCE.shootComplete),
+                        Sort.INSTANCE.shootNewGreen()
+                ).schedule();
         }
        else if(Arrays.equals(
                 targetColor,
                 new Sort.Color[]{Sort.Color.PURPLE, Sort.Color.GREEN, Sort.Color.PURPLE}
         )){
-                patternActions.clear();
-                patternActions.add(Action.SHOOT_PURP);
-                patternActions.add(Action.SHOOT_GREEN);
-                patternActions.add(Action.SHOOT_PURP);
-                patternIndex = 0;
-                patternWaitingForComplete = false;
-                patternActive = true;
-                return;
+                new SequentialGroup(
+                        Sort.INSTANCE.shootNewPurp(),
+                        new WaitUntil(() -> Sort.INSTANCE.shootComplete),
+                        Sort.INSTANCE.shootNewGreen(),
+                        new WaitUntil(() -> Sort.INSTANCE.shootComplete),
+                        Sort.INSTANCE.shootNewPurp()
+                ).schedule();
         }
 
-            })
+
+            }).setInterruptible(true)
             .named("shootInPattern");
 
     public Command detectTargetColorArray = new LambdaCommand()
@@ -110,23 +101,32 @@ public class MySubsystemGroup extends SubsystemGroup {
             });
    public Command tripleLaunch
           = new InstantCommand(() -> {
-              // Build a list of actions from colorWeHave; do not schedule commands here.
-              patternActions.clear();
-              if (colorWeHave != null) {
-                  for (Sort.Color color: colorWeHave) {
-                      if (color == null || color == Sort.Color.EMPTY) continue;
-                      if (color == Sort.Color.GREEN) patternActions.add(Action.SHOOT_GREEN);
-                      else if (color == Sort.Color.PURPLE) patternActions.add(Action.SHOOT_PURP);
+
+                  Command[] commands = new Command[6];
+                  int counters = 0;
+                  for (Sort.Color color : colorWeHave) {
+                      if (color != Sort.Color.EMPTY) {
+                          if (color == Sort.Color.GREEN) {
+                              commands[counters] = Sort.INSTANCE.shootNewGreen();
+                              counters++;
+                              commands[counters] = new WaitUntil(() -> Sort.INSTANCE.shootComplete);
+                              counters++;
+                          } else if (color == Sort.Color.PURPLE) {
+                              commands[counters] = Sort.INSTANCE.shootNewPurp();
+                              counters++;
+                              commands[counters] = new WaitUntil(() -> Sort.INSTANCE.shootComplete);
+                              counters++;
+
+                          }
+                      }
                   }
-              }
-              if (!patternActions.isEmpty()) {
-                  patternIndex = 0;
-                  patternWaitingForComplete = false;
-                  patternActive = true;
-              }
+                  Command[] commandsFinal = Arrays.copyOf(commands, counters);
+                if (commandsFinal.length !=0) {
+                    new SequentialGroup(commandsFinal
+                    ).schedule();
+                }
 
-
-    })
+    }).setInterruptible(true)
             .named("tripleLaunch");
 //    public Command tripleLaunch = new InstantCommand(() -> {
 //        ArrayList<Command> commands = new ArrayList<>();
@@ -160,48 +160,6 @@ public class MySubsystemGroup extends SubsystemGroup {
     @Override
     public void periodic() {
         colorWeHave = Sort.INSTANCE.getColorArray();
-        // drive the internal pattern processor which schedules Sort commands as needed (outside of other commands)
-        processPattern();
-    }
-
-    // Processes the currently-active patternActions array; this runs from periodic() so we're not scheduling
-    // commands from within another command. We schedule Sort's InstantCommands from here and wait for
-    // Sort.INSTANCE.shootComplete to advance between steps.
-    private void processPattern() {
-        if (!patternActive) return;
-        // if we're in the middle of a step and waiting for completion, check the Sort flag
-        if (patternWaitingForComplete) {
-            if (Sort.INSTANCE.shootComplete) {
-                // consume the completion and advance
-                Sort.INSTANCE.shootComplete = false;
-                patternWaitingForComplete = false;
-                patternIndex++;
-                if (patternIndex >= patternActions.size()) {
-                    // done
-                    patternActive = false;
-                    patternActions.clear();
-                    patternIndex = 0;
-                }
-            }
-            return;
-        }
-
-        // Not currently waiting - start the next action if available
-        if (patternIndex < patternActions.size()) {
-            Action a = patternActions.get(patternIndex);
-            if (a == Action.SHOOT_GREEN) {
-                Sort.INSTANCE.shootNewGreen().schedule();
-            } else if (a == Action.SHOOT_PURP) {
-                Sort.INSTANCE.shootNewPurp().schedule();
-            }
-            // now wait for Sort to set shootComplete
-            patternWaitingForComplete = true;
-        } else {
-            // nothing to do
-            patternActive = false;
-            patternActions.clear();
-            patternIndex = 0;
-        }
     }
 
 
