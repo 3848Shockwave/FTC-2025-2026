@@ -331,34 +331,6 @@ public static double Lkp =0.0004;
         telemetryManager.addData("Pipeline", Turret.INSTANCE.limelightProcessing.getCurrentPipeline());
         telemetryManager.addData("Limelight Status: ", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
 
-//        telemetryManager.addData("Servo Command Pos", Sort.INSTANCE.getServoPosition());
-//
-//        // --- Turret Telemetry ---
-//        Turret.INSTANCE.getRotateEncoder().updateRotations();
-//        telemetryManager.addData("goalvel", newVelocity);
-//        telemetryManager.addData("turretMotorPosition", Turret.INSTANCE.getRealTurretPosition());
-//        telemetryManager.addData("TurretNextPosition", turretWant);
-//
-//        telemetryManager.addData("=== ROTATION TRACKING ===", "");
-//        telemetryManager.addData("Rotations", Turret.INSTANCE.getRotateEncoder().getRotations());
-        //telemetryManager.addData("Position",Turret.INSTANCE.getRotateEncoder().getTotalDegrees());
-//        telemetryManager.addData("Calculate Position", Turret.INSTANCE.calculatePosition());
-//        telemetryManager.addData("Next Position", Turret.INSTANCE.getNextTurretPosition());
-//        telemetryManager.addData("Real Goal Position", Turret.INSTANCE.getControlSystemRotate().getGoal());
-//
-//        telemetryManager.addData("=== MYSUBSYSTEMGROUP ===", "");
-
-//
-//
-//
-//
-//        // Turret.INSTANCE.rebuildControlSystem(Rkp,Rki,Rkd,Rkf,100);
-//        // --- Limelight Telemetry ---
-//        telemetryManager.addData("Pipeline", Turret.INSTANCE.limelightProcessing.getCurrentPipeline());
-//        telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
-//        telemetryManager.addData("turretVelocity", Turret.INSTANCE.getTurretVelocity());
-//        Turret.INSTANCE.setTestSpeed(speed);
-
         telemetryManager.update(telemetry);
     }
 }
