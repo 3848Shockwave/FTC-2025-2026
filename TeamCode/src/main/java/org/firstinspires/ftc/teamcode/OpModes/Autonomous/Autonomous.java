@@ -12,7 +12,7 @@ import com.pedropathing.paths.PathChain;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.Drawing;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotStateTracker;
-import org.firstinspires.ftc.teamcode.Subsystems.MySubsystemGroup;
+import org.firstinspires.ftc.teamcode.Subsystems.Coordinator;
 import org.firstinspires.ftc.teamcode.Subsystems.Sort;
 import org.firstinspires.ftc.teamcode.Subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
@@ -76,7 +76,7 @@ public class Autonomous extends NextFTCOpMode {
     public Autonomous() {
         addComponents(
                 new SubsystemComponent(Sort.INSTANCE),
-                new SubsystemComponent(MySubsystemGroup.INSTANCE),
+                new SubsystemComponent(Coordinator.INSTANCE),
                 // ==========================================================
                 // CRITICAL FIX: Add Turret Subsystem to the scheduler!
                 // Without this, the turret's periodic() code NEVER runs.
@@ -310,7 +310,7 @@ public class Autonomous extends NextFTCOpMode {
                     Turret.INSTANCE.setManualControl(false);
                     // Turret will now aim automatically using Vision/Blind logic
                 }),
-                MySubsystemGroup.INSTANCE.detectTargetColorArray.thenWait(2),
+                Coordinator.INSTANCE.detectTargetColorArray.thenWait(2),
                 new FollowPath(moveBLF)
                 // Removed manual angle settings at end, tracking will maintain aim
         );
@@ -336,7 +336,7 @@ public class Autonomous extends NextFTCOpMode {
                     // ENABLE TRACKING
                     Turret.INSTANCE.setManualControl(false);
                 }),
-                MySubsystemGroup.INSTANCE.detectTargetColorArray.thenWait(2),
+                Coordinator.INSTANCE.detectTargetColorArray.thenWait(2),
                 new FollowPath(moveRF)
         );
     }
@@ -393,7 +393,7 @@ public class Autonomous extends NextFTCOpMode {
                     // ENABLE TRACKING for the entire sequence
                     Turret.INSTANCE.setManualControl(false);
                 }),
-                MySubsystemGroup.INSTANCE.detectTargetColorArray.thenWait(2),
+                Coordinator.INSTANCE.detectTargetColorArray.thenWait(2),
 
                 // The turret will automatically aim at the RED GOAL while moving
                 new FollowPath(moveToScoreRF),
@@ -478,7 +478,7 @@ public class Autonomous extends NextFTCOpMode {
                     // ENABLE TRACKING
                     Turret.INSTANCE.setManualControl(false);
                 }),
-                MySubsystemGroup.INSTANCE.detectTargetColorArray.thenWait(2),
+                Coordinator.INSTANCE.detectTargetColorArray.thenWait(2),
 
                 new FollowPath(moveToScore),
                 new Delay(3.5),

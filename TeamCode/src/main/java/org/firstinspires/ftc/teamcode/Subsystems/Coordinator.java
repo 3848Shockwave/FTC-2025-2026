@@ -2,25 +2,18 @@ package org.firstinspires.ftc.teamcode.Subsystems;
 
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.jetbrains.annotations.NotNull;
-
-import java.lang.reflect.Array;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Timer;
 
 import dev.nextftc.core.commands.Command;
 
-import dev.nextftc.core.commands.CommandManager;
-import dev.nextftc.core.commands.delays.Delay;
 import dev.nextftc.core.commands.delays.WaitUntil;
 import dev.nextftc.core.commands.groups.SequentialGroup;
 import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.commands.utility.LambdaCommand;
 import dev.nextftc.core.subsystems.SubsystemGroup;
 
-public class MySubsystemGroup extends SubsystemGroup {
-    public static final MySubsystemGroup INSTANCE = new MySubsystemGroup();
+public class Coordinator extends SubsystemGroup {
+    public static final Coordinator INSTANCE = new Coordinator();
     private boolean checkIsDone =false;
     private int counter =0;
     private static ElapsedTime timer = new ElapsedTime();
@@ -29,7 +22,7 @@ public class MySubsystemGroup extends SubsystemGroup {
 
 
 
-    private MySubsystemGroup() {
+    private Coordinator() {
         super(
                 Turret.INSTANCE,
                 Sort.INSTANCE

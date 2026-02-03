@@ -1,0 +1,195 @@
+@startuml
+
+scale 1
+left to right direction
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam roundcorner 10
+hide empty members
+
+
+skinparam class {
+    ArrowColor Black
+    BorderThickness 1
+
+    ' [OpModes] - 绿色系 (代表运行模式)
+    BackgroundColor<<OpMode>> #E8F5E9
+    BorderColor<<OpMode>> #2E7D32
+
+    ' [Subsystems] - 橙色系 (代表硬件机构)
+    BackgroundColor<<Subsystem>> #FFF3E9
+    BorderColor<<Subsystem>> #EF6C00
+
+    ' [Helpers] - 青色系 (代表辅助工具)
+    BackgroundColor<<Helper>> #E0F7FA
+    BorderColor<<Helper>> #0097A7
+
+    ' [Tests] - 黄色系 (代表测试/警告)
+    BackgroundColor<<Test>> #FFFDE1
+    BorderColor<<Test>> #FBC02D
+
+    ' [Pedro Pathing] - 紫色系 (代表高级算法)
+    BackgroundColor<<Pedro>> #F3E5F5
+    BorderColor<<Pedro>> #7B1FA2
+
+    ' [External] - 灰色系 (代表外部代码)
+    BackgroundColor<<External>> #F5F5F5
+    BorderColor<<External>> #616161
+}
+
+' --- 2. 模块定义 ---
+
+package "OpModes" #F1F8E9 {
+    class Autonomous <<OpMode>>{
+    +@override onInit()
+    +@override onStartButtonPressed()
+    +@override onUpdate()
+    +@override onStartButtonPressed()
+    +@override onStop()
+
+    +updateSelectedMode()
+    +updateTelemetry()
+
+    +runRedGoalMovingCommands: Command
+    +runBlueGoalMovingCommands: Command
+    +runRedGoalShootingCommands: Command
+    +runBlueGoalShootingCommands: Command
+
+    +runRedFarMovingCommands: Command
+    +runBlueFarMovingCommands: Command
+    +runRedFarShootingCommands: Command
+    +runBlueFarShootingCommands: Command
+    }
+    class TeleOpProgram <<OpMode>>{
+    +@override onInit()
+    +@override onWaitForStart()
+    +@override onUpdate()
+    }
+}
+
+package "Subsystems" #FFF8E1 {
+    class Turret <<Subsystem>> {
+        +calculateLaunchStrength()
+        +initLimelightSystem()
+        +calculatePosition()
+        +getColorArray()
+        +normalizeAngle()
+        +getVelocityFromDistance()
+        +calculateVelocityCompensation()
+    }
+
+    class PTO <<Subsystem>>{
+    +engage: Command
+    +liftLeft: Command
+    +liftRight: Command
+    +stopLeft: Command
+    +stopRight: Command
+    }
+
+    class Sort <<Subsystem>> {
+        +intake: Command
+        +outtake: Command
+        +shootGreen: Command
+        +shootPurple: Command
+        +shootNewPurple: Command
+        +shootNewGreen: Command
+        +shootClosestBall: Command
+
+        +moveSpindex()
+        +updateServo()
+        +checkColors()
+        +isSpindexStable()
+        +isTouchPressed()
+    }
+
+    class Coordinator <<Subsystem>> {
+        +shootInPattern: Command
+        +tripleShoot: Command
+        +getTargetColor: Command
+        +detectColorArray: Command
+    }
+
+    package "Helpers" #E0F2F1 {
+        class RobotConfig <<Helper>>
+
+        class LimelightProcessing <<Helper>> {
+            +initLimeLight()
+            +setPipeline()
+            +getCurrentPipeline()
+            +ProcessTargets()
+            +getTargetInfo()
+        }
+
+        class RobotStateTracker <<Helper>>
+
+        class ELCEncoderV2 <<Helper>> {
+            +updateRotations()
+            +computeVelocity()
+            +isStable()
+        }
+    }
+}
+
+package "Tests" #FFFDE7 {
+    class MotorTest <<Test>>
+    class SensorLimelight3A <<Test>>
+    class DriveTest <<Test>>
+    class PTOLiftTest <<Test>>
+    class AprilTagRangeCalculator <<Test>>
+    class ELCEncoderTeleOP <<Test>>
+}
+
+package "External / SDK" #EEEEEE {
+    package "NextFTC" {
+        class "NextFTC Subsystem" as SubsystemInterface <<External>>
+        class "NextFTC OpMode" as NextFTCOpMode <<External>>
+    }
+
+    package "Pedro Pathing" {
+        class Tuning <<Pedro>>
+        class Constants <<Pedro>>
+        class Follower <<Pedro>>
+        class LocalizationTest <<Pedro>>
+        class DriveTuner <<Pedro>>
+    }
+}
+
+
+NextFTCOpMode <|-- Autonomous
+NextFTCOpMode <|-- TeleOpProgram
+NextFTCOpMode <|-- MotorTest
+NextFTCOpMode <|-- DriveTest
+NextFTCOpMode <|-- PTOLiftTest
+NextFTCOpMode <|-- AprilTagRangeCalculator
+NextFTCOpMode <|-- ELCEncoderTeleOP
+NextFTCOpMode <|-- SensorLimelight3A
+
+
+SubsystemInterface <|.. RobotConfig
+SubsystemInterface <|.. Turret
+SubsystemInterface <|.. PTO
+SubsystemInterface <|.. Sort
+SubsystemInterface <|.. Coordinator
+
+Autonomous --> Turret : uses
+Autonomous --> PTO : uses
+Autonomous --> Follower : uses
+Autonomous --> Coordinator : uses
+
+TeleOpProgram --> Turret : uses
+TeleOpProgram --> Sort : uses
+TeleOpProgram --> Coordinator : uses
+
+Coordinator ---> Turret : uses
+Coordinator ---> Sort : uses
+
+Tuning --|> NextFTCOpMode
+
+Sort --> ELCEncoderV2 : uses
+
+Turret --> LimelightProcessing : uses
+Turret --> RobotStateTracker : uses
+Turret --> ELCEncoderV2 : uses
+Turret --> RobotConfig : uses
+
+@enduml

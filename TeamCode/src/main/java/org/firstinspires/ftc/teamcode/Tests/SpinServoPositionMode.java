@@ -3,11 +3,6 @@ package org.firstinspires.ftc.teamcode.Tests;
 import static dev.nextftc.bindings.Bindings.button;
 
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.PwmControl;
-import com.qualcomm.robotcore.hardware.CRServo;
-
-import org.firstinspires.ftc.teamcode.Subsystems.MySubsystemGroup;
-import org.firstinspires.ftc.teamcode.Subsystems.Sort;
 
 import dev.nextftc.bindings.Button;
 import dev.nextftc.core.components.BindingsComponent;

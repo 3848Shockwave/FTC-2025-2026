@@ -261,7 +261,6 @@ public class Turret implements Subsystem {
         } else if (!ActiveOpMode.isStarted()) {
             turretState = TurretState.IDLE;
         } else if (turretState == TurretState.FOLDING) {
-            // 保持 FOLDING 状态
         } else {
             turretState = targetVisible ? TurretState.VISUAL_TRACKING : TurretState.BLIND_TRACKING;
         }
