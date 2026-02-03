@@ -83,6 +83,13 @@ public class Turret implements Subsystem {
     private final Pose RED_GOAL = new Pose(144, 144);
     private final Pose BLUE_GOAL = new Pose(0, 144);
 
+    // FOLDING constants
+    private static final double FOLDING_POSITION = -220;
+    private static final double FOLDING_TOLERANCE = 5.0; // degrees
+    private static final long FOLDING_TIMEOUT_MS = 2000; // 2 seconds
+    private long foldingStartTime = 0;
+    private boolean foldingCompleted = false;
+
     private Turret() {
     }
 
@@ -107,48 +114,60 @@ public class Turret implements Subsystem {
     }
 
     public double calculatePosition() {
-        ArrayList<TargetInfo> targets = limelightProcessing.processTargets();
-        double angle = 0;
-        if (!targets.isEmpty()) {
-            angle = limelightProcessing.getTargetInfo().getTargetX();
-            // VISUAL STANDARD:
-            // Limelight +Angle (Left) -> Negative Ticks
+        // SAFE: Reads the cache we updated in periodic()
+        TargetInfo target = limelightProcessing.getTargetInfo();
+        if (target != null) {
+            double angle = target.getTargetX();
             return (-angle * 5.625);
-        } else {
-            return 0;
         }
+        return 0;
     }
 
     public double getRealTurretPosition(){
         return -rotateEncoder.getTotalDegrees()/5.625;
     }
 
-    public void calculateLaunchStrength() {
-        if(testing){
+    public void calculateLaunchStrength(boolean hasTarget, double blindBearing) {
+        if (testing) {
             Lvelocity = testingVelocity;
-            controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
+            controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity, 0.0));
             return;
         }
-        limelightProcessing.processTargets();
-        if (!limelightProcessing.processTargets().isEmpty()) {
-            double distance = limelightProcessing.getTargetInfo().getDistance();
-            Lvelocity =(0.0000300785* Math.pow(distance, 3))
-                    +( -0.0226083 * Math.pow(distance, 2))+
-                    (7.13468 * distance)
-                    + 589.24871;
-            Vector velocity = PedroComponent.follower().getVelocity();
-            double velocityCompensation = calculateVelocityCompensation(velocity, distance);
-            Lvelocity = Lvelocity;
-            controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
+
+        double targetDistance = 0.0;
+        double targetBearing = 0.0;
+
+        if (hasTarget) {
+            TargetInfo target = limelightProcessing.getTargetInfo();
+            if (target != null) {
+                targetDistance = target.getDistance();
+                targetBearing = target.getTargetX();
+            }
+        } else {
+            Pose robotPose = PedroComponent.follower().getPose();
+            Pose goal = (RobotConfig.alliance == RobotConfig.Alliance.RED) ? RED_GOAL : BLUE_GOAL;
+            double dx = goal.getX() - robotPose.getX();
+            double dy = goal.getY() - robotPose.getY();
+            targetDistance = Math.hypot(dx, dy);
+
+
+            targetBearing = blindBearing;
         }
-        else{
-            Lvelocity= 600;
-            controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity,0.0));
+
+        if (targetDistance > 0) {
+            double rawVelocity = getVelocityFromDistance(targetDistance);
+            Vector robotVelocity = PedroComponent.follower().getVelocity();
+
+            double velocityCompensation = calculateVelocityCompensation(robotVelocity, targetDistance, targetBearing);
+
+            Lvelocity = rawVelocity + velocityCompensation;
+        } else {
+            Lvelocity = 500;
         }
+        controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity, 0.0));
     }
 
-    private double calculateVelocityCompensation(Vector robotVelocity, double distance) {
-        double targetBearing = limelightProcessing.getTargetInfo().getTargetX();
+    private double calculateVelocityCompensation(Vector robotVelocity, double distance, double targetBearing) {
         Pose2D targetDirection = new Pose2D(
                 DistanceUnit.MM,
                 Math.cos(Math.toRadians(targetBearing)),
@@ -161,7 +180,6 @@ public class Turret implements Subsystem {
         double distanceScaling = 1.0 / (1.0 + distance / 100.0);
         return velocityTowardTarget * compensationFactor * distanceScaling;
     }
-
     public void setLaunchMotorSpeed(double power){ launchMotorLeft.setPower(power); }
 
     public void initLimelightSystem(){
@@ -191,8 +209,18 @@ public class Turret implements Subsystem {
         return angle;
     }
 
+    private double getVelocityFromDistance(double distance) {
+        return (0.0000300785 * Math.pow(distance, 3))
+                + (-0.0226083 * Math.pow(distance, 2))
+                + (7.13468 * distance)
+                + 589.24871;
+    }
     public String getSide(){ return RobotConfig.alliance.name(); }
     public ELCEncoderV2 getRotateEncoder() { return rotateEncoder; }
+
+    // Add a simple turret state machine
+    private enum TurretState { INIT, IDLE, VISUAL_TRACKING, BLIND_TRACKING, MANUAL, FOLDING }
+    private TurretState turretState = TurretState.INIT;
 
     @Override
     public void initialize() {
@@ -206,94 +234,139 @@ public class Turret implements Subsystem {
 
     @Override
     public void periodic() {
-        // Rebuild PID (You can move this to initialize if you want to save performance)
-        controlSystemRotate = ControlSystem.builder().posPid(Rkp, Rki, Rkd).basicFF(Rkf).build();
-        controlSystemTurret = ControlSystem.builder().velPid(Lkp, Lki, Lkd).basicFF(Lkf).build();
-
+        // Update encoder state every loop
         rotateEncoder.updateRotations();
 
-        if(ActiveOpMode.isStarted()) {
-            limelightProcessing.processTargets();
+        // Single limelight read per loop when started
+        boolean targetVisible = false;
+        if (ActiveOpMode.isStarted()) {
+            ArrayList<TargetInfo> targets = limelightProcessing.processTargets();
+            targetVisible = !targets.isEmpty();
         }
 
-        if (!ActiveOpMode.isStarted()&&ActiveOpMode.opModeInInit()) {
+        // Init safety - stay idle during init
+        if (!ActiveOpMode.isStarted() && ActiveOpMode.opModeInInit()) {
+            turretState = TurretState.IDLE;
             rotateMotor.setPower(0);
             launchMotorLeft.setPower(0);
             return;
         }
 
-        boolean targetVisible = !limelightProcessing.processTargets().isEmpty();
+        // Update robot blind state
+        RobotConfig.robotStateTracker.setBlind(!targetVisible);
 
-        if (!targetVisible){
-            RobotConfig.robotStateTracker.setBlind(true);
-        } else  {
-            RobotConfig.robotStateTracker.setBlind(false);
+        // --- State transitions ---
+        if (manualControl) {
+            turretState = TurretState.MANUAL;
+        } else if (!ActiveOpMode.isStarted()) {
+            turretState = TurretState.IDLE;
+        } else if (turretState == TurretState.FOLDING) {
+            // 保持 FOLDING 状态
+        } else {
+            turretState = targetVisible ? TurretState.VISUAL_TRACKING : TurretState.BLIND_TRACKING;
         }
 
-        if(!manualControl) {
-            calculateLaunchStrength();
+        // --- State actions and shared behavior ---
+        double computedNextPosition = rotateEncoder.getTotalDegrees();
 
-            if(targetVisible){
-                // === VISUAL TRACKING (RELATIVE) ===
-                // CurrentTicks + Correction.
-                // Works because it adjusts based on current error.
-                nextTurretPosition = rotateEncoder.getTotalDegrees() + calculatePosition();
-            }
-            else {
-                // === BLIND TRACKING (ABSOLUTE) ===
+        switch (turretState) {
+            case MANUAL:
+                // Manual override - set explicit angle and velocity
+                computedNextPosition = -manualAngle * 5.625;
+                controlSystemTurret.setGoal(new KineticState(0.0, manualVelocity, 0.0));
+                break;
+
+            case VISUAL_TRACKING:
+                // Use camera to track relative angle
+                calculateLaunchStrength(true, 0.3);
+                computedNextPosition = rotateEncoder.getTotalDegrees() + calculatePosition();
+                break;
+
+            case BLIND_TRACKING:
+                // Use odometry to aim at goal
+                calculateLaunchStrength(false, 0);
                 Pose robotPose = PedroComponent.follower().getPose();
                 Pose goal = (RobotConfig.alliance == RobotConfig.Alliance.RED) ? RED_GOAL : BLUE_GOAL;
-
                 double dx = goal.getX() - robotPose.getX();
                 double dy = goal.getY() - robotPose.getY();
-
-                // 1. Absolute Field Angle (0 = East)
                 double absoluteAngleToGoal = Math.toDegrees(Math.atan2(dy, dx));
-
                 double robotHeading = Math.toDegrees(robotPose.getHeading());
-
-                // 2. Calculate Angle Needed for Turret
-                // Subtract Robot Heading AND Mounting Offset (180 if back-mounted)
                 double angleNeeded = normalizeAngle(absoluteAngleToGoal - robotHeading - MOUNTING_OFFSET);
-
-                // 3. Convert to Ticks & Apply Hardware Offset
-                // Visual Standard: (-Angle * 5.625)
-                // Hardware Offset: Shift Center by -27 degrees
                 double targetTicks = (-angleNeeded * 5.625) + (HARDWARE_ZERO_OFFSET * 5.625);
+                computedNextPosition = targetTicks;
+                break;
 
-                nextTurretPosition = targetTicks;
-            }
+            case FOLDING:
+                if (foldingStartTime == 0) {
+                    foldingStartTime = System.currentTimeMillis();
+                    foldingCompleted = false;
+                }
+                computedNextPosition = FOLDING_POSITION;
+                controlSystemRotate.setGoal(new KineticState(FOLDING_POSITION));
+
+                double currentPos = rotateEncoder.getTotalDegrees();
+                foldingCompleted = Math.abs(currentPos - FOLDING_POSITION) < FOLDING_TOLERANCE;
+
+                boolean foldingTimeout = (System.currentTimeMillis() - foldingStartTime) > FOLDING_TIMEOUT_MS;
+                try {
+                    ActiveOpMode.telemetry().addData("TurretState", "FOLDING");
+                    ActiveOpMode.telemetry().addData("FoldingCompleted", foldingCompleted);
+                    ActiveOpMode.telemetry().addData("FoldingTimeout", foldingTimeout);
+                    ActiveOpMode.telemetry().addData("FoldingCurrentPos", currentPos);
+                } catch (Exception e) {}
+                break;
+
+            case IDLE:
+            default:
+                // Hold current position
+                controlSystemTurret.setGoal(new KineticState(0.0, Lvelocity, 0.0));
+                break;
         }
 
-        if(manualControl){
-            nextTurretPosition = -manualAngle * 5.625;
-            controlSystemTurret.setGoal(new KineticState(0.0, manualVelocity,0.0));
+        if (turretState != TurretState.FOLDING) {
+            foldingStartTime = 0;
+            foldingCompleted = false;
         }
 
-        // Safety Clamping
+        nextTurretPosition = computedNextPosition;
+
+        // --- Soft limits ---
         if (nextTurretPosition > minPosition) nextTurretPosition = minPosition;
         if (nextTurretPosition < maxPosition) nextTurretPosition = maxPosition;
 
-        // Expanded Safety Check: -400 to 0 is your range.
-        if (nextTurretPosition > -400 && nextTurretPosition <= 0) {
+        if (turretState == TurretState.FOLDING) {
+            controlSystemRotate.setGoal(new KineticState(FOLDING_POSITION));
+        } else if (nextTurretPosition > -400 && nextTurretPosition <= 0) {
             controlSystemRotate.setGoal(new KineticState(nextTurretPosition));
         } else {
-            controlSystemRotate.setGoal(new KineticState(-220));
+            controlSystemRotate.setGoal(new KineticState(FOLDING_POSITION));
         }
 
         double Rpower = controlSystemRotate.calculate(
                 new KineticState(rotateEncoder.getTotalDegrees())
         );
 
-        double Lpower = controlSystemTurret.calculate(new KineticState(launchMotorLeft.getCurrentPosition(), getTurretVelocity()));
+        double Lpower = controlSystemTurret.calculate(
+                new KineticState(launchMotorLeft.getCurrentPosition(), getTurretVelocity())
+        );
 
-        if(Rpower>.8) Rpower=.8;
-        if(Rpower<-.8) Rpower = -.8;
+        try {
+            ActiveOpMode.telemetry().addData("TurretState", turretState == null ? "null" : turretState.name());
+            ActiveOpMode.telemetry().addData("NextTurretPos", nextTurretPosition);
+            ActiveOpMode.telemetry().addData("RotateDegrees", rotateEncoder != null ? rotateEncoder.getTotalDegrees() : Double.NaN);
+            ActiveOpMode.telemetry().addData("RotateGoal", controlSystemRotate != null && controlSystemRotate.getGoal() != null ? controlSystemRotate.getGoal().toString() : "null");
+            ActiveOpMode.telemetry().addData("LaunchGoalVel", controlSystemTurret != null && controlSystemTurret.getGoal() != null ? String.valueOf(controlSystemTurret.getGoal().component2()) : "null");
+        } catch (Exception e) {
+            // Defensive: telemetry shouldn't crash the loop; swallow unexpected errors
+        }
+
+        // Hard Power Clamps
+        if (Rpower > 0.8) Rpower = 0.8;
+        if (Rpower < -0.8) Rpower = -0.8;
 
         rotateMotor.setPower(Rpower);
         launchMotorLeft.setPower(-Lpower);
         launchMotorRight.setPower(-Lpower);
-
     }
 
     public void rebuildControlSystem(double p, double i, double d, double f, double speed) {

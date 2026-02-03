@@ -94,12 +94,12 @@ public class LimelightProcessing {
     }
 
     public TargetInfo getTargetInfo(double targetID) {
-        for (TargetInfo t : processTargets()) {
+        for (TargetInfo t : targetsDetected) {
             if (t.getID() == targetID) {
                 return t;
             }
         }
-        return null; // Return null if no target with the specified ID is found
+        return null;
     }
 
     public TargetInfo getTargetInfo() {
