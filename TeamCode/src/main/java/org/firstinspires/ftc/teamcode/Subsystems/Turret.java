@@ -7,6 +7,7 @@ import dev.nextftc.core.commands.Command;
 import com.pedropathing.math.Vector;
 import com.qualcomm.hardware.rev.RevTouchSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -55,6 +56,7 @@ public class Turret implements Subsystem {
     private static double Lki =  0.004;
     private static double Lkd =  0.0088;
     private static double Lkf = 0.000452;
+    private VoltageSensor voltSensor;
 
 
 
@@ -62,7 +64,6 @@ public class Turret implements Subsystem {
     //all the hardware goes here
     private final MotorEx launchMotorLeft = new MotorEx("launchMotorLeft").brakeMode();
     private final MotorEx launchMotorRight = new MotorEx("launchMotorRight").brakeMode().reversed();
-
 
     /*
     launcher angle(horizontal): 65  degrees
@@ -323,6 +324,7 @@ public class Turret implements Subsystem {
                 .build();
         launchMotorLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
            rotateEncoder = new ELCEncoderV2(ActiveOpMode.hardwareMap(),"turretEncoder");
+         voltSensor = ActiveOpMode.hardwareMap().get(VoltageSensor.class, "Control Hub");
 
        //set default pipeline
         // initialization logic (runs on init)
@@ -405,6 +407,8 @@ public class Turret implements Subsystem {
 
 
         double Lpower = controlSystemTurret.calculate(new KineticState(launchMotorLeft.getCurrentPosition(), getTurretVelocity()));
+
+      //  ActiveOpMode.telemetry().addData("Voltage",voltSensor.getVoltage());
 //        ActiveOpMode.telemetry().addData("Calculated Power",controlSystemTurret.calculate(launchMotorLeft.getState()));
 //        ActiveOpMode.telemetry().addData("LaunchMotorState", launchMotorLeft.getState().component2());
 //        ActiveOpMode.telemetry().addData("PowerRotate",Rpower);
@@ -430,6 +434,9 @@ public class Turret implements Subsystem {
             Rpower = -.8;
         }
         rotateMotor.setPower(Rpower);
+        if(voltSensor.getVoltage()<9.5){
+            Lpower = Lpower * (12.5/voltSensor.getVoltage());
+        }
         launchMotorLeft.setPower(-Lpower);
         launchMotorRight.setPower(-Lpower);
 
