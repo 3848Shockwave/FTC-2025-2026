@@ -63,7 +63,9 @@ public static double Lkp =0.0004;
     public static double Lkf = 0.000452;
     public static double speed =1345;
     public boolean PTOEngaged = false;
+    public boolean intakeOn = false;
     private boolean overrideUpdatePose = false;
+    boolean isNotfull = false;
 
 
     public TeleOpProgram() {
@@ -179,10 +181,20 @@ public static double Lkp =0.0004;
         //Intake IN
                     Button dpad_up = button(() -> gamepad1.dpad_up).whenBecomesTrue(() -> {
                         motorToggle = !motorToggle;
-                        if (motorToggle) {
+
+                        for(Color color: Sort.INSTANCE.getColorArray()){
+                            if (color == Color.EMPTY) {
+                                isNotfull = true;
+                                break;
+                            }
+                        }
+
+                        if (motorToggle&&isNotfull) {
                             intake.setPower(1);
+                            intakeOn = true;
                         } else {
                             intake.setPower(0);
+                            intakeOn = false;
                         }
                     });
 
@@ -274,6 +286,16 @@ public static double Lkp =0.0004;
 
     @Override
     public void onUpdate() {
+        if(intakeOn&&Sort.INSTANCE.isSpindexStable()){
+            if(Sort.INSTANCE.getColorArray()[2]!= Color.EMPTY) {
+                if (Sort.INSTANCE.getColorArray()[0] == Color.EMPTY) {
+                    Sort.INSTANCE.cycleLeft.schedule();
+                } else if (Sort.INSTANCE.getColorArray()[1] == Color.EMPTY) {
+                    Sort.INSTANCE.cycleRight.schedule();
+                }
+            }
+        }
+
         if(PTOEngaged) {
             if (gamepad2.left_trigger > 0.5) {
                 leftBack.setPower(-gamepad2.left_trigger);

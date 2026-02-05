@@ -434,7 +434,7 @@ public class Turret implements Subsystem {
             Rpower = -.8;
         }
         rotateMotor.setPower(Rpower);
-        if(voltSensor.getVoltage()<9.5){
+        if(voltSensor.getVoltage()<8){
             Lpower = Lpower * (12.5/voltSensor.getVoltage());
         }
         launchMotorLeft.setPower(-Lpower);
