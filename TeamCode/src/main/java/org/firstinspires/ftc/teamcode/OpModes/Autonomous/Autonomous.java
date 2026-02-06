@@ -58,18 +58,16 @@ public class Autonomous extends NextFTCOpMode {
     private boolean readyToGo = false;
     MotorEx intake = new MotorEx("intakeMotor").brakeMode();
 
-    // Paths variables
-    private Path simplePath;
-    private Path scorePreload;
-    private Path moveToCheck;
     private PathChain moveToScore,load1,score2,ready2,score3; //blueFarSideScore
     private PathChain moveBLF;//blueFarSideMove
     private PathChain moveRF;//redFarSideMove
     private PathChain moveToScoreRF, loadRF1, scoreRF1, loadRF2, scoreRF2; //redFarSideScore
-    private PathChain moveToReady0, moveToPick0, moveToScore0,
-            moveToReady1, moveToPick1, moveToScore1,
-            moveToReady2, moveToPick2, moveToScore2,
-            moveToReady3, moveToPick3, moveToScore3, moveToScore4;
+
+    private PathChain ObeliskMove,Shoot1,Collect1,Shoot2,Collect2,Shoot3;//blueGoalSideScore
+    private PathChain RedGoalMove; // redGoalSideMove
+    private PathChain BlueGoalMove; //BlueGoalSideMove
+    private PathChain MoveObeliskR, Shoot1R, Collect1R, Shoot2R, Collect2R, Shoot3R;//redGoalSideScore
+
 
     private RobotStateTracker robotStateTracker = new RobotStateTracker();
 
@@ -89,6 +87,7 @@ public class Autonomous extends NextFTCOpMode {
     public void onInit() {
         Drawing.init();
         follower = follower();
+        Sort.INSTANCE.setAutoModeIsEnabled(false);
         RobotConfig.robotStateTracker = robotStateTracker;
         // follower() = Constants.createfollower()(hardwareMap);
     }
@@ -150,7 +149,7 @@ public class Autonomous extends NextFTCOpMode {
                         readyToGo = true;
                         break;
                     case BLUE_GOAL_SIDE_SCORE:
-                        //WRITE THIS
+                       buildBlueGoalSideScorePaths();
                         readyToGo = true;
                         break;
                     case RED_FAR_SIDE_SCORE:
@@ -185,7 +184,8 @@ public class Autonomous extends NextFTCOpMode {
 
             } else { // GOAL
                 selectedMode = isScore ? AutoMode.BLUE_GOAL_SIDE_SCORE : AutoMode.BLUE_GOAL_SIDE_MOVE;
-                RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.GOALSIDEBLUE;
+                RobotConfig.autonomousStartEndPoses = isScore ?  RobotConfig.AutonomousStartEndPoses.GOALSIDEBLUESCORE :  RobotConfig.AutonomousStartEndPoses.GOALSIDEBLUEMOVE ;
+
             }
             RobotConfig.alliance = RobotConfig.Alliance.BLUE;
         } else { // RED
@@ -195,7 +195,7 @@ public class Autonomous extends NextFTCOpMode {
 
             } else { // GOAL
                 selectedMode = isScore ? AutoMode.RED_GOAL_SIDE_SCORE : AutoMode.RED_GOAL_SIDE_MOVE;
-                RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.GOALSIDERED;
+                RobotConfig.autonomousStartEndPoses = isScore ?  RobotConfig.AutonomousStartEndPoses.GOALSIDEREDSCORE :  RobotConfig.AutonomousStartEndPoses.GOALSIDEREDMOVE ;
             }
             RobotConfig.alliance = RobotConfig.Alliance.RED;
         }
@@ -232,8 +232,7 @@ public class Autonomous extends NextFTCOpMode {
                 runBlueGoalMovingCommands().schedule();
                 break;
             case BLUE_GOAL_SIDE_SCORE:
-                // TODO: add blue goal side score path
-                telemetry.addData("Warning", "Blue Goal Score Path not implemented yet!");
+                runBlueGoalSideScoreCommands().schedule();
                 break;
             case RED_FAR_SIDE_SCORE:
                 runRedFarSideScoreCommands().schedule();
@@ -265,36 +264,47 @@ public class Autonomous extends NextFTCOpMode {
         Turret.INSTANCE.setManualControl(false);
         RobotConfig.finalMeasuredPose = follower.getPose();
         RobotConfig.finalMeasuredSpindexPosition = Sort.INSTANCE.getServoPosition();
+        RobotConfig.finalMeasuredColors = Turret.INSTANCE.getColorArray();
         super.onStop();
     }
 
 
     //  RED GOAL SIDE MOVE
     private void buildRedGoalMovingPaths() {
-        simplePath = new Path(new BezierLine(
-                RobotConfig.AutonomousStartEndPoses.GOALSIDERED.getStartPose(),
-                RobotConfig.AutonomousStartEndPoses.GOALSIDERED.getEndPose()));
-        simplePath.setLinearHeadingInterpolation(
-                RobotConfig.AutonomousStartEndPoses.GOALSIDERED.getStartPose().getHeading(),
-                RobotConfig.AutonomousStartEndPoses.GOALSIDERED.getEndPose().getHeading());
+        RedGoalMove = follower.pathBuilder().addPath(
+                new BezierLine(
+                        new Pose(121.662, 123.657),
+
+                        new Pose(90, 111.789)
+                )
+        ).setLinearHeadingInterpolation(Math.toRadians(37), Math.toRadians(270)).build();
     }
 
     private Command runRedGoalMovingCommands() {
-        return new SequentialGroup(new FollowPath(simplePath));
+        return new SequentialGroup(new FollowPath(RedGoalMove));
     }
 
     // BLUE GOAL SIDE MOVE
     private void buildBlueGoalMovingPaths() {
-        simplePath = new Path(new BezierLine(
-                RobotConfig.AutonomousStartEndPoses.GOALSIDEBLUE.getStartPose(),
-                RobotConfig.AutonomousStartEndPoses.GOALSIDEBLUE.getEndPose()));
-        simplePath.setLinearHeadingInterpolation(
-                RobotConfig.AutonomousStartEndPoses.GOALSIDEBLUE.getStartPose().getHeading(),
-                RobotConfig.AutonomousStartEndPoses.GOALSIDEBLUE.getEndPose().getHeading());
+
+            BlueGoalMove = follower.pathBuilder().addPath(
+                            new BezierLine(
+                                    new Pose(20.742, 123.457),
+
+                                    new Pose(59.391, 111.989)
+                            )
+                    ).setLinearHeadingInterpolation(Math.toRadians(143), Math.toRadians(270))
+
+                    .build();
     }
 
     private Command runBlueGoalMovingCommands() {
-        return new SequentialGroup(new FollowPath(simplePath));
+        return new SequentialGroup(
+                new InstantCommand(() -> {
+                    Turret.INSTANCE.setManualControl(true);
+                    Turret.INSTANCE.setManualAnglePower(35,0);
+                }),
+                new FollowPath(BlueGoalMove));
     }
 
     //  BLUE FAR SIDE MOVE
@@ -530,6 +540,7 @@ public class Autonomous extends NextFTCOpMode {
                         new InstantCommand(()->{
                             Turret.INSTANCE.setManualAnglePower(20,600);
                             intake.setPower(1.0);
+
                         })
                 ),
                 new FollowPath(score2).and(
@@ -564,99 +575,244 @@ public class Autonomous extends NextFTCOpMode {
 
     // ==================== RED GOAL SIDE (SCORE) ====================
     private void buildRedGoalSideScorePaths() {
-        Pose startPose = RobotConfig.AutonomousStartEndPoses.GOALSIDERED.getStartPose();
-        Pose check = new Pose(125, 122, Math.toRadians(270));
-        Pose Score1 = new Pose(85, 96, Math.toRadians(217));
-        Pose move1 = new Pose(85, 83, Math.toRadians(0));
-        Pose grab1 = new Pose(120, 83, Math.toRadians(0));
-        Pose Score2 = new Pose(90, 90, Math.toRadians(217));
-        Pose move2 = new Pose(90, 60, Math.toRadians(0));
-        Pose grab2 = new Pose(120, 60, Math.toRadians(0));
-        Pose Score3 = new Pose(87, 87, Math.toRadians(217));
-        Pose move3 = new Pose(87, 35, Math.toRadians(0));
-        Pose grab3 = new Pose(120, 35, Math.toRadians(0));
-        Pose Score4 = new Pose(80, 80, Math.toRadians(217));
+        MoveObeliskR = follower.pathBuilder().addPath(
+                        new BezierLine(
+                                new Pose(121.994, 123.590),
 
-        moveToCheck = new Path(new BezierLine(startPose, check));
-        moveToCheck.setLinearHeadingInterpolation(startPose.getHeading(), check.getHeading());
+                                new Pose(96.488, 96.233)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(35), Math.toRadians(270))
 
-        scorePreload = new Path(new BezierLine(check, Score1));
-        scorePreload.setLinearHeadingInterpolation(check.getHeading(), Score1.getHeading());
-
-        moveToReady1 = follower.pathBuilder()
-                .addPath(new BezierLine(Score1, move1))
-                .setLinearHeadingInterpolation(Score1.getHeading(), move1.getHeading())
                 .build();
 
-        moveToPick1 = follower.pathBuilder()
-                .addPath(new BezierLine(move1, grab1))
-                .setLinearHeadingInterpolation(move1.getHeading(), grab1.getHeading())
+        Shoot1R = follower.pathBuilder().addPath(
+                        new BezierLine(
+                                new Pose(96.488, 96.233),
+
+                                new Pose(96.670, 96.288)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(270), Math.toRadians(230))
+
                 .build();
 
-        moveToScore2 = follower.pathBuilder()
-                .addPath(new BezierLine(grab1, Score2))
-                .setLinearHeadingInterpolation(grab1.getHeading(), Score2.getHeading())
+        Collect1R = follower.pathBuilder().addPath(
+                        new BezierCurve(
+                                new Pose(96.670, 96.288),
+                                new Pose(91.766, 85.489),
+                                new Pose(118.3, 82.864)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(230), Math.toRadians(360),.15).setVelocityConstraint(12.5)
+
                 .build();
 
-        moveToReady2 = follower.pathBuilder()
-                .addPath(new BezierLine(Score2, move2))
-                .setLinearHeadingInterpolation(Score2.getHeading(), move2.getHeading())
+        Shoot2R = follower.pathBuilder().addPath(
+                        new BezierLine(
+                                new Pose(119.975, 83.864),
+
+                                new Pose(96.812, 96.524)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(360), Math.toRadians(230))
+
                 .build();
 
-        moveToPick2 = follower.pathBuilder()
-                .addPath(new BezierLine(move2, grab2))
-                .setLinearHeadingInterpolation(move2.getHeading(), grab2.getHeading())
+        Collect2R = follower.pathBuilder().addPath(
+                        new BezierCurve(
+                                new Pose(96.812, 96.524),
+                                new Pose(73.093, 63.458),
+                                new Pose(118.590, 55.5)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(230), Math.toRadians(360),.15).setVelocityConstraint(25)
+
                 .build();
 
-        moveToScore3 = follower.pathBuilder()
-                .addPath(new BezierLine(grab2, Score3))
-                .setLinearHeadingInterpolation(grab2.getHeading(), Score3.getHeading())
+        Shoot3R = follower.pathBuilder().addPath(
+                        new BezierLine(
+                                new Pose(119.590, 59.889),
+
+                                new Pose(96.310, 96.825)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(360), Math.toRadians(230))
+
                 .build();
 
-        moveToReady3 = follower.pathBuilder()
-                .addPath(new BezierLine(Score3, move3))
-                .setLinearHeadingInterpolation(Score3.getHeading(), move3.getHeading())
-                .build();
-
-        moveToPick3 = follower.pathBuilder()
-                .addPath(new BezierLine(move3, grab3))
-                .setLinearHeadingInterpolation(move3.getHeading(), grab3.getHeading())
-                .build();
-
-        moveToScore4 = follower.pathBuilder()
-                .addPath(new BezierLine(grab3, Score4))
-                .setLinearHeadingInterpolation(grab3.getHeading(), Score4.getHeading())
-                .build();
         telemetry.addLine("Paths Built");
         telemetry.update();
     }
 
     private Command runRedGoalSideScoreCommands() {
         return new SequentialGroup(
+                new InstantCommand(()->{
+                    Turret.INSTANCE.setManualControl(true);
+                    Sort.INSTANCE.restartScissor();
+                    Turret.INSTANCE.setManualAnglePower(25,600);
+                }),
+                new FollowPath(MoveObeliskR),
+                MySubsystemGroup.INSTANCE.detectTargetColorArray.thenWait(1.0),
+                new FollowPath(Shoot1R).and(
+                        new InstantCommand(()->{
+                            Turret.INSTANCE.setManualAnglePower(50,1250);
+                        })
+                ),MySubsystemGroup.INSTANCE.shootInPattern,
+                new Delay(4.5),
+                new FollowPath(Collect1R).and(
+                        new InstantCommand(()->{
+                            Turret.INSTANCE.setManualAnglePower(35,600);
+                            Sort.INSTANCE.setAutoModeIsEnabled(true);
+                            intake.setPower(1.0);
 
-                new FollowPath(moveToCheck),
-                // 1. Detect Colors First
-             //   MySubsystemGroup.INSTANCE.detectTargetColorArray,
+                        })
+                ).thenWait(2),
 
-                // 2. Preload + Shoot
-                new FollowPath(scorePreload),
-              //  MySubsystemGroup.INSTANCE.shootInPattern,
+                new FollowPath(Shoot2R).and(
+                        new InstantCommand(()->{
+                            Sort.INSTANCE.setAutoModeIsEnabled(false);
+                            Turret.INSTANCE.setManualAnglePower(50,1250);
+                            // intake.setPower(0);
+                        })
+                )
+                ,MySubsystemGroup.INSTANCE.shootInPattern,
+                new Delay(4.5),
+                new FollowPath(Collect2R).and(
+                        new InstantCommand(()->{
+                            Sort.INSTANCE.setAutoModeIsEnabled(true);
+                            Turret.INSTANCE.setManualAnglePower(35,600);
+                            intake.setPower(1.0);
 
-                // 3. Cycles
-                new FollowPath(moveToReady1),
-                new FollowPath(moveToPick1),//.and(Sort.INSTANCE.positiveIntake),
-                new FollowPath(moveToScore2),//.and(Sort.INSTANCE.positiveIntake).thenWait(0.5),
-              //  MySubsystemGroup.INSTANCE.shootInPattern,
+                        })
+                ),
+                new FollowPath(Shoot3R).and(new InstantCommand(()->{
+                    Sort.INSTANCE.setAutoModeIsEnabled(false);
+                    Turret.INSTANCE.setManualAnglePower(50,1250);
+                    // intake.setPower(0.0);
+                })),
+                MySubsystemGroup.INSTANCE.shootInPattern,
+                new Delay(4.5).then(
+                        new InstantCommand(()->{
+                            Turret.INSTANCE.setManualAnglePower(25,600);
+                            intake.setPower(0.0);
+                        }))
 
-                new FollowPath(moveToReady2),
-                new FollowPath(moveToPick2),//.and(Sort.INSTANCE.positiveIntake),
-                new FollowPath(moveToScore3),//.and(Sort.INSTANCE.positiveIntake).thenWait(0.5),
-               // MySubsystemGroup.INSTANCE.shootInPattern,
+        );
+    }
+    // ==================== RED GOAL SIDE (SCORE) ====================
+    private void buildBlueGoalSideScorePaths() {
+        ObeliskMove = follower.pathBuilder().addPath(
+                        new BezierLine(
+                                new Pose(20.742, 123.457),
 
-                new FollowPath(moveToReady3),
-                new FollowPath(moveToPick3),//.and(Sort.INSTANCE.positiveIntake),
-                new FollowPath(moveToScore4)//.and(Sort.INSTANCE.positiveIntake).thenWait(0.5),
-               // MySubsystemGroup.INSTANCE.shootInPattern
+                                new Pose(46.825, 96.632)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(143), Math.toRadians(250))
+
+                .build();
+
+        Shoot1 = follower.pathBuilder().addPath(
+                        new BezierLine(
+                                new Pose(46.825, 96.632),
+
+                                new Pose(46.753, 96.593)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(250), Math.toRadians(315))
+
+                .build();
+
+        Collect1 = follower.pathBuilder().addPath(
+                        new BezierCurve(
+                                new Pose(46.753, 96.593),
+                                new Pose(48.766, 82.892),
+                                new Pose(24.65, 82.5)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(315), Math.toRadians(180),.15).setVelocityConstraint(15)
+
+                .build();
+
+        Shoot2 = follower.pathBuilder().addPath(
+                        new BezierLine(
+                                new Pose(19.460, 84.366),
+
+                                new Pose(46.798, 96.662)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(320))
+
+                .build();
+
+        Collect2 = follower.pathBuilder().addPath(
+                        new BezierCurve(
+                                new Pose(46.798, 96.662),
+                                new Pose(61.561, 65.724),
+                                new Pose(26.65, 56.0)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(320), Math.toRadians(180),.2).setVelocityConstraint(25)
+
+                .build();
+
+        Shoot3 = follower.pathBuilder().addPath(
+                        new BezierLine(
+                                new Pose(19.072, 59.740),
+
+                                new Pose(46.648, 96.537)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(315))
+
+                .build();
+
+        telemetry.addLine("Paths Built");
+        telemetry.update();
+    }
+
+    private Command runBlueGoalSideScoreCommands() {
+        return new SequentialGroup(
+                new InstantCommand(()->{
+                    Turret.INSTANCE.setManualControl(true);
+                    Sort.INSTANCE.restartScissor();
+                    Turret.INSTANCE.setManualAnglePower(35,600);
+                }),
+                new FollowPath(ObeliskMove),
+                MySubsystemGroup.INSTANCE.detectTargetColorArray.thenWait(1.0),
+                new FollowPath(Shoot1).and(
+                        new InstantCommand(()->{
+                            Turret.INSTANCE.setManualAnglePower(45,1250);
+                        })
+                ),MySubsystemGroup.INSTANCE.shootInPattern,
+                new Delay(4.5),
+                new FollowPath(Collect1).and(
+                        new InstantCommand(()->{
+                            Turret.INSTANCE.setManualAnglePower(35,600);
+                            Sort.INSTANCE.setAutoModeIsEnabled(true);
+                            intake.setPower(1.0);
+
+                        })
+                ).thenWait(1),
+
+                new FollowPath(Shoot2).and(
+                        new InstantCommand(()->{
+                            Sort.INSTANCE.setAutoModeIsEnabled(false);
+                            Turret.INSTANCE.setManualAnglePower(35,1250);
+                           // intake.setPower(0);
+                        })
+                )
+                       ,MySubsystemGroup.INSTANCE.shootInPattern,
+                new Delay(4.5),
+                new FollowPath(Collect2).and(
+                        new InstantCommand(()->{
+                            Sort.INSTANCE.setAutoModeIsEnabled(true);
+                            Turret.INSTANCE.setManualAnglePower(35,600);
+                            intake.setPower(1.0);
+
+                        })
+                ),
+                new FollowPath(Shoot3).and(new InstantCommand(()->{
+                    Sort.INSTANCE.setAutoModeIsEnabled(false);
+                    Turret.INSTANCE.setManualAnglePower(35,1250);
+                   // intake.setPower(0.0);
+                })),
+                MySubsystemGroup.INSTANCE.shootInPattern,
+                new Delay(4.5).then(
+                        new InstantCommand(()->{
+                            Turret.INSTANCE.setManualAnglePower(25,600);
+                            intake.setPower(0.0);
+                        }))
+
         );
     }
 }

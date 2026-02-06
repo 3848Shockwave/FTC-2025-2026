@@ -91,6 +91,9 @@ public static double Lkp =0.0004;
             antiCrazy = RobotConfig.robotStateTracker;
             Turret.INSTANCE.initLimelightSystem();
         }
+        if(RobotConfig.finalMeasuredColors!=null){
+            MySubsystemGroup.INSTANCE.setTargetColor(RobotConfig.finalMeasuredColors);
+        }
 
         telemetryManager.update(telemetry);
         if (RobotConfig.autonomousStartEndPoses == null) {
@@ -120,7 +123,7 @@ public static double Lkp =0.0004;
                 y_button.whenBecomesTrue(() -> {
                     if (ActiveOpMode.opModeInInit()&&!sideSelected) {
                         RobotConfig.alliance = RobotConfig.Alliance.BLUE;
-                        RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.GOALSIDEBLUE;
+                        RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.GOALSIDEBLUESCORE;
                         telemetryManager.addData("Start Selected:", " BLUE GOAL SIDE autonomous");
                         telemetryManager.update(telemetry);
                         sideSelected = true;
@@ -144,7 +147,7 @@ public static double Lkp =0.0004;
                 b_button.whenBecomesTrue(() -> {
                     if (ActiveOpMode.opModeInInit()&&!sideSelected) {
                         RobotConfig.alliance = RobotConfig.Alliance.RED;
-                        RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.GOALSIDERED;
+                        RobotConfig.autonomousStartEndPoses = RobotConfig.AutonomousStartEndPoses.GOALSIDEREDMOVE;
                         telemetryManager.addData("Start Selected:", " RED GOAL SIDE autonomous");
                         telemetryManager.update(telemetry);
                         sideSelected = true;
