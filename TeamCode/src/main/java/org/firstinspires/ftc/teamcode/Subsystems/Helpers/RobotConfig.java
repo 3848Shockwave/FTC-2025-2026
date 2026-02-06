@@ -22,7 +22,7 @@ public final class RobotConfig {
         FARSIDEREDSCORE(new Pose(84, 8.5, Math.toRadians(270)), new Pose(84.435, 83.670, Math.toRadians(225))),
         FARSIDEBLUEMOVE(new Pose(59.2, 8.5, Math.toRadians(270)), new Pose(34.749, 20.953, Math.toRadians(180))),
         FARSIDEBLUESCORE(new Pose(59.2, 8.5, Math.toRadians(270)), new Pose(47.670, 95.450,Math.toRadians(315)));
-
+        
         private final Pose startPose;
         private final Pose endPose;
 

@@ -342,7 +342,8 @@ public class Sort implements Subsystem {
             final int[] targetIndex = { -1 };
 
             final double retractDelay = 0.6;
-
+            final double minStableWait = 0.2; // Minimum wait before checking stability
+            final ElapsedTime stableTimer = new ElapsedTime();
             return new LambdaCommand()
                     .setStart(() -> {
                         shootComplete = false;
@@ -359,18 +360,19 @@ public class Sort implements Subsystem {
                                 } else if (colorArray[1] == Color.GREEN) {
                                     targetIndex[0] = 1;
                                     cycleLeft.schedule();
+                                    stableTimer.reset();
                                     state[0] = State.WAIT_STABLE;
                                 } else if (colorArray[0] == Color.GREEN) {
                                     targetIndex[0] = 0;
                                     cycleRight.schedule();
+                                    stableTimer.reset();
                                     state[0] = State.WAIT_STABLE;
                                 } else {
                                     state[0] = State.DONE;
                                 }
                                 break;
                             case WAIT_STABLE:
-                                if (Sort.INSTANCE.spindexIsStable) {
-                                    // small settle
+                                if (stableTimer.seconds() >= minStableWait && Sort.INSTANCE.spindexIsStable) {
                                     timer.reset();
                                     state[0] = State.PUSH;
                                 }
@@ -413,7 +415,8 @@ public class Sort implements Subsystem {
             final State[] state = { State.CHECK };
             final int[] targetIndex = { -1 };
             final double retractDelay = 0.6;
-
+            final double minStableWait = 0.2; // Minimum wait before checking stability
+            final ElapsedTime stableTimer = new ElapsedTime();
             return new LambdaCommand()
                     .setStart(() -> {
                         shootComplete = false;
@@ -430,17 +433,20 @@ public class Sort implements Subsystem {
                                 } else if (colorArray[1] == Color.PURPLE) {
                                     targetIndex[0] = 1;
                                     cycleLeft.schedule();
+                                    stableTimer.reset();
                                     state[0] = State.WAIT_STABLE;
                                 } else if (colorArray[0] == Color.PURPLE) {
                                     targetIndex[0] = 0;
                                     cycleRight.schedule();
+                                    stableTimer.reset();
                                     state[0] = State.WAIT_STABLE;
                                 } else {
                                     state[0] = State.DONE;
                                 }
                                 break;
                             case WAIT_STABLE:
-                                if (Sort.INSTANCE.spindexIsStable) {
+                                // Wait minimum time AND for spindex to be stable
+                                if (stableTimer.seconds() >= minStableWait && Sort.INSTANCE.spindexIsStable) {
                                     timer.reset();
                                     state[0] = State.PUSH;
                                 }
@@ -477,12 +483,13 @@ public class Sort implements Subsystem {
         return new InstantCommand(() -> {});
     }
 
-    public Command shootClosestBall() {
+   public Command shootClosestBall() {
         if (colorArray[2] != Color.EMPTY || colorArray[1] != Color.EMPTY || colorArray[0] != Color.EMPTY) {
             final State[] state = { State.CHECK };
             final int[] targetIndex = { -1 };
-
             final double retractDelay = 0.6;
+            final double minStableWait = 0.2; // Minimum wait before checking stability
+            final ElapsedTime stableTimer = new ElapsedTime();
 
             return new LambdaCommand()
                     .setStart(() -> {
@@ -499,17 +506,20 @@ public class Sort implements Subsystem {
                                 } else if (colorArray[1] != Color.EMPTY) {
                                     targetIndex[0] = 1;
                                     cycleLeft.schedule();
+                                    stableTimer.reset();
                                     state[0] = State.WAIT_STABLE;
                                 } else if (colorArray[0] != Color.EMPTY) {
                                     targetIndex[0] = 0;
                                     cycleRight.schedule();
+                                    stableTimer.reset();
                                     state[0] = State.WAIT_STABLE;
                                 } else {
                                     state[0] = State.DONE;
                                 }
                                 break;
                             case WAIT_STABLE:
-                                if (Sort.INSTANCE.spindexIsStable) {
+                                // Wait minimum time AND for spindex to be stable
+                                if (stableTimer.seconds() >= minStableWait && Sort.INSTANCE.spindexIsStable) {
                                     timer.reset();
                                     state[0] = State.PUSH;
                                 }
