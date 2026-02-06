@@ -48,7 +48,8 @@ public class Coordinator extends SubsystemGroup {
                         new WaitUntil(() -> Sort.INSTANCE.shootComplete),
                         Sort.INSTANCE.shootNewPurp(),
                         new WaitUntil(() -> Sort.INSTANCE.shootComplete),
-                        Sort.INSTANCE.shootNewPurp()
+                        Sort.INSTANCE.shootNewPurp(),
+                        new WaitUntil(() -> Sort.INSTANCE.shootComplete)
                 ).schedule();
 
                 }
@@ -61,7 +62,8 @@ public class Coordinator extends SubsystemGroup {
                         new WaitUntil(() -> Sort.INSTANCE.shootComplete),
                         Sort.INSTANCE.shootNewPurp(),
                         new WaitUntil(() -> Sort.INSTANCE.shootComplete),
-                        Sort.INSTANCE.shootNewGreen()
+                        Sort.INSTANCE.shootNewGreen(),
+                         new WaitUntil(() -> Sort.INSTANCE.shootComplete)
                 ).schedule();
         }
        else if(Arrays.equals(
@@ -73,7 +75,8 @@ public class Coordinator extends SubsystemGroup {
                         new WaitUntil(() -> Sort.INSTANCE.shootComplete),
                         Sort.INSTANCE.shootNewGreen(),
                         new WaitUntil(() -> Sort.INSTANCE.shootComplete),
-                        Sort.INSTANCE.shootNewPurp()
+                        Sort.INSTANCE.shootNewPurp(),
+                        new WaitUntil(() -> Sort.INSTANCE.shootComplete)
                 ).schedule();
         }
 
@@ -153,6 +156,9 @@ public class Coordinator extends SubsystemGroup {
     @Override
     public void periodic() {
         colorWeHave = Sort.INSTANCE.getColorArray();
+    }
+    public void setTargetColor(Sort.Color[] targetColor){
+        this.targetColor = targetColor;
     }
 
 

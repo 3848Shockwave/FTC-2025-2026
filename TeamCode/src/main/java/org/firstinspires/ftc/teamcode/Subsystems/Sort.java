@@ -51,6 +51,7 @@ public class Sort implements Subsystem {
     boolean hasRunL = false;
     boolean hasRunR = false;
     private boolean secondPressSeen = false;
+    boolean autoModeIsEnabled = false;
 
 
     public enum Color {
@@ -64,6 +65,7 @@ public class Sort implements Subsystem {
     public Command pushBall = null;
     boolean shootComplete = false;
     public LambdaCommand pushBallAndBack = null;
+
     public LambdaCommand positiveIntake = null;
     public LambdaCommand negativeIntake = null;
 
@@ -77,6 +79,7 @@ public class Sort implements Subsystem {
 
     RevTouchSensor touchSensor = null;
     final ElapsedTime timer = new ElapsedTime();
+    boolean isNotfull = false;
 
     public InstantCommand stopIntake = new InstantCommand(() -> {
         intakeOn = false;
@@ -88,6 +91,7 @@ public class Sort implements Subsystem {
     @Override
 
     public void initialize() {
+
         hardwareMap = ActiveOpMode.hardwareMap();
         telemetry = ActiveOpMode.telemetry();
         spindexEncoder = new ELCEncoderV2(ActiveOpMode.hardwareMap(),"spindexEncoder");
@@ -103,6 +107,8 @@ public class Sort implements Subsystem {
 
         spindexRight = new ServoEx(hardwareMap.get(Servo.class, "spindexRight"));
         spindexLeft = new ServoEx(hardwareMap.get(Servo.class, "spindexLeft"));
+
+
 
 
         pushBallAndBack = new LambdaCommand()
@@ -296,6 +302,17 @@ public class Sort implements Subsystem {
 
     @Override
     public void periodic() {
+        if(autoModeIsEnabled){
+            if(getColorArray()[2] != Color.EMPTY){
+                if(getColorArray()[1]==Color.EMPTY){
+                   cycleRight.schedule();
+                }
+                else if(getColorArray()[0]==Color.EMPTY){
+                  cycleLeft.schedule();
+                }
+            }
+
+        }
         checkColors();
         updateServo();
         spindexEncoder.updateRotations();
@@ -553,6 +570,9 @@ public class Sort implements Subsystem {
                     .named("shootClosestBall");
         }
         return new InstantCommand(() -> {}).named("shootClosestBall");
+    }
+    public void setAutoModeIsEnabled(boolean enabled) {
+        autoModeIsEnabled = enabled;
     }
 
 }
