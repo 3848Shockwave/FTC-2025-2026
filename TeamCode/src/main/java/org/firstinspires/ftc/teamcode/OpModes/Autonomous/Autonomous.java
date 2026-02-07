@@ -265,6 +265,7 @@ public class Autonomous extends NextFTCOpMode {
         RobotConfig.finalMeasuredPose = follower.getPose();
         RobotConfig.finalMeasuredSpindexPosition = Sort.INSTANCE.getServoPosition();
         RobotConfig.finalMeasuredColors = MySubsystemGroup.INSTANCE.getTargetColor();
+
         super.onStop();
     }
 
@@ -369,7 +370,7 @@ public class Autonomous extends NextFTCOpMode {
         }),
                 MySubsystemGroup.INSTANCE.detectTargetColorArray.thenWait(2),
                 new FollowPath(moveBLF).and(new InstantCommand(()->{
-                    Turret.INSTANCE.setManualAnglePower(35,600);
+                    Turret.INSTANCE.setManualAnglePower(25,600);
                 })));
     }
 
@@ -767,7 +768,7 @@ public class Autonomous extends NextFTCOpMode {
                         new BezierCurve(
                                 new Pose(46.753, 96.593),
                                 new Pose(48.766, 82.892),
-                                new Pose(30, 82.5)
+                                new Pose(25, 82.5)
                         )
                 ).setLinearHeadingInterpolation(Math.toRadians(315), Math.toRadians(180),.15).setVelocityConstraint(10)
 
@@ -775,7 +776,7 @@ public class Autonomous extends NextFTCOpMode {
 
         Shoot2 = follower.pathBuilder().addPath(
                         new BezierLine(
-                                new Pose(19.460, 84.366),
+                                new Pose(25, 82.5),
 
                                 new Pose(46.798, 96.662)
                         )
@@ -787,7 +788,7 @@ public class Autonomous extends NextFTCOpMode {
                         new BezierCurve(
                                 new Pose(46.798, 96.662),
                                 new Pose(61.561, 65.724),
-                                new Pose(30, 56.0)
+                                new Pose(27, 57.0)
                         )
                 ).setLinearHeadingInterpolation(Math.toRadians(320), Math.toRadians(180),.2).setVelocityConstraint(10)
 
@@ -795,7 +796,7 @@ public class Autonomous extends NextFTCOpMode {
 
         Shoot3 = follower.pathBuilder().addPath(
                         new BezierLine(
-                                new Pose(19.072, 59.740),
+                                new Pose(27.072, 57.0),
 
                                 new Pose(46.648, 106.537)
                         )
@@ -821,11 +822,11 @@ public class Autonomous extends NextFTCOpMode {
 
                 new FollowPath(Shoot1).and(
                         new InstantCommand(()->{
-                            Turret.INSTANCE.setManualAnglePower(50,1250);
+                            Turret.INSTANCE.setManualAnglePower(35,1225);
                         })
-                ),new Delay (1),
+                ),
                 MySubsystemGroup.INSTANCE.shootInPattern,
-                new Delay(4),
+                new Delay(4.5),
 
 
                 new FollowPath(Collect1).and(
@@ -835,17 +836,17 @@ public class Autonomous extends NextFTCOpMode {
                             intake.setPower(1.0);
 
                         })
-                ).thenWait(1),
+                ).thenWait(.5),
 
                 new FollowPath(Shoot2).and(
                         new InstantCommand(()->{
                             Sort.INSTANCE.setAutoModeIsEnabled(false);
-                            Turret.INSTANCE.setManualAnglePower(50,1250);
+                            Turret.INSTANCE.setManualAnglePower(40,1225);
                            // intake.setPower(0);
                         })
                 ).thenWait(1)
                 ,MySubsystemGroup.INSTANCE.shootInPattern,
-                new Delay(4),
+                new Delay(4.5),
 
 
 
@@ -860,10 +861,10 @@ public class Autonomous extends NextFTCOpMode {
 
                 new FollowPath(Shoot3).and(new InstantCommand(()->{
                     Sort.INSTANCE.setAutoModeIsEnabled(false);
-                    Turret.INSTANCE.setManualAnglePower(50,1250);
+                    Turret.INSTANCE.setManualAnglePower(25,1225);
                    // intake.setPower(0.0);
                 })),
-                new Delay (1),
+                new Delay (.5),
                 MySubsystemGroup.INSTANCE.shootInPattern,
                 new Delay(4.5).then(
                         new InstantCommand(()->{

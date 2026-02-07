@@ -274,6 +274,9 @@ public class Turret implements Subsystem {
             return null;
         }
     }
+    public void setPreviousTurretAngle(double angle){
+
+    }
 
     public double getBlindTrackingCoordinates(){
         double calculatedAngle = 0;

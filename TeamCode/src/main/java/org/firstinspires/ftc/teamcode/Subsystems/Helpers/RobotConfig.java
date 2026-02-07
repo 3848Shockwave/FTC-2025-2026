@@ -11,6 +11,7 @@ public final class RobotConfig {
     public static Sort.Color[] finalMeasuredColors = null;
     public static AutonomousStartEndPoses autonomousStartEndPoses = null;
     public static RobotStateTracker robotStateTracker = null;
+    public static double lastTurretPos = 0.0;
     private RobotConfig() {
     }
     public enum Alliance {

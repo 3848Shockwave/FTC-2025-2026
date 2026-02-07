@@ -48,6 +48,8 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     private final MotorEx leftBack = new MotorEx("back_left");
     private final MotorEx rightBack = new MotorEx("back_right");
+    private final MotorEx leftFront = new MotorEx("front_left");
+    private final MotorEx rightFront = new MotorEx("front_right");
     Button x_button, y_button, a_button, b_button;
     Pose startPose = null;
     private boolean motorToggle = false;
@@ -81,7 +83,7 @@ public static double Lkp =0.0004;
 
     @Override
     public void onInit() {
-
+        Turret.INSTANCE.setManualControl(false);
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
         if(RobotConfig.autonomousStartEndPoses != null){
             startPose = RobotConfig.autonomousStartEndPoses.getEndPose();
@@ -93,6 +95,7 @@ public static double Lkp =0.0004;
         if(RobotConfig.finalMeasuredColors!=null){
             MySubsystemGroup.INSTANCE.setTargetColor(RobotConfig.finalMeasuredColors);
         }
+
 
         telemetryManager.update(telemetry);
         if (RobotConfig.autonomousStartEndPoses == null) {
@@ -312,11 +315,13 @@ public static double Lkp =0.0004;
         if(PTOEngaged) {
             if (gamepad2.left_trigger > 0.5) {
                 leftBack.setPower(-gamepad2.left_trigger);
+                leftFront.setPower(-gamepad2.left_trigger);
             }  else if(gamepad2.left_trigger < .5){
                 leftBack.setPower(0.0);
             }
             if (gamepad2.right_trigger > .5) {
                 rightBack.setPower(gamepad2.right_trigger);
+                rightFront.setPower(gamepad2.right_trigger);
             } else if(gamepad2.right_trigger < .5){
                 rightBack.setPower(0.0);
             }
