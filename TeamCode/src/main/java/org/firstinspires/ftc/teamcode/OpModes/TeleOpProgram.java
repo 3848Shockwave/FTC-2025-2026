@@ -20,7 +20,6 @@ import org.firstinspires.ftc.teamcode.Subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 import dev.nextftc.bindings.Button;
-import dev.nextftc.bindings.Variable;
 import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
@@ -344,7 +343,7 @@ public static double Lkp =0.0004;
             );
         }
         if(MySubsystemGroup.INSTANCE.getTargetColor()!=null) {
-            telemetryManager.addData("Target Colors: ", MySubsystemGroup.INSTANCE.getTargetColor()[0]+", "+MySubsystemGroup.INSTANCE.getTargetColor()[1]+", "+MySubsystemGroup.INSTANCE.getTargetColor()[2]);
+            telemetryManager.addData("Target Colors: ", MySubsystemGroup.INSTANCE.getTargetColor()[0]+", "+ MySubsystemGroup.INSTANCE.getTargetColor()[1]+", "+ MySubsystemGroup.INSTANCE.getTargetColor()[2]);
         }
         telemetryManager.addData("Current Spindex Index (0-2)", Sort.INSTANCE.getCurrentIndex());
         telemetryManager.addData("Spindex Stability", Sort.INSTANCE.isSpindexStable());
