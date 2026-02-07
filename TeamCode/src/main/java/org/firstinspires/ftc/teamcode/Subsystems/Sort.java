@@ -80,6 +80,7 @@ public class Sort implements Subsystem {
     RevTouchSensor touchSensor = null;
     final ElapsedTime timer = new ElapsedTime();
     boolean isNotfull = false;
+    private final ServoEx Light = new ServoEx("Light");
 
     public InstantCommand stopIntake = new InstantCommand(() -> {
         intakeOn = false;
@@ -314,6 +315,19 @@ public class Sort implements Subsystem {
 
         }
         checkColors();
+        int counter = 0;
+        for(Sort.Color color : Sort.INSTANCE.getColorArray()){
+            if(color==Color.EMPTY){
+                Light.setPosition(0);
+                break;
+            }
+            else{
+                counter++;
+            }
+        }
+        if(counter ==3){
+            Light.setPosition(.5);
+        }
         updateServo();
         spindexEncoder.updateRotations();
         spindexIsStable = spindexEncoder.isStable(.25, 4);

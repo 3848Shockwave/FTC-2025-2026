@@ -276,13 +276,24 @@ public static double Lkp =0.0004;
 
 
         follower().startTeleopDrive();
-
-        DriverControlledCommand driverControlled = new PedroDriverControlled(
-                    Gamepads.gamepad1().leftStickX().negate(),
+        DriverControlledCommand  driverControlled = null;
+        if(RobotConfig.alliance == RobotConfig.Alliance.BLUE) {
+               driverControlled =new PedroDriverControlled(
                     Gamepads.gamepad1().leftStickY(),
-                Gamepads.gamepad1().rightStickX().negate(),
-                false
-        );
+                    Gamepads.gamepad1().leftStickX(),
+                    Gamepads.gamepad1().rightStickX().negate(),
+                    false
+            );
+        }
+            if(RobotConfig.alliance == RobotConfig.Alliance.RED){
+                driverControlled = new PedroDriverControlled(
+                        Gamepads.gamepad1().leftStickY().negate(),
+                        Gamepads.gamepad1().leftStickX().negate(),
+                        Gamepads.gamepad1().rightStickX().negate(),
+                        false
+                );
+            }
+
         driverControlled.schedule();
     }
 
