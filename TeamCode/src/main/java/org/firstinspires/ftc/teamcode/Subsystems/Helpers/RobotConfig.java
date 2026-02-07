@@ -8,7 +8,7 @@ public final class RobotConfig {
     public static Alliance alliance = null;
     public static Pose finalMeasuredPose = null;
     public static double finalMeasuredSpindexPosition = 0;
-    public static Sort.Color[] finalMeasuredColors = new Sort.Color[2];
+    public static Sort.Color[] finalMeasuredColors = null;
     public static AutonomousStartEndPoses autonomousStartEndPoses = null;
     public static RobotStateTracker robotStateTracker = null;
     private RobotConfig() {
