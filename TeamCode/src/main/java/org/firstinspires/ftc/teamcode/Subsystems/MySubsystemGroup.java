@@ -12,8 +12,8 @@ import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.commands.utility.LambdaCommand;
 import dev.nextftc.core.subsystems.SubsystemGroup;
 
-public class Coordinator extends SubsystemGroup {
-    public static final Coordinator INSTANCE = new Coordinator();
+public class MySubsystemGroup extends SubsystemGroup {
+    public static final MySubsystemGroup INSTANCE = new MySubsystemGroup();
     private boolean checkIsDone =false;
     private int counter =0;
     private static ElapsedTime timer = new ElapsedTime();
@@ -22,7 +22,7 @@ public class Coordinator extends SubsystemGroup {
 
 
 
-    private Coordinator() {
+    private MySubsystemGroup() {
         super(
                 Turret.INSTANCE,
                 Sort.INSTANCE

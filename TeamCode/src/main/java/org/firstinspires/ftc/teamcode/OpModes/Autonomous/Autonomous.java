@@ -64,8 +64,8 @@ public class Autonomous extends NextFTCOpMode {
     private PathChain moveToScoreRF, loadRF1, scoreRF1, loadRF2, scoreRF2; //redFarSideScore
 
     private PathChain ObeliskMove,Shoot1,Collect1,Shoot2,Collect2,Shoot3;//blueGoalSideScore
-    private PathChain RedGoalMove; // redGoalSideMove
-    private PathChain BlueGoalMove; //BlueGoalSideMove
+    private PathChain ObeliskMoveRG, Shoot1RG; // redGoalSideMove
+    private PathChain ObeliskMoveRM, Shoot1RM; //BlueGoalSideMove
     private PathChain MoveObeliskR, Shoot1R, Collect1R, Shoot2R, Collect2R, Shoot3R;//redGoalSideScore
 
 
@@ -264,38 +264,69 @@ public class Autonomous extends NextFTCOpMode {
         Turret.INSTANCE.setManualControl(false);
         RobotConfig.finalMeasuredPose = follower.getPose();
         RobotConfig.finalMeasuredSpindexPosition = Sort.INSTANCE.getServoPosition();
-        RobotConfig.finalMeasuredColors = Turret.INSTANCE.getColorArray();
+        RobotConfig.finalMeasuredColors = MySubsystemGroup.INSTANCE.getTargetColor();
         super.onStop();
     }
 
 
     //  RED GOAL SIDE MOVE
     private void buildRedGoalMovingPaths() {
-        RedGoalMove = follower.pathBuilder().addPath(
-                new BezierLine(
-                        new Pose(121.662, 123.657),
+        ObeliskMoveRG = follower.pathBuilder().addPath(
+                        new BezierLine(
+                                new Pose(123.258, 123.457),
 
-                        new Pose(90, 111.789)
-                )
-        ).setLinearHeadingInterpolation(Math.toRadians(37), Math.toRadians(270)).build();
+                                new Pose(97.175, 96.632)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(37), Math.toRadians(-70))
+
+                .build();
+
+        Shoot1RG = follower.pathBuilder().addPath(
+                        new BezierLine(
+                                new Pose(97.175, 96.632),
+
+                                new Pose(97.247, 96.593)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(-70), Math.toRadians(230))
+
+                .build();
     }
 
     private Command runRedGoalMovingCommands() {
-        return new SequentialGroup(new FollowPath(RedGoalMove));
+        return new SequentialGroup(
+                new InstantCommand(() -> {
+                    Turret.INSTANCE.setManualControl(true);
+                    Turret.INSTANCE.setManualAnglePower(35,0);
+                }),
+                new FollowPath(ObeliskMoveRG),
+                MySubsystemGroup.INSTANCE.detectTargetColorArray.thenWait(5),
+                new InstantCommand(() -> {
+                    Turret.INSTANCE.setManualAnglePower(25, 0);
+                }),
+                new FollowPath(Shoot1RG));
     }
 
     // BLUE GOAL SIDE MOVE
     private void buildBlueGoalMovingPaths() {
+        ObeliskMoveRM = follower.pathBuilder().addPath(
+                        new BezierLine(
+                                new Pose(20.742, 123.457),
 
-            BlueGoalMove = follower.pathBuilder().addPath(
-                            new BezierLine(
-                                    new Pose(20.742, 123.457),
+                                new Pose(46.825, 96.632)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(143), Math.toRadians(250))
 
-                                    new Pose(59.391, 111.989)
-                            )
-                    ).setLinearHeadingInterpolation(Math.toRadians(143), Math.toRadians(270))
+                .build();
 
-                    .build();
+        Shoot1RM = follower.pathBuilder().addPath(
+                        new BezierLine(
+                                new Pose(46.825, 96.632),
+
+                                new Pose(46.753, 96.593)
+                        )
+                ).setLinearHeadingInterpolation(Math.toRadians(250), Math.toRadians(315))
+
+                .build();
     }
 
     private Command runBlueGoalMovingCommands() {
@@ -304,7 +335,15 @@ public class Autonomous extends NextFTCOpMode {
                     Turret.INSTANCE.setManualControl(true);
                     Turret.INSTANCE.setManualAnglePower(35,0);
                 }),
-                new FollowPath(BlueGoalMove));
+                new FollowPath(ObeliskMoveRM),
+                new InstantCommand(() -> {
+                    MySubsystemGroup.INSTANCE.detectTargetColorArray.thenWait(5);
+                }),
+                new InstantCommand(()-> {
+                    Turret.INSTANCE.setManualAnglePower(25, 0);
+                }),
+                new FollowPath(Shoot1RM));
+
     }
 
     //  BLUE FAR SIDE MOVE
@@ -419,51 +458,52 @@ public class Autonomous extends NextFTCOpMode {
         return new SequentialGroup(
                 new InstantCommand(()->{
                     Turret.INSTANCE.setManualControl(true);
-                    Turret.INSTANCE.setManualAnglePower(15,600);
+                    Sort.INSTANCE.restartScissor();
+                    Turret.INSTANCE.setManualAnglePower(35,600);
                 }),
+
                 MySubsystemGroup.INSTANCE.detectTargetColorArray.thenWait(2),
                 new FollowPath(moveToScoreRF).and(new InstantCommand(()->{
                             Turret.INSTANCE.setManualAnglePower(50,1000);
                         })
-                ),
+                ).thenWait(1),
+                MySubsystemGroup.INSTANCE.shootInPattern,
                 new Delay(3.5),
+
                 new FollowPath(loadRF1).and(
                         new InstantCommand(()->{
                             Turret.INSTANCE.setManualAnglePower(35,600);
+                            Sort.INSTANCE.setAutoModeIsEnabled(true);
                             intake.setPower(1.0);
                         })
                 ),
+
                 new FollowPath(scoreRF1).and(
                         new InstantCommand(()->{
+                            Sort.INSTANCE.setAutoModeIsEnabled(false);
                             Turret.INSTANCE.setManualAnglePower(50,1000);
                             intake.setPower(0);
                         })
-                ).thenWait(3.5),
+                ).thenWait(1)
+                ,MySubsystemGroup.INSTANCE.shootInPattern,
+
                 new FollowPath(loadRF2).and(
                         new InstantCommand(()->{
+                            Sort.INSTANCE.setAutoModeIsEnabled(true);
                             Turret.INSTANCE.setManualAnglePower(35,600);
                             intake.setPower(1.0);
                         })),
+
                 new FollowPath(scoreRF2).and(new InstantCommand(()->{
+                    Sort.INSTANCE.setAutoModeIsEnabled(false);
                     Turret.INSTANCE.setManualAnglePower(50,1000);
                     intake.setPower(0.0);
                 })).thenWait(5).then(
                         new InstantCommand(()->{
                             Turret.INSTANCE.setManualAnglePower(25,600);
 
-                        }))
-
-
-                //.and(Sort.INSTANCE.positiveIntake),
-                //   new FollowPath(readygrab2),
-                // MySubsystemGroup.INSTANCE.shootInPattern,
-
-                // new FollowPath(shoot3),//.and(Sort.INSTANCE.positiveIntake),
-                // new FollowPath(ready3),//.and(Sort.INSTANCE.positiveIntake),
-                // new FollowPath(grab3),
-                // MySubsystemGroup.INSTANCE.shootInPattern,
-
-                //  new FollowPath(shoot4)//.and(Sort.INSTANCE.positiveIntake),
+                        })).thenWait(1)
+                ,MySubsystemGroup.INSTANCE.shootInPattern
         );
     }
 
@@ -486,7 +526,7 @@ public class Autonomous extends NextFTCOpMode {
                                 new Pose(44.010, 62.387),
                                 new Pose(21.107, 59.887)
                         )
-                ).setLinearHeadingInterpolation(Math.toRadians(315), Math.toRadians(180),.4)
+                ).setLinearHeadingInterpolation(Math.toRadians(315), Math.toRadians(180),.4).setVelocityConstraint(10)
 
                     .build();
         score2 = follower.pathBuilder().addPath(
@@ -505,7 +545,7 @@ public class Autonomous extends NextFTCOpMode {
 
                                 new Pose(21.836, 83.855)
                         )
-                ).setLinearHeadingInterpolation(Math.toRadians(315), Math.toRadians(180),.2)
+                ).setLinearHeadingInterpolation(Math.toRadians(315), Math.toRadians(180),.2).setVelocityConstraint(10)
 
                     .build();
 
@@ -528,47 +568,43 @@ public class Autonomous extends NextFTCOpMode {
         return new SequentialGroup(
                 new InstantCommand(()->{
                     Turret.INSTANCE.setManualControl(true);
-                    Turret.INSTANCE.setManualAnglePower(55,600);
+                    Sort.INSTANCE.restartScissor();
+                    Turret.INSTANCE.setManualAnglePower(35,600);
                 }),
                 MySubsystemGroup.INSTANCE.detectTargetColorArray.thenWait(2),
                 new FollowPath(moveToScore).and(new InstantCommand(()->{
-                    Turret.INSTANCE.setManualAnglePower(20,1000);
+                    Turret.INSTANCE.setManualAnglePower(25,1000);
                 })
-                ),
+                ).thenWait(1),MySubsystemGroup.INSTANCE.shootInPattern,
                 new Delay(3.5),
+
                 new FollowPath(load1).and(
                         new InstantCommand(()->{
+                            Sort.INSTANCE.setAutoModeIsEnabled(true);
                             Turret.INSTANCE.setManualAnglePower(20,600);
                             intake.setPower(1.0);
-
                         })
                 ),
                 new FollowPath(score2).and(
                         new InstantCommand(()->{
+                            Sort.INSTANCE.setAutoModeIsEnabled(false);
                             Turret.INSTANCE.setManualAnglePower(20,1000);
-                            intake.setPower(0);
+                            intake.setPower(1.0);
                         })
-                ).thenWait(3.5),
+                ).thenWait(1),MySubsystemGroup.INSTANCE.shootInPattern.thenWait(3.5),
+
                 new FollowPath(ready2).and(
                         new InstantCommand(()->{
-                    Turret.INSTANCE.setManualAnglePower(15,600);
-                    intake.setPower(1.0);
+                            Sort.INSTANCE.setAutoModeIsEnabled(true);
+                            Turret.INSTANCE.setManualAnglePower(15,600);
+                            intake.setPower(1.0);
                 })),
+
                 new FollowPath(score3).and(new InstantCommand(()->{
+                    Sort.INSTANCE.setAutoModeIsEnabled(false);
                     Turret.INSTANCE.setManualAnglePower(20,1000);
-                    intake.setPower(0.0);
-                }))
-
-                //.and(Sort.INSTANCE.positiveIntake),
-             //   new FollowPath(readygrab2),
-               // MySubsystemGroup.INSTANCE.shootInPattern,
-
-               // new FollowPath(shoot3),//.and(Sort.INSTANCE.positiveIntake),
-               // new FollowPath(ready3),//.and(Sort.INSTANCE.positiveIntake),
-               // new FollowPath(grab3),
-               // MySubsystemGroup.INSTANCE.shootInPattern,
-
-              //  new FollowPath(shoot4)//.and(Sort.INSTANCE.positiveIntake),
+                 //   intake.setPower(0.0);
+                })),MySubsystemGroup.INSTANCE.shootInPattern
         );
 
     }
@@ -601,7 +637,7 @@ public class Autonomous extends NextFTCOpMode {
                                 new Pose(91.766, 85.489),
                                 new Pose(118.3, 82.864)
                         )
-                ).setLinearHeadingInterpolation(Math.toRadians(230), Math.toRadians(360),.15).setVelocityConstraint(12.5)
+                ).setLinearHeadingInterpolation(Math.toRadians(230), Math.toRadians(360),.15).setVelocityConstraint(10)
 
                 .build();
 
@@ -621,7 +657,7 @@ public class Autonomous extends NextFTCOpMode {
                                 new Pose(73.093, 63.458),
                                 new Pose(118.590, 55.5)
                         )
-                ).setLinearHeadingInterpolation(Math.toRadians(230), Math.toRadians(360),.15).setVelocityConstraint(25)
+                ).setLinearHeadingInterpolation(Math.toRadians(230), Math.toRadians(360),.15).setVelocityConstraint(10)
 
                 .build();
 
@@ -720,9 +756,9 @@ public class Autonomous extends NextFTCOpMode {
                         new BezierCurve(
                                 new Pose(46.753, 96.593),
                                 new Pose(48.766, 82.892),
-                                new Pose(24.65, 82.5)
+                                new Pose(30, 82.5)
                         )
-                ).setLinearHeadingInterpolation(Math.toRadians(315), Math.toRadians(180),.15).setVelocityConstraint(15)
+                ).setLinearHeadingInterpolation(Math.toRadians(315), Math.toRadians(180),.15).setVelocityConstraint(10)
 
                 .build();
 
@@ -740,9 +776,9 @@ public class Autonomous extends NextFTCOpMode {
                         new BezierCurve(
                                 new Pose(46.798, 96.662),
                                 new Pose(61.561, 65.724),
-                                new Pose(26.65, 56.0)
+                                new Pose(30, 56.0)
                         )
-                ).setLinearHeadingInterpolation(Math.toRadians(320), Math.toRadians(180),.2).setVelocityConstraint(25)
+                ).setLinearHeadingInterpolation(Math.toRadians(320), Math.toRadians(180),.2).setVelocityConstraint(10)
 
                 .build();
 
@@ -767,14 +803,20 @@ public class Autonomous extends NextFTCOpMode {
                     Sort.INSTANCE.restartScissor();
                     Turret.INSTANCE.setManualAnglePower(35,600);
                 }),
+
                 new FollowPath(ObeliskMove),
                 MySubsystemGroup.INSTANCE.detectTargetColorArray.thenWait(1.0),
+
+
                 new FollowPath(Shoot1).and(
                         new InstantCommand(()->{
-                            Turret.INSTANCE.setManualAnglePower(45,1250);
+                            Turret.INSTANCE.setManualAnglePower(50,1250);
                         })
-                ),MySubsystemGroup.INSTANCE.shootInPattern,
-                new Delay(4.5),
+                ),new Delay (1),
+                MySubsystemGroup.INSTANCE.shootInPattern,
+                new Delay(4),
+
+
                 new FollowPath(Collect1).and(
                         new InstantCommand(()->{
                             Turret.INSTANCE.setManualAnglePower(35,600);
@@ -787,12 +829,15 @@ public class Autonomous extends NextFTCOpMode {
                 new FollowPath(Shoot2).and(
                         new InstantCommand(()->{
                             Sort.INSTANCE.setAutoModeIsEnabled(false);
-                            Turret.INSTANCE.setManualAnglePower(35,1250);
+                            Turret.INSTANCE.setManualAnglePower(50,1250);
                            // intake.setPower(0);
                         })
-                )
-                       ,MySubsystemGroup.INSTANCE.shootInPattern,
-                new Delay(4.5),
+                ).thenWait(1)
+                ,MySubsystemGroup.INSTANCE.shootInPattern,
+                new Delay(4),
+
+
+
                 new FollowPath(Collect2).and(
                         new InstantCommand(()->{
                             Sort.INSTANCE.setAutoModeIsEnabled(true);
@@ -801,11 +846,13 @@ public class Autonomous extends NextFTCOpMode {
 
                         })
                 ),
+
                 new FollowPath(Shoot3).and(new InstantCommand(()->{
                     Sort.INSTANCE.setAutoModeIsEnabled(false);
-                    Turret.INSTANCE.setManualAnglePower(35,1250);
+                    Turret.INSTANCE.setManualAnglePower(50,1250);
                    // intake.setPower(0.0);
                 })),
+                new Delay (1),
                 MySubsystemGroup.INSTANCE.shootInPattern,
                 new Delay(4.5).then(
                         new InstantCommand(()->{

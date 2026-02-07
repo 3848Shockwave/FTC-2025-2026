@@ -12,7 +12,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotStateTracker;
-import org.firstinspires.ftc.teamcode.Subsystems.Coordinator;
+import org.firstinspires.ftc.teamcode.Subsystems.MySubsystemGroup;
 import org.firstinspires.ftc.teamcode.Subsystems.PTO;
 import org.firstinspires.ftc.teamcode.Subsystems.Sort;
 import org.firstinspires.ftc.teamcode.Subsystems.Sort.Color;
@@ -72,7 +72,7 @@ public static double Lkp =0.0004;
                 new SubsystemComponent(Sort.INSTANCE),
                 new SubsystemComponent(Turret.INSTANCE),
                 new SubsystemComponent(PTO.INSTANCE),
-                new SubsystemComponent(Coordinator.INSTANCE),
+                new SubsystemComponent(MySubsystemGroup.INSTANCE),
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
                 new PedroComponent(Constants::createFollower)
@@ -213,13 +213,13 @@ public static double Lkp =0.0004;
 
         //Detect Colors Manually
                     Button dpad_right = button(()->gamepad1.dpad_right)
-                            .whenBecomesTrue(Coordinator.INSTANCE.detectTargetColorArray);
+                            .whenBecomesTrue(MySubsystemGroup.INSTANCE.detectTargetColorArray);
 
 
         // Triple Launch
                     Button x = button(() -> gamepad1.x)
                             .whenBecomesTrue(() -> {
-                                Coordinator.INSTANCE.tripleLaunch.schedule();
+                                MySubsystemGroup.INSTANCE.tripleLaunch.schedule();
                             });
         // Normal  Shoot
                     Button y_button = button(() -> gamepad1.y)
@@ -229,7 +229,7 @@ public static double Lkp =0.0004;
                             .whenBecomesTrue(()->{Sort.INSTANCE.shootClosestBall().schedule();});
         // Shoot In Pattern
                     Button a_button = button(() -> gamepad1.a)
-                            .whenBecomesTrue(Coordinator.INSTANCE.shootInPattern);
+                            .whenBecomesTrue(MySubsystemGroup.INSTANCE.shootInPattern);
         // Shoot Purple
                     Button right_trigger = button(() -> gamepad1.right_trigger > 0.5)
                             .whenBecomesTrue(()->{
@@ -342,8 +342,8 @@ public static double Lkp =0.0004;
                     colors[0] + ", " + colors[1] + ", " + colors[2]
             );
         }
-        if(Coordinator.INSTANCE.getTargetColor()!=null) {
-            telemetryManager.addData("Target Colors: ", Coordinator.INSTANCE.getTargetColor()[0]+", "+ Coordinator.INSTANCE.getTargetColor()[1]+", "+ Coordinator.INSTANCE.getTargetColor()[2]);
+        if(MySubsystemGroup.INSTANCE.getTargetColor()!=null) {
+            telemetryManager.addData("Target Colors: ", MySubsystemGroup.INSTANCE.getTargetColor()[0]+", "+ MySubsystemGroup.INSTANCE.getTargetColor()[1]+", "+ MySubsystemGroup.INSTANCE.getTargetColor()[2]);
         }
         telemetryManager.addData("Current Spindex Index (0-2)", Sort.INSTANCE.getCurrentIndex());
         telemetryManager.addData("Spindex Stability", Sort.INSTANCE.isSpindexStable());

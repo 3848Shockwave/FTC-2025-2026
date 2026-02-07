@@ -1,9 +1,5 @@
 package org.firstinspires.ftc.teamcode.Subsystems;
 
-
-import static org.firstinspires.ftc.teamcode.Subsystems.TurretConstants.ticksPerDegreeOfRotation;
-import dev.nextftc.core.commands.Command;
-
 import com.pedropathing.math.Vector;
 import com.qualcomm.hardware.rev.RevTouchSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
