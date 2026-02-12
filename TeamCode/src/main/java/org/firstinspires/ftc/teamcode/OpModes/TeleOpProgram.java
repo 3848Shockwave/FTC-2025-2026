@@ -7,6 +7,8 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.geometry.Pose;
+import com.pedropathing.paths.PathChain;
+import com.pedropathing.geometry.BezierLine;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
@@ -25,6 +27,7 @@ import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.extensions.pedro.PedroDriverControlled;
+import dev.nextftc.extensions.pedro.FollowPath;
 import dev.nextftc.ftc.ActiveOpMode;
 import dev.nextftc.ftc.Gamepads;
 import dev.nextftc.ftc.NextFTCOpMode;
@@ -32,17 +35,28 @@ import dev.nextftc.ftc.components.BulkReadComponent;
 import dev.nextftc.hardware.driving.DriverControlledCommand;
 import dev.nextftc.hardware.impl.MotorEx;
 import dev.nextftc.hardware.impl.ServoEx;
-
+import com.pedropathing.geometry.Pose;
 
 @Configurable
 @TeleOp(name = "TeleOp Program", group = "Production")
 public class TeleOpProgram extends NextFTCOpMode {
-
     public static RobotStateTracker antiCrazy;
     public static double newVelocity = 1345;
 
     public static double power = 1.0;
     public static double xOffset = 0.0;
+
+    // Preset target coordinates
+    // Blue Alliance Preset
+    public static double bluePresetX = 105;
+    public static double bluePresetY = 34;
+    public static double bluePresetHeading = 90; // in degrees
+
+    // Red Alliance Preset
+    public static double redPresetX = 38.0;
+    public static double redPresetY = 34.0;
+    public static double redPresetHeading = 90.0; // in degrees
+
     private final boolean launchToggle = false;
     private boolean sideSelected = false;
     MotorEx intake = new MotorEx("intakeMotor").brakeMode();
@@ -58,7 +72,7 @@ public class TeleOpProgram extends NextFTCOpMode {
     public static double Rkd = 0.00026;
     public static double Rki = 0.004;
     public static double Rkf = 0.0000275;
-public static double Lkp =0.0004;
+    public static double Lkp =0.0004;
     public static double Lki =  0.004;
     public static double Lkd =  0.0088;
     public static double Lkf = 0.000452;
@@ -67,6 +81,7 @@ public static double Lkp =0.0004;
     public boolean intakeOn = false;
     private boolean overrideUpdatePose = false;
     boolean isNotfull = false;
+
 
 
     public TeleOpProgram() {
@@ -217,6 +232,35 @@ public static double Lkp =0.0004;
                     Button dpad_right = button(()->gamepad1.dpad_right)
                             .whenBecomesTrue(MySubsystemGroup.INSTANCE.detectTargetColorArray);
 
+        //Go to Preset Coordinate
+                    Button dpad_left = button(()->gamepad1.dpad_left)
+                            .whenBecomesTrue(() -> {
+                                // Get current pose
+                                Pose currentPose = follower().getPose();
+
+                                // Select preset based on alliance color
+                                Pose targetPose;
+                                if (RobotConfig.alliance == RobotConfig.Alliance.BLUE) {
+                                    targetPose = new Pose(bluePresetX, bluePresetY, Math.toRadians(bluePresetHeading));
+                                } else {
+                                    targetPose = new Pose(redPresetX, redPresetY, Math.toRadians(redPresetHeading));
+                                }
+
+                                // Build path from current position to target
+                                PathChain pathToTarget = follower().pathBuilder()
+                                        .addPath(new BezierLine(currentPose, targetPose))
+                                        .setLinearHeadingInterpolation(currentPose.getHeading(), targetPose.getHeading())
+                                        .build();
+
+                                // Override pose update temporarily to avoid conflicts
+                                overrideUpdatePose = true;
+
+                                // Follow the path
+                                new FollowPath(pathToTarget).schedule();
+
+                                // Provide feedback
+                                gamepad1.rumble(100);
+                            });
 
         // Triple Launch
                     Button x = button(() -> gamepad1.x)
@@ -251,30 +295,12 @@ public static double Lkp =0.0004;
                     Button right_bumper = button(() -> gamepad1.right_bumper)
                             .whenBecomesTrue(Sort.INSTANCE.cycleLeft
                             );
-
-
-
-
-//        Button dpad_left = button(()->gamepad1.dpad_left)
-//                .whenBecomesTrue(()->{
-//                    overrideUpdatePose = true;
-//                    PedroComponent.follower().setPose(new Pose(antiCrazy.getLastMeasuredPose().getX(),antiCrazy.getLastMeasuredPose().getY(),90));
-//
-//                });
-
-
-
-
-
-
-
         Button PTOEngage = button(() -> gamepad2.y)
                 .whenBecomesTrue(()->{
                     follower().breakFollowing();
                     PTO.INSTANCE.engage.schedule();
                     PTOEngaged = true;
                 });
-
 
 
         follower().startTeleopDrive();
@@ -299,8 +325,6 @@ public static double Lkp =0.0004;
                 }
             }
         }
-
-
 
         if(PTOEngaged) {
             if (gamepad2.left_trigger > 0.5) {
