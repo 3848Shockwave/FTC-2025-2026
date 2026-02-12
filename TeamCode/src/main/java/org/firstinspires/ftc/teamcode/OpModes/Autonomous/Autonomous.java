@@ -666,7 +666,7 @@ public class Autonomous extends NextFTCOpMode {
                         new BezierCurve(
                                 new Pose(96.812, 96.524),
                                 new Pose(73.093, 63.458),
-                                new Pose(118.590, 57)
+                                new Pose(120.590, 57)
                         )
                 ).setLinearHeadingInterpolation(Math.toRadians(230), Math.toRadians(360),.15).setVelocityConstraint(10)
 
@@ -700,7 +700,7 @@ public class Autonomous extends NextFTCOpMode {
                             Turret.INSTANCE.setManualAnglePower(50,1250);
                         })
                 ),MySubsystemGroup.INSTANCE.shootInPattern,
-                new Delay(5),
+                new Delay(4),
                 new FollowPath(Collect1R).and(
                         new InstantCommand(()->{
                             Turret.INSTANCE.setManualAnglePower(35,600);
@@ -729,7 +729,7 @@ public class Autonomous extends NextFTCOpMode {
                 ),
                 new FollowPath(Shoot3R).and(new InstantCommand(()->{
 
-                    Turret.INSTANCE.setManualAnglePower(65,1200);
+                    Turret.INSTANCE.setManualAnglePower(65,1250);
                     // intake.setPower(0.0);
                 })).then(new InstantCommand(()->{
                     Sort.INSTANCE.setAutoModeIsEnabled(false);})).thenWait(.1),
@@ -738,6 +738,7 @@ public class Autonomous extends NextFTCOpMode {
                         new InstantCommand(()->{
                             Turret.INSTANCE.setManualAnglePower(25,600);
                             intake.setPower(0.0);
+                            Turret.INSTANCE.setManualControl(true);
                         }))
 
         );

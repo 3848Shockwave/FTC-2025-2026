@@ -373,7 +373,7 @@ public class Sort implements Subsystem {
             final int[] targetIndex = { -1 };
 
             final double retractDelay = 0.6;
-            final double minStableWait = 0.2; // Minimum wait before checking stability
+            final double minStableWait = 0.3; // Minimum wait before checking stability
             final ElapsedTime stableTimer = new ElapsedTime();
             return new LambdaCommand()
                     .setStart(() -> {
