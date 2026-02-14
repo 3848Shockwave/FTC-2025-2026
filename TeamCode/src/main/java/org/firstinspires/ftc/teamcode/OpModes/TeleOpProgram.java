@@ -81,6 +81,7 @@ public class TeleOpProgram extends NextFTCOpMode {
     public boolean intakeOn = false;
     private boolean overrideUpdatePose = false;
     boolean isNotfull = false;
+    double lastLoopTime = 0;
 
 
 
@@ -382,7 +383,12 @@ public class TeleOpProgram extends NextFTCOpMode {
         telemetryManager.addLine("-----------------------------");
         telemetryManager.addData("Pipeline", Turret.INSTANCE.limelightProcessing.getCurrentPipeline());
         telemetryManager.addData("Limelight Status: ", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
+        double currentLoopTime = System.nanoTime();
+        double loopFrequency = 1000000000 / (currentLoopTime - lastLoopTime);
+        lastLoopTime = currentLoopTime;
 
+        telemetry.addData("Loop Frequency", "%.0f Hz", loopFrequency);
         telemetryManager.update(telemetry);
     }
+
 }
