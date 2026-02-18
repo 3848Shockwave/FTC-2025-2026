@@ -5,6 +5,7 @@ import com.pedropathing.math.Vector;
 import com.qualcomm.hardware.rev.RevTouchSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -339,6 +340,8 @@ public class Turret implements Subsystem {
 
     @Override
     public void periodic() {
+        ElapsedTime periodicTimer = new ElapsedTime();
+        double startTime = periodicTimer.milliseconds();
         controlSystemRotate = ControlSystem.builder()
                 .posPid(Rkp, Rki, Rkd)
                 .basicFF(Rkf)
@@ -439,7 +442,8 @@ public class Turret implements Subsystem {
         }
         launchMotorLeft.setPower(-Lpower);
         launchMotorRight.setPower(-Lpower);
-
+        double afterMotors = periodicTimer.milliseconds();
+        ActiveOpMode.telemetry().addData("[Turret] TOTAL ms", afterMotors - startTime);
 
 
     }

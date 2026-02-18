@@ -52,7 +52,8 @@ public class Sort implements Subsystem {
     boolean hasRunR = false;
     private boolean secondPressSeen = false;
     boolean autoModeIsEnabled = false;
-
+    private static final double COLOR_PERIOD = 0.12; // 80 ms
+    private final ElapsedTime colorTimer = new ElapsedTime();
 
     public enum Color {
         GREEN, PURPLE, EMPTY
@@ -303,6 +304,8 @@ public class Sort implements Subsystem {
 
     @Override
     public void periodic() {
+        ElapsedTime sortTimer = new ElapsedTime();
+        double start = sortTimer.milliseconds();
         if(autoModeIsEnabled){
             if(getColorArray()[2] != Color.EMPTY){
                 if(getColorArray()[1]==Color.EMPTY){
@@ -314,7 +317,10 @@ public class Sort implements Subsystem {
             }
 
         }
-        checkColors();
+        if (colorTimer.seconds() > COLOR_PERIOD) {
+            readColors();   // does ALL I2C reads
+            colorTimer.reset();
+        }
         int counter = 0;
         for(Sort.Color color : Sort.INSTANCE.getColorArray()){
             if(color==Color.EMPTY){
@@ -331,9 +337,12 @@ public class Sort implements Subsystem {
         updateServo();
         spindexEncoder.updateRotations();
         spindexIsStable = spindexEncoder.isStable(.25, 4);
+        double end = sortTimer.milliseconds();
+        ActiveOpMode.telemetry().addData("[Sort] TOTAL ms", end - start);
+
     }
 
-    public void checkColors() {
+    public void readColors() {
         int greenNumL = (colorSensorL1.green() + colorSensorL2.green()) / 2;
         int blueNumL = (colorSensorL1.blue() + colorSensorL2.blue()) / 2;
         int greenNumR = (colorSensorR1.green() + colorSensorR2.green()) / 2;

@@ -9,6 +9,7 @@ import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotStateTracker;
@@ -67,12 +68,14 @@ public static double Lkp =0.0004;
     public boolean intakeOn = false;
     private boolean overrideUpdatePose = false;
     boolean isNotfull = false;
+    double lastLoopTime = 0;
+
 
 
     public TeleOpProgram() {
         addComponents(
-                new SubsystemComponent(Sort.INSTANCE),
-                new SubsystemComponent(Turret.INSTANCE),
+               // new SubsystemComponent(Sort.INSTANCE),
+               // new SubsystemComponent(Turret.INSTANCE),
                 new SubsystemComponent(PTO.INSTANCE),
                 new SubsystemComponent(MySubsystemGroup.INSTANCE),
                 BulkReadComponent.INSTANCE,
@@ -302,6 +305,8 @@ public static double Lkp =0.0004;
 
     @Override
     public void onUpdate() {
+        ElapsedTime loopTimer = new ElapsedTime();
+        double start = loopTimer.milliseconds();
         if(intakeOn&&Sort.INSTANCE.isSpindexStable()){
             if(Sort.INSTANCE.getColorArray()[2]!= Color.EMPTY) {
                 if (Sort.INSTANCE.getColorArray()[0] == Color.EMPTY) {
@@ -370,34 +375,11 @@ public static double Lkp =0.0004;
         telemetryManager.addLine("-----------------------------");
         telemetryManager.addData("Pipeline", Turret.INSTANCE.limelightProcessing.getCurrentPipeline());
         telemetryManager.addData("Limelight Status: ", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
+        double currentLoopTime = System.nanoTime();
+        double loopFrequency = 1000000000 / (currentLoopTime - lastLoopTime);
+        lastLoopTime = currentLoopTime;
 
-//        telemetryManager.addData("Servo Command Pos", Sort.INSTANCE.getServoPosition());
-//
-//        // --- Turret Telemetry ---
-//        Turret.INSTANCE.getRotateEncoder().updateRotations();
-//        telemetryManager.addData("goalvel", newVelocity);
-//        telemetryManager.addData("turretMotorPosition", Turret.INSTANCE.getRealTurretPosition());
-//        telemetryManager.addData("TurretNextPosition", turretWant);
-//
-//        telemetryManager.addData("=== ROTATION TRACKING ===", "");
-//        telemetryManager.addData("Rotations", Turret.INSTANCE.getRotateEncoder().getRotations());
-        telemetryManager.addData("Position",Turret.INSTANCE.getRotateEncoder().getTotalDegrees());
-//        telemetryManager.addData("Calculate Position", Turret.INSTANCE.calculatePosition());
-//        telemetryManager.addData("Next Position", Turret.INSTANCE.getNextTurretPosition());
-        telemetryManager.addData("Real Goal Position", Turret.INSTANCE.getControlSystemRotate().getGoal().getPosition());
-//
-//        telemetryManager.addData("=== MYSUBSYSTEMGROUP ===", "");
-
-//
-//
-//
-//
-//        // Turret.INSTANCE.rebuildControlSystem(Rkp,Rki,Rkd,Rkf,100);
-//        // --- Limelight Telemetry ---
-//        telemetryManager.addData("Pipeline", Turret.INSTANCE.limelightProcessing.getCurrentPipeline());
-//        telemetryManager.addData("Limelight Status", Turret.INSTANCE.limelightProcessing.limelightTelemetry());
-//        telemetryManager.addData("turretVelocity", Turret.INSTANCE.getTurretVelocity());
-//        Turret.INSTANCE.setTestSpeed(speed);
+        telemetry.addData("Loop Frequency", "%.0f Hz", loopFrequency);
 
         telemetryManager.update(telemetry);
     }
