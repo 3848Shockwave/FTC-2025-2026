@@ -28,6 +28,7 @@ import dev.nextftc.core.subsystems.Subsystem;
 import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.ActiveOpMode;
 import dev.nextftc.hardware.controllable.RunToState;
+import dev.nextftc.hardware.impl.CRServoEx;
 import dev.nextftc.hardware.impl.MotorEx;
 
 
@@ -69,7 +70,8 @@ public class Turret implements Subsystem {
     Encoder Resolution	537.7 PPR at the Output Shaft
 
      */
-    private final MotorEx rotateMotor = new MotorEx("rotateMotor").brakeMode();
+    //private final MotorEx rotateMotor = new MotorEx("rotateMotor").brakeMode();
+    private final CRServoEx turretRotateServo = new CRServoEx("turretRotate");
     /*
     13.7 : 1 Ratio, 435 RPM
     Encoder Resolution	384.5 PPR at the Output Shaft
@@ -125,10 +127,7 @@ public class Turret implements Subsystem {
         return Math.abs((Math.abs(launchMotorLeft.getVelocity())+Math.abs(launchMotorRight.getVelocity()))/2);
     }
 
-    public void resetRotateMotorPosition() {
-        rotateMotor.setCurrentPosition(0);
 
-    }
 
     public double getNextTurretPosition() {
         return nextTurretPosition;
@@ -328,7 +327,7 @@ public class Turret implements Subsystem {
 
        //set default pipeline
         // initialization logic (runs on init)
-        rotateMotor.setPower(0);
+        turretRotateServo.setPower(0);
         // rotateMotor.getRawTicks() this could be interesting?
         //set current position to 0
         launchMotorLeft.setPower(0);
@@ -358,7 +357,7 @@ public class Turret implements Subsystem {
         if (!ActiveOpMode.isStarted()&&ActiveOpMode.opModeInInit()) {
            //limelightProcessing.processTargets();
             // add detected tags to telemetry
-            rotateMotor.setPower(0);
+            turretRotateServo.setPower(0);
             launchMotorLeft.setPower(0);
             return;
         }
@@ -374,7 +373,8 @@ public class Turret implements Subsystem {
                         calculatePosition();
             }
             else if(limelightProcessing.processTargets().isEmpty()){
-                nextTurretPosition = -35 * 5.625;
+
+                //   nextTurretPosition = -35 * 5.625;
             }
         }
         if(manualControl){
@@ -427,13 +427,13 @@ public class Turret implements Subsystem {
 //        ActiveOpMode.telemetry().addData("Goal Velocity", controlSystemTurret.getGoal().component2());
 //        ///launchMotorLeft.getVelocity();
         //clamp power to limit during testing
-        if(Rpower>.8){
-            Rpower=.8;
+        if(Rpower>1){
+            Rpower=1;
         }
-        if(Rpower<-.8){
-            Rpower = -.8;
+        if(Rpower<-1){
+            Rpower = -1;
         }
-        rotateMotor.setPower(Rpower);
+        turretRotateServo.setPower(-Rpower);
         if(voltSensor.getVoltage()<8){
             Lpower = Lpower * (12.5/voltSensor.getVoltage());
         }

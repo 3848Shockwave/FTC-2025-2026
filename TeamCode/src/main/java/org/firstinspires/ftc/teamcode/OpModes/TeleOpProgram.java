@@ -168,7 +168,7 @@ public static double Lkp =0.0004;
             follower().setPose(startPose);
         }
 
-        Turret.INSTANCE.resetRotateMotorPosition();
+
         intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     }
 
@@ -381,10 +381,10 @@ public static double Lkp =0.0004;
 //
 //        telemetryManager.addData("=== ROTATION TRACKING ===", "");
 //        telemetryManager.addData("Rotations", Turret.INSTANCE.getRotateEncoder().getRotations());
-        //telemetryManager.addData("Position",Turret.INSTANCE.getRotateEncoder().getTotalDegrees());
+        telemetryManager.addData("Position",Turret.INSTANCE.getRotateEncoder().getTotalDegrees());
 //        telemetryManager.addData("Calculate Position", Turret.INSTANCE.calculatePosition());
 //        telemetryManager.addData("Next Position", Turret.INSTANCE.getNextTurretPosition());
-//        telemetryManager.addData("Real Goal Position", Turret.INSTANCE.getControlSystemRotate().getGoal());
+        telemetryManager.addData("Real Goal Position", Turret.INSTANCE.getControlSystemRotate().getGoal().getPosition());
 //
 //        telemetryManager.addData("=== MYSUBSYSTEMGROUP ===", "");
 
