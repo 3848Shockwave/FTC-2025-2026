@@ -12,6 +12,7 @@ import com.pedropathing.geometry.BezierLine;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
+import org.firstinspires.ftc.teamcode.Subsystems.CurrentSensing;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotStateTracker;
 import org.firstinspires.ftc.teamcode.Subsystems.MySubsystemGroup;
@@ -20,6 +21,8 @@ import org.firstinspires.ftc.teamcode.Subsystems.Sort;
 import org.firstinspires.ftc.teamcode.Subsystems.Sort.Color;
 import org.firstinspires.ftc.teamcode.Subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.Subsystems.Helpers.SimpleKalmanFilter;
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 
 import dev.nextftc.bindings.Button;
 import dev.nextftc.core.commands.CommandManager;
@@ -59,10 +62,19 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     private final boolean launchToggle = false;
     private boolean sideSelected = false;
-    MotorEx intake = new MotorEx("intakeMotor").brakeMode();
+
+    // Jam detection variables
+    private SimpleKalmanFilter currentFilter;
+    private static final double JAM_THRESHOLD = 4.0; // Amps
+    private static final double REVERSE_POWER = -0.8; // Power to reverse when jam detected
+    private static final long REVERSE_DURATION_MS = 500; // How long to reverse (milliseconds)
+    private boolean isReversing = false;
+    private long reverseStartTime = 0;
 
     private final MotorEx leftBack = new MotorEx("back_left");
     private final MotorEx rightBack = new MotorEx("back_right");
+    private final MotorEx leftFront = new MotorEx("front_left");
+    private final MotorEx rightFront = new MotorEx("front_right");
 
     Button x_button, y_button, a_button, b_button;
     Pose startPose = null;
@@ -78,7 +90,6 @@ public class TeleOpProgram extends NextFTCOpMode {
     public static double Lkf = 0.000452;
     public static double speed =1345;
     public boolean PTOEngaged = false;
-    public boolean intakeOn = false;
     private boolean overrideUpdatePose = false;
     boolean isNotfull = false;
     double lastLoopTime = 0;
@@ -89,6 +100,7 @@ public class TeleOpProgram extends NextFTCOpMode {
         addComponents(
                 new SubsystemComponent(PTO.INSTANCE),
                 new SubsystemComponent(MySubsystemGroup.INSTANCE),
+                new SubsystemComponent(CurrentSensing.INSTANCE),
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
                 new PedroComponent(Constants::createFollower)
@@ -98,6 +110,10 @@ public class TeleOpProgram extends NextFTCOpMode {
     @Override
     public void onInit() {
 
+        // Initialize jam detection filter
+        currentFilter = new SimpleKalmanFilter(0.01, 0.1);
+
+        Turret.INSTANCE.setManualControl(false);
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
         if(RobotConfig.autonomousStartEndPoses != null){
             startPose = RobotConfig.autonomousStartEndPoses.getEndPose();
@@ -181,7 +197,6 @@ public class TeleOpProgram extends NextFTCOpMode {
             follower().setPose(startPose);
         }
 
-        intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     }
 
     @Override
@@ -191,38 +206,11 @@ public class TeleOpProgram extends NextFTCOpMode {
         Sort.INSTANCE.updateServo();
         Sort.INSTANCE.restartScissor();
 
-
-
-
         //Intake IN
-        Button dpad_up = button(() -> gamepad1.dpad_up).whenBecomesTrue(() -> {
-            motorToggle = !motorToggle;
+        Button dpad_up = button(() -> gamepad1.dpad_up)
+                .whenBecomesTrue(CurrentSensing.INSTANCE.autoIntake);
 
-            for(Color color: Sort.INSTANCE.getColorArray()){
-                if (color == Color.EMPTY) {
-                    isNotfull = true;
-                    break;
-                }
-            }
 
-            if (motorToggle&&isNotfull) {
-                intake.setPower(1);
-                intakeOn = true;
-            } else {
-                intake.setPower(0);
-                intakeOn = false;
-            }
-        });
-
-        //Intake REVERSE
-        Button dpad_down = button(() -> gamepad1.dpad_down).whenBecomesTrue(() -> {
-            motorToggle = !motorToggle;
-            if (motorToggle) {
-                intake.setPower(-1);
-            } else {
-                intake.setPower(0);
-            }
-        });
 
 
         //Detect Colors Manually
@@ -299,21 +287,34 @@ public class TeleOpProgram extends NextFTCOpMode {
                     PTOEngaged = true;
                 });
 
-
         follower().startTeleopDrive();
+        DriverControlledCommand driverControlled = null;
+        if(RobotConfig.alliance == RobotConfig.Alliance.BLUE) {
+            driverControlled = new PedroDriverControlled(
+                    Gamepads.gamepad1().leftStickY(),
+                    Gamepads.gamepad1().leftStickX(),
+                    Gamepads.gamepad1().rightStickX().negate(),
+                    false
+            );
+        }
+        if(RobotConfig.alliance == RobotConfig.Alliance.RED){
+            driverControlled = new PedroDriverControlled(
+                    Gamepads.gamepad1().leftStickY().negate(),
+                    Gamepads.gamepad1().leftStickX().negate(),
+                    Gamepads.gamepad1().rightStickX().negate(),
+                    false
+            );
+        }
 
-        DriverControlledCommand driverControlled = new PedroDriverControlled(
-                Gamepads.gamepad1().leftStickX().negate(),
-                Gamepads.gamepad1().leftStickY(),
-                Gamepads.gamepad1().rightStickX().negate(),
-                false
-        );
-        driverControlled.schedule();
+        if(driverControlled != null) {
+            driverControlled.schedule();
+        }
     }
 
     @Override
     public void onUpdate() {
-        if(intakeOn&&Sort.INSTANCE.isSpindexStable()){
+
+        if(CurrentSensing.INSTANCE.isIntakeActive()&&Sort.INSTANCE.isSpindexStable()){
             if(Sort.INSTANCE.getColorArray()[2]!= Color.EMPTY) {
                 if (Sort.INSTANCE.getColorArray()[0] == Color.EMPTY) {
                     Sort.INSTANCE.cycleLeft.schedule();
@@ -326,11 +327,13 @@ public class TeleOpProgram extends NextFTCOpMode {
         if(PTOEngaged) {
             if (gamepad2.left_trigger > 0.5) {
                 leftBack.setPower(-gamepad2.left_trigger);
+                leftFront.setPower(-gamepad2.left_trigger);
             }  else if(gamepad2.left_trigger < .5){
                 leftBack.setPower(0.0);
             }
             if (gamepad2.right_trigger > .5) {
                 rightBack.setPower(gamepad2.right_trigger);
+                rightFront.setPower(gamepad2.right_trigger);
             } else if(gamepad2.right_trigger < .5){
                 rightBack.setPower(0.0);
             }
@@ -373,6 +376,14 @@ public class TeleOpProgram extends NextFTCOpMode {
         telemetryManager.addData("Current Spindex Index (0-2)", Sort.INSTANCE.getCurrentIndex());
         telemetryManager.addData("Spindex Stability", Sort.INSTANCE.isSpindexStable());
         telemetryManager.addData("ScissorLift Staus",Sort.INSTANCE.isTouchPressed());
+
+        telemetryManager.addLine("-----------------------------");
+        telemetryManager.addLine("===== INTAKE / JAM ======");
+        telemetryManager.addLine("-----------------------------");
+        telemetryManager.addData("Intake Raw A", CurrentSensing.INSTANCE.getRawCurrent());
+        telemetryManager.addData("Intake Filtered A", CurrentSensing.INSTANCE.getFilteredCurrent());
+        telemetryManager.addData("Intake Max A", CurrentSensing.INSTANCE.getMaxCurrentSeen());
+        telemetryManager.addData("Intake Reversing", CurrentSensing.INSTANCE.isReversing());
 
         telemetryManager.addLine("-----------------------------");
         telemetryManager.addLine("===== LAUNCH SYSTEM ======");
