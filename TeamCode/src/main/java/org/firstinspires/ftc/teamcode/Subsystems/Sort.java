@@ -52,7 +52,8 @@ public class Sort implements Subsystem {
     boolean hasRunR = false;
     private boolean secondPressSeen = false;
     boolean autoModeIsEnabled = false;
-
+    private static final double COLOR_PERIOD = 0.12; // 80 ms
+    private final ElapsedTime colorTimer = new ElapsedTime();
 
     public enum Color {
         GREEN, PURPLE, EMPTY
@@ -112,7 +113,6 @@ public class Sort implements Subsystem {
 
 
 
-
         pushBallAndBack = new LambdaCommand()
                 .setStart(() -> {
                     // Reset internal latch
@@ -146,8 +146,8 @@ public class Sort implements Subsystem {
         // Rotate Left (Index + 1)
         cycleLeft = new LambdaCommand()
                 .setStart(()->{
-                     hasRunL = false;
-                 })
+                    hasRunL = false;
+                })
                 .setUpdate(() -> {
                     if (!hasRunL && touchSensor.isPressed()) {
                         moveSpindex(1);
@@ -246,33 +246,33 @@ public class Sort implements Subsystem {
 
 
 
-     // direction 1 for clockwise (Next slot), -1 for counter-clockwise (Previous slot)
-     private void moveSpindex(int direction) {
-         currentIndex += direction;
+    // direction 1 for clockwise (Next slot), -1 for counter-clockwise (Previous slot)
+    private void moveSpindex(int direction) {
+        currentIndex += direction;
 
-         if (currentIndex > 2) {
-             currentIndex = 0;
-         } else if (currentIndex < 0) {
-             currentIndex = 2;
-         }
+        if (currentIndex > 2) {
+            currentIndex = 0;
+        } else if (currentIndex < 0) {
+            currentIndex = 2;
+        }
 
-         //Memory Shifting (Virtual Rotation)
-         Color temp;
-         if (direction == 1) {
-             // Rotating Left (1->2, 0->1, 2->0)
-             temp = colorArray[2];
-             colorArray[2] = colorArray[1];
-             colorArray[1] = colorArray[0];
-             colorArray[0] = temp;
-         } else {
-             // Rotating Right (0->2, 1->0, 2->1)
-             temp = colorArray[0];
-             colorArray[0] = colorArray[1];
-             colorArray[1] = colorArray[2];
-             colorArray[2] = temp;
-         }
+        //Memory Shifting (Virtual Rotation)
+        Color temp;
+        if (direction == 1) {
+            // Rotating Left (1->2, 0->1, 2->0)
+            temp = colorArray[2];
+            colorArray[2] = colorArray[1];
+            colorArray[1] = colorArray[0];
+            colorArray[0] = temp;
+        } else {
+            // Rotating Right (0->2, 1->0, 2->1)
+            temp = colorArray[0];
+            colorArray[0] = colorArray[1];
+            colorArray[1] = colorArray[2];
+            colorArray[2] = temp;
+        }
 
-     }
+    }
 
     public boolean isSpindexStable(){
         return spindexIsStable;
@@ -304,18 +304,23 @@ public class Sort implements Subsystem {
 
     @Override
     public void periodic() {
+        ElapsedTime sortTimer = new ElapsedTime();
+        double start = sortTimer.milliseconds();
         if(autoModeIsEnabled){
             if(getColorArray()[2] != Color.EMPTY){
                 if(getColorArray()[1]==Color.EMPTY){
-                   cycleRight.schedule();
+                    cycleRight.schedule();
                 }
                 else if(getColorArray()[0]==Color.EMPTY){
-                  cycleLeft.schedule();
+                    cycleLeft.schedule();
                 }
             }
 
         }
-        checkColors();
+        if (colorTimer.seconds() > COLOR_PERIOD) {
+            readColors();   // does ALL I2C reads
+            colorTimer.reset();
+        }
         int counter = 0;
         for(Sort.Color color : Sort.INSTANCE.getColorArray()){
             if(color==Color.EMPTY){
@@ -332,9 +337,12 @@ public class Sort implements Subsystem {
         updateServo();
         spindexEncoder.updateRotations();
         spindexIsStable = spindexEncoder.isStable(.25, 4);
+        double end = sortTimer.milliseconds();
+        ActiveOpMode.telemetry().addData("[Sort] TOTAL ms", end - start);
+
     }
 
-    public void checkColors() {
+    public void readColors() {
         int greenNumL = (colorSensorL1.green() + colorSensorL2.green()) / 2;
         int blueNumL = (colorSensorL1.blue() + colorSensorL2.blue()) / 2;
         int greenNumR = (colorSensorR1.green() + colorSensorR2.green()) / 2;
@@ -365,8 +373,8 @@ public class Sort implements Subsystem {
     public Color[] getColorArray() {
         return colorArray;
     }
-    
-   private enum State { CHECK, WAIT_STABLE, PUSH, WAIT_RETRACT, DONE }
+
+    private enum State { CHECK, WAIT_STABLE, PUSH, WAIT_RETRACT, DONE }
 
     public Command shootNewGreen() {
         if (colorArray[0] == Color.GREEN || colorArray[1] == Color.GREEN || colorArray[2] == Color.GREEN) {
@@ -374,7 +382,7 @@ public class Sort implements Subsystem {
             final int[] targetIndex = { -1 };
 
             final double retractDelay = 0.6;
-            final double minStableWait = 0.2; // Minimum wait before checking stability
+            final double minStableWait = 0.3; // Minimum wait before checking stability
             final ElapsedTime stableTimer = new ElapsedTime();
             return new LambdaCommand()
                     .setStart(() -> {
@@ -515,7 +523,7 @@ public class Sort implements Subsystem {
         return new InstantCommand(() -> {});
     }
 
-   public Command shootClosestBall() {
+    public Command shootClosestBall() {
         if (colorArray[2] != Color.EMPTY || colorArray[1] != Color.EMPTY || colorArray[0] != Color.EMPTY) {
             final State[] state = { State.CHECK };
             final int[] targetIndex = { -1 };
@@ -591,4 +599,3 @@ public class Sort implements Subsystem {
     }
 
 }
-

@@ -87,8 +87,6 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     public TeleOpProgram() {
         addComponents(
-                new SubsystemComponent(Sort.INSTANCE),
-                new SubsystemComponent(Turret.INSTANCE),
                 new SubsystemComponent(PTO.INSTANCE),
                 new SubsystemComponent(MySubsystemGroup.INSTANCE),
                 BulkReadComponent.INSTANCE,
@@ -183,119 +181,117 @@ public class TeleOpProgram extends NextFTCOpMode {
             follower().setPose(startPose);
         }
 
-        Turret.INSTANCE.resetRotateMotorPosition();
         intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     }
 
     @Override
     public void onStartButtonPressed() {
-   //     Turret.INSTANCE.RunTurret.schedule();
+        //     Turret.INSTANCE.RunTurret.schedule();
 
         Sort.INSTANCE.updateServo();
         Sort.INSTANCE.restartScissor();
 
 
 
-        //=================== GAMEPAD 1 CONTROLS =================//
 
         //Intake IN
-                    Button dpad_up = button(() -> gamepad1.dpad_up).whenBecomesTrue(() -> {
-                        motorToggle = !motorToggle;
+        Button dpad_up = button(() -> gamepad1.dpad_up).whenBecomesTrue(() -> {
+            motorToggle = !motorToggle;
 
-                        for(Color color: Sort.INSTANCE.getColorArray()){
-                            if (color == Color.EMPTY) {
-                                isNotfull = true;
-                                break;
-                            }
-                        }
+            for(Color color: Sort.INSTANCE.getColorArray()){
+                if (color == Color.EMPTY) {
+                    isNotfull = true;
+                    break;
+                }
+            }
 
-                        if (motorToggle&&isNotfull) {
-                            intake.setPower(1);
-                            intakeOn = true;
-                        } else {
-                            intake.setPower(0);
-                            intakeOn = false;
-                        }
-                    });
+            if (motorToggle&&isNotfull) {
+                intake.setPower(1);
+                intakeOn = true;
+            } else {
+                intake.setPower(0);
+                intakeOn = false;
+            }
+        });
 
         //Intake REVERSE
-                    Button dpad_down = button(() -> gamepad1.dpad_down).whenBecomesTrue(() -> {
-                        motorToggle = !motorToggle;
-                        if (motorToggle) {
-                            intake.setPower(-1);
-                        } else {
-                            intake.setPower(0);
-                        }
-                    });
+        Button dpad_down = button(() -> gamepad1.dpad_down).whenBecomesTrue(() -> {
+            motorToggle = !motorToggle;
+            if (motorToggle) {
+                intake.setPower(-1);
+            } else {
+                intake.setPower(0);
+            }
+        });
 
 
         //Detect Colors Manually
-                    Button dpad_right = button(()->gamepad1.dpad_right)
-                            .whenBecomesTrue(MySubsystemGroup.INSTANCE.detectTargetColorArray);
+        Button dpad_right = button(()->gamepad1.dpad_right)
+                .whenBecomesTrue(MySubsystemGroup.INSTANCE.detectTargetColorArray);
 
         //Go to Preset Coordinate
-                    Button dpad_left = button(()->gamepad1.dpad_left)
-                            .whenBecomesTrue(() -> {
-                                // Get current pose
-                                Pose currentPose = follower().getPose();
+        Button dpad_left = button(()->gamepad1.dpad_left)
+                .whenBecomesTrue(() -> {
+                    // Get current pose
+                    Pose currentPose = follower().getPose();
 
-                                // Select preset based on alliance color
-                                Pose targetPose;
-                                if (RobotConfig.alliance == RobotConfig.Alliance.BLUE) {
-                                    targetPose = new Pose(bluePresetX, bluePresetY, Math.toRadians(bluePresetHeading));
-                                } else {
-                                    targetPose = new Pose(redPresetX, redPresetY, Math.toRadians(redPresetHeading));
-                                }
+                    // Select preset based on alliance color
+                    Pose targetPose;
+                    if (RobotConfig.alliance == RobotConfig.Alliance.BLUE) {
+                        targetPose = new Pose(bluePresetX, bluePresetY, Math.toRadians(bluePresetHeading));
+                    } else {
+                        targetPose = new Pose(redPresetX, redPresetY, Math.toRadians(redPresetHeading));
+                    }
 
-                                // Build path from current position to target
-                                PathChain pathToTarget = follower().pathBuilder()
-                                        .addPath(new BezierLine(currentPose, targetPose))
-                                        .setLinearHeadingInterpolation(currentPose.getHeading(), targetPose.getHeading())
-                                        .build();
+                    // Build path from current position to target
+                    PathChain pathToTarget = follower().pathBuilder()
+                            .addPath(new BezierLine(currentPose, targetPose))
+                            .setLinearHeadingInterpolation(currentPose.getHeading(), targetPose.getHeading())
+                            .build();
 
-                                // Override pose update temporarily to avoid conflicts
-                                overrideUpdatePose = true;
+                    // Override pose update temporarily to avoid conflicts
+                    overrideUpdatePose = true;
 
-                                // Follow the path
-                                new FollowPath(pathToTarget).schedule();
+                    // Follow the path
+                    new FollowPath(pathToTarget).schedule();
 
-                                // Provide feedback
-                                gamepad1.rumble(100);
-                            });
+                    // Provide feedback
+                    gamepad1.rumble(100);
+                });
 
         // Triple Launch
-                    Button x = button(() -> gamepad1.x)
-                            .whenBecomesTrue(() -> {
-                                MySubsystemGroup.INSTANCE.tripleLaunch.schedule();
-                            });
+        Button x = button(() -> gamepad1.x)
+                .whenBecomesTrue(() -> {
+                    MySubsystemGroup.INSTANCE.tripleLaunch.schedule();
+                });
         // Normal  Shoot
-                    Button y_button = button(() -> gamepad1.y)
-                            .whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
+        Button y_button = button(() -> gamepad1.y)
+                .whenBecomesTrue(Sort.INSTANCE.pushBallAndBack);
         // Closest Shoot
-                    Button b_button = button(() -> gamepad1.b)
-                            .whenBecomesTrue(()->{Sort.INSTANCE.shootClosestBall().schedule();});
+        Button b_button = button(() -> gamepad1.b)
+                .whenBecomesTrue(()->{Sort.INSTANCE.shootClosestBall().schedule();});
         // Shoot In Pattern
-                    Button a_button = button(() -> gamepad1.a)
-                            .whenBecomesTrue(MySubsystemGroup.INSTANCE.shootInPattern);
+        Button a_button = button(() -> gamepad1.a)
+                .whenBecomesTrue(MySubsystemGroup.INSTANCE.shootInPattern);
         // Shoot Purple
-                    Button right_trigger = button(() -> gamepad1.right_trigger > 0.5)
-                            .whenBecomesTrue(()->{
-                                Sort.INSTANCE.shootPurp.schedule();
-                            });
+        Button right_trigger = button(() -> gamepad1.right_trigger > 0.5)
+                .whenBecomesTrue(()->{
+                    Sort.INSTANCE.shootPurp.schedule();
+                });
         // Shoot Green
-                    Button left_trigger = button(() -> gamepad1.left_trigger > 0.5)
-                            .whenBecomesTrue(()->{
-                                Sort.INSTANCE.shootGreen.schedule();
-                            });
+        Button left_trigger = button(() -> gamepad1.left_trigger > 0.5)
+                .whenBecomesTrue(()->{
+                    Sort.INSTANCE.shootGreen.schedule();
+                });
         // Cycle Right
-                    Button left_bumper = button(() -> gamepad1.left_bumper)
-                            .whenBecomesTrue(
-                                    Sort.INSTANCE.cycleRight
-                            );
+        Button left_bumper = button(() -> gamepad1.left_bumper)
+                .whenBecomesTrue(
+                        Sort.INSTANCE.cycleRight
+                );
         // Cycle Left
-                    Button right_bumper = button(() -> gamepad1.right_bumper)
-                            .whenBecomesTrue(Sort.INSTANCE.cycleLeft
-                            );
+        Button right_bumper = button(() -> gamepad1.right_bumper)
+                .whenBecomesTrue(Sort.INSTANCE.cycleLeft
+                );
         Button PTOEngage = button(() -> gamepad2.y)
                 .whenBecomesTrue(()->{
                     follower().breakFollowing();
@@ -307,8 +303,8 @@ public class TeleOpProgram extends NextFTCOpMode {
         follower().startTeleopDrive();
 
         DriverControlledCommand driverControlled = new PedroDriverControlled(
-                    Gamepads.gamepad1().leftStickX().negate(),
-                    Gamepads.gamepad1().leftStickY(),
+                Gamepads.gamepad1().leftStickX().negate(),
+                Gamepads.gamepad1().leftStickY(),
                 Gamepads.gamepad1().rightStickX().negate(),
                 false
         );

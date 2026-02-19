@@ -88,18 +88,18 @@ public class LimelightProcessing {
                 }
             }
 
-           // targetsDetected.clear(); // Clear all targets if no valid results
+            // targetsDetected.clear(); // Clear all targets if no valid results
         }
         return targetsDetected;
     }
 
     public TargetInfo getTargetInfo(double targetID) {
-        for (TargetInfo t : targetsDetected) {
+        for (TargetInfo t : processTargets()) {
             if (t.getID() == targetID) {
                 return t;
             }
         }
-        return null;
+        return null; // Return null if no target with the specified ID is found
     }
 
     public TargetInfo getTargetInfo() {
