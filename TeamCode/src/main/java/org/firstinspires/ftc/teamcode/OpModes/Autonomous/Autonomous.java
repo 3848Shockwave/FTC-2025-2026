@@ -10,6 +10,7 @@ import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathChain;
 
+import org.firstinspires.ftc.teamcode.Subsystems.CurrentSensing;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.Drawing;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotStateTracker;
@@ -56,8 +57,6 @@ public class Autonomous extends NextFTCOpMode {
     private AutoMode selectedMode;
     private boolean confirmed = false;
     private boolean readyToGo = false;
-    MotorEx intake = new MotorEx("intakeMotor").brakeMode();
-
     private PathChain moveToScore,load1,score2,ready2,score3; //blueFarSideScore
     private PathChain moveBLF;//blueFarSideMove
     private PathChain moveRF;//redFarSideMove
@@ -75,10 +74,10 @@ public class Autonomous extends NextFTCOpMode {
 
     public Autonomous() {
         addComponents(
-                new SubsystemComponent(Sort.INSTANCE),
                 new SubsystemComponent(MySubsystemGroup.INSTANCE),
-                BindingsComponent.INSTANCE,
+                new SubsystemComponent(CurrentSensing.INSTANCE),
                 new PedroComponent(Constants::createFollower),
+                BindingsComponent.INSTANCE,
                 BulkReadComponent.INSTANCE
         );
     }
@@ -474,7 +473,7 @@ public class Autonomous extends NextFTCOpMode {
                         new InstantCommand(()->{
                             Turret.INSTANCE.setManualAnglePower(35,600);
                             Sort.INSTANCE.setAutoModeIsEnabled(true);
-                            intake.setPower(1.0);
+                            CurrentSensing.INSTANCE.enableAutoIntake();
                         })
                 ),
 
@@ -482,7 +481,6 @@ public class Autonomous extends NextFTCOpMode {
                         new InstantCommand(()->{
                             Sort.INSTANCE.setAutoModeIsEnabled(false);
                             Turret.INSTANCE.setManualAnglePower(50,1000);
-                            intake.setPower(0);
                         })
                 ).thenWait(1)
                 ,MySubsystemGroup.INSTANCE.shootInPattern,
@@ -491,13 +489,11 @@ public class Autonomous extends NextFTCOpMode {
                         new InstantCommand(()->{
                             Sort.INSTANCE.setAutoModeIsEnabled(true);
                             Turret.INSTANCE.setManualAnglePower(35,600);
-                            intake.setPower(1.0);
                         })),
 
                 new FollowPath(scoreRF2).and(new InstantCommand(()->{
                     Sort.INSTANCE.setAutoModeIsEnabled(false);
                     Turret.INSTANCE.setManualAnglePower(50,1000);
-                    intake.setPower(0.0);
                 })).thenWait(5).then(
                         new InstantCommand(()->{
                             Turret.INSTANCE.setManualAnglePower(25,600);
@@ -583,14 +579,13 @@ public class Autonomous extends NextFTCOpMode {
                         new InstantCommand(()->{
                             Sort.INSTANCE.setAutoModeIsEnabled(true);
                             Turret.INSTANCE.setManualAnglePower(20,600);
-                            intake.setPower(1.0);
+                            CurrentSensing.INSTANCE.enableAutoIntake();
                         })
                 ),
                 new FollowPath(score2).and(
                         new InstantCommand(()->{
                             Sort.INSTANCE.setAutoModeIsEnabled(false);
                             Turret.INSTANCE.setManualAnglePower(32,1400);
-                            intake.setPower(1.0);
                         })
                 ).thenWait(1),MySubsystemGroup.INSTANCE.shootInPattern.thenWait(4),
 
@@ -598,7 +593,6 @@ public class Autonomous extends NextFTCOpMode {
                         new InstantCommand(()->{
                             Sort.INSTANCE.setAutoModeIsEnabled(true);
                             Turret.INSTANCE.setManualAnglePower(15,600);
-                            intake.setPower(1.0);
                 })),
 
                 new FollowPath(score3).and(new InstantCommand(()->{
@@ -694,7 +688,7 @@ public class Autonomous extends NextFTCOpMode {
                         new InstantCommand(()->{
                             Turret.INSTANCE.setManualAnglePower(35,600);
                             Sort.INSTANCE.setAutoModeIsEnabled(true);
-                            intake.setPower(1.0);
+                            CurrentSensing.INSTANCE.enableAutoIntake();
 
                         })
                 ).thenWait(2),
@@ -703,7 +697,7 @@ public class Autonomous extends NextFTCOpMode {
                         new InstantCommand(()->{
                             Sort.INSTANCE.setAutoModeIsEnabled(false);
                             Turret.INSTANCE.setManualAnglePower(50,1250);
-                            // intake.setPower(0);
+
                         })
                 )
                 ,MySubsystemGroup.INSTANCE.shootInPattern,
@@ -712,20 +706,17 @@ public class Autonomous extends NextFTCOpMode {
                         new InstantCommand(()->{
                             Sort.INSTANCE.setAutoModeIsEnabled(true);
                             Turret.INSTANCE.setManualAnglePower(35,600);
-                            intake.setPower(1.0);
 
                         })
                 ),
                 new FollowPath(Shoot3R).and(new InstantCommand(()->{
                     Sort.INSTANCE.setAutoModeIsEnabled(false);
                     Turret.INSTANCE.setManualAnglePower(50,1250);
-                    // intake.setPower(0.0);
                 })),
                 MySubsystemGroup.INSTANCE.shootInPattern,
                 new Delay(4.5).then(
                         new InstantCommand(()->{
                             Turret.INSTANCE.setManualAnglePower(25,600);
-                            intake.setPower(0.0);
                         }))
 
         );
@@ -821,7 +812,7 @@ public class Autonomous extends NextFTCOpMode {
                         new InstantCommand(()->{
                             Turret.INSTANCE.setManualAnglePower(35,600);
                             Sort.INSTANCE.setAutoModeIsEnabled(true);
-                            intake.setPower(1.0);
+                            CurrentSensing.INSTANCE.enableAutoIntake();
 
                         })
                 ).thenWait(1),
@@ -830,7 +821,6 @@ public class Autonomous extends NextFTCOpMode {
                         new InstantCommand(()->{
                             Sort.INSTANCE.setAutoModeIsEnabled(false);
                             Turret.INSTANCE.setManualAnglePower(50,1250);
-                           // intake.setPower(0);
                         })
                 ).thenWait(1)
                 ,MySubsystemGroup.INSTANCE.shootInPattern,
@@ -842,22 +832,18 @@ public class Autonomous extends NextFTCOpMode {
                         new InstantCommand(()->{
                             Sort.INSTANCE.setAutoModeIsEnabled(true);
                             Turret.INSTANCE.setManualAnglePower(35,600);
-                            intake.setPower(1.0);
-
                         })
                 ),
 
                 new FollowPath(Shoot3).and(new InstantCommand(()->{
                     Sort.INSTANCE.setAutoModeIsEnabled(false);
                     Turret.INSTANCE.setManualAnglePower(50,1250);
-                   // intake.setPower(0.0);
                 })),
                 new Delay (1),
                 MySubsystemGroup.INSTANCE.shootInPattern,
                 new Delay(4.5).then(
                         new InstantCommand(()->{
                             Turret.INSTANCE.setManualAnglePower(25,600);
-                            intake.setPower(0.0);
                         }))
 
         );

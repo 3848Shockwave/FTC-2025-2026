@@ -10,7 +10,6 @@ import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 import com.pedropathing.geometry.BezierLine;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.DcMotor;
 
 import org.firstinspires.ftc.teamcode.Subsystems.CurrentSensing;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.RobotConfig;
@@ -21,8 +20,6 @@ import org.firstinspires.ftc.teamcode.Subsystems.Sort;
 import org.firstinspires.ftc.teamcode.Subsystems.Sort.Color;
 import org.firstinspires.ftc.teamcode.Subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-import org.firstinspires.ftc.teamcode.Subsystems.Helpers.SimpleKalmanFilter;
-import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 
 import dev.nextftc.bindings.Button;
 import dev.nextftc.core.commands.CommandManager;
@@ -37,8 +34,6 @@ import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
 import dev.nextftc.hardware.driving.DriverControlledCommand;
 import dev.nextftc.hardware.impl.MotorEx;
-import dev.nextftc.hardware.impl.ServoEx;
-import com.pedropathing.geometry.Pose;
 
 @Configurable
 @TeleOp(name = "TeleOp Program", group = "Production")
@@ -51,25 +46,26 @@ public class TeleOpProgram extends NextFTCOpMode {
 
     // Preset target coordinates
     // Blue Alliance Preset
-    public static double bluePresetX = 105;
-    public static double bluePresetY = 34;
-    public static double bluePresetHeading = 90; // in degrees
+    public static double blueBaseX = 105;
+    public static double blueBaseY = 34;
+    public static double blueBaseHeading = 90; // in degrees
 
     // Red Alliance Preset
-    public static double redPresetX = 38.0;
-    public static double redPresetY = 34.0;
-    public static double redPresetHeading = 90.0; // in degrees
+    public static double redBaseX = 38.0;
+    public static double redBaseY = 34.0;
+    public static double redBaseHeading = 90.0; // in degrees
+
+    public static double blueShootX = 55;
+    public static double blueShootY = 100;
+    public static double blueShootHeading = 140;
+
+    public static double redShootX = 90;
+    public static double redShootY = 100;
+    public static double redShootHeading = 50;
+
 
     private final boolean launchToggle = false;
     private boolean sideSelected = false;
-
-    // Jam detection variables
-    private SimpleKalmanFilter currentFilter;
-    private static final double JAM_THRESHOLD = 4.0; // Amps
-    private static final double REVERSE_POWER = -0.8; // Power to reverse when jam detected
-    private static final long REVERSE_DURATION_MS = 500; // How long to reverse (milliseconds)
-    private boolean isReversing = false;
-    private long reverseStartTime = 0;
 
     private final MotorEx leftBack = new MotorEx("back_left");
     private final MotorEx rightBack = new MotorEx("back_right");
@@ -93,7 +89,9 @@ public class TeleOpProgram extends NextFTCOpMode {
     private boolean overrideUpdatePose = false;
     boolean isNotfull = false;
     double lastLoopTime = 0;
-
+    private DriverControlledCommand driverControlled;
+    private FollowPath holdCommand;
+    private Pose holdPose;
 
 
     public TeleOpProgram() {
@@ -110,8 +108,6 @@ public class TeleOpProgram extends NextFTCOpMode {
     @Override
     public void onInit() {
 
-        // Initialize jam detection filter
-        currentFilter = new SimpleKalmanFilter(0.01, 0.1);
 
         Turret.INSTANCE.setManualControl(false);
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
@@ -208,27 +204,27 @@ public class TeleOpProgram extends NextFTCOpMode {
 
         //Intake IN
         Button dpad_up = button(() -> gamepad1.dpad_up)
-                .whenBecomesTrue(CurrentSensing.INSTANCE.autoIntake);
+                .whenBecomesTrue(() -> CurrentSensing.INSTANCE.toggleAutoIntake());
 
-
-
+        //Intake Reverse
+        Button dpad_down = button(() -> gamepad1.dpad_down)
+                .whenBecomesTrue(() -> CurrentSensing.INSTANCE.toggleManualReverse());
 
         //Detect Colors Manually
         Button dpad_right = button(()->gamepad1.dpad_right)
                 .whenBecomesTrue(MySubsystemGroup.INSTANCE.detectTargetColorArray);
 
+
         //Go to Preset Coordinate
-        Button dpad_left = button(()->gamepad1.dpad_left)
+        Button y2 = button(()->gamepad2.y)
                 .whenBecomesTrue(() -> {
-                    // Get current pose
                     Pose currentPose = follower().getPose();
 
-                    // Select preset based on alliance color
                     Pose targetPose;
                     if (RobotConfig.alliance == RobotConfig.Alliance.BLUE) {
-                        targetPose = new Pose(bluePresetX, bluePresetY, Math.toRadians(bluePresetHeading));
+                        targetPose = new Pose(blueBaseX, blueBaseY, Math.toRadians(blueBaseHeading));
                     } else {
-                        targetPose = new Pose(redPresetX, redPresetY, Math.toRadians(redPresetHeading));
+                        targetPose = new Pose(redBaseX, redBaseY, Math.toRadians(redBaseHeading));
                     }
 
                     // Build path from current position to target
@@ -240,12 +236,62 @@ public class TeleOpProgram extends NextFTCOpMode {
                     // Override pose update temporarily to avoid conflicts
                     overrideUpdatePose = true;
 
-                    // Follow the path
                     new FollowPath(pathToTarget).schedule();
 
                     // Provide feedback
-                    gamepad1.rumble(100);
+                    gamepad1.rumble(50);
                 });
+
+        Button x2 = button(()->gamepad2.x)
+                .whenBecomesTrue(() -> {
+                    Pose currentPose = follower().getPose();
+
+                    Pose targetPose;
+                    if (RobotConfig.alliance == RobotConfig.Alliance.BLUE) {
+                        targetPose = new Pose(blueShootX, blueShootY, Math.toRadians(blueShootHeading));
+                    }else{
+                        targetPose = new Pose(redShootX, redShootY, Math.toRadians(redShootHeading));
+                    }
+
+                    PathChain pathToTarget = follower().pathBuilder()
+                            .addPath(new BezierLine(currentPose, targetPose))
+                            .setLinearHeadingInterpolation(currentPose.getHeading(), targetPose.getHeading())
+                            .build();
+
+                    overrideUpdatePose = true;
+
+                    new FollowPath(pathToTarget).schedule();
+
+                    gamepad1.rumble(50);
+                });
+
+        Button a2 = button(()->gamepad2.a);
+        a2.whenTrue(() -> {
+            holdPose = follower().getPose();
+            PathChain holdPath = follower().pathBuilder()
+                    .addPath(new BezierLine(holdPose, holdPose))
+                    .setLinearHeadingInterpolation(holdPose.getHeading(), holdPose.getHeading())
+                    .build();
+            if (holdCommand != null) {
+                holdCommand.cancel();
+            }
+            if (driverControlled != null) {
+                driverControlled.cancel();
+            }
+            holdCommand = new FollowPath(holdPath);
+            holdCommand.schedule();
+        });
+        a2.whenFalse(() -> {
+            if (holdCommand != null) {
+                holdCommand.cancel();
+                holdCommand = null;
+            }
+            follower().startTeleopDrive();
+            if (driverControlled != null) {
+                driverControlled.schedule();
+            }
+        });
+
 
         // Triple Launch
         Button x = button(() -> gamepad1.x)
@@ -288,7 +334,7 @@ public class TeleOpProgram extends NextFTCOpMode {
                 });
 
         follower().startTeleopDrive();
-        DriverControlledCommand driverControlled = null;
+        driverControlled = null;
         if(RobotConfig.alliance == RobotConfig.Alliance.BLUE) {
             driverControlled = new PedroDriverControlled(
                     Gamepads.gamepad1().leftStickY(),
@@ -384,6 +430,7 @@ public class TeleOpProgram extends NextFTCOpMode {
         telemetryManager.addData("Intake Filtered A", CurrentSensing.INSTANCE.getFilteredCurrent());
         telemetryManager.addData("Intake Max A", CurrentSensing.INSTANCE.getMaxCurrentSeen());
         telemetryManager.addData("Intake Reversing", CurrentSensing.INSTANCE.isReversing());
+        telemetryManager.addData("Manual Reverse", CurrentSensing.INSTANCE.isManualReverseEnabled());
 
         telemetryManager.addLine("-----------------------------");
         telemetryManager.addLine("===== LAUNCH SYSTEM ======");

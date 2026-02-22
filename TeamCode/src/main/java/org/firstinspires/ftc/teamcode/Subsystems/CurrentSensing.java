@@ -22,6 +22,9 @@ public class CurrentSensing implements Subsystem {
     private boolean isReversing = false;
     private long reverseStartTime = 0;
     private double maxCurrentSeen = 0.0;
+    private boolean autoIntakeEnabled = false;
+    private boolean autoIntakeScheduled = false;
+    private boolean manualReverseEnabled = false;
 
     // Auto-intake command (schedule to run with jam protection)
     public LambdaCommand autoIntake;
@@ -39,6 +42,14 @@ public class CurrentSensing implements Subsystem {
                     reverseStartTime = 0;
                 })
                 .setUpdate(() -> {
+                    if (manualReverseEnabled) {
+                        intake.setPower(REVERSE_POWER);
+                        return;
+                    }
+                    if (!autoIntakeEnabled) {
+                        intake.setPower(0);
+                        return;
+                    }
                     double rawCurrentAmps = intake.getMotor().getCurrent(CurrentUnit.AMPS);
                     double filteredCurrentAmps = currentFilter.filter(rawCurrentAmps);
                     if (rawCurrentAmps > maxCurrentSeen) {
@@ -65,6 +76,7 @@ public class CurrentSensing implements Subsystem {
                 })
                 .setStop(interrupted -> {
                     isReversing = false;
+                    intake.setPower(0);
                 })
                 .setIsDone(() -> false) // run until explicitly cancelled/overridden
                 .setInterruptible(true)
@@ -74,6 +86,64 @@ public class CurrentSensing implements Subsystem {
     @Override
     public void periodic() {
         // No periodic actions required; autoIntake handles runtime behavior when scheduled.
+    }
+
+    public void enableAutoIntake() {
+        ensureScheduled();
+        manualReverseEnabled = false;
+        autoIntakeEnabled = true;
+    }
+
+    public void disableAutoIntake() {
+        autoIntakeEnabled = false;
+        manualReverseEnabled = false;
+        isReversing = false;
+        reverseStartTime = 0;
+        intake.setPower(0);
+    }
+
+    public void toggleAutoIntake() {
+        if (autoIntakeEnabled) {
+            disableAutoIntake();
+        } else {
+            enableAutoIntake();
+        }
+    }
+
+    public boolean isAutoIntakeEnabled() {
+        return autoIntakeEnabled;
+    }
+
+    public void enableManualReverse() {
+        ensureScheduled();
+        autoIntakeEnabled = false;
+        isReversing = false;
+        manualReverseEnabled = true;
+        intake.setPower(REVERSE_POWER);
+    }
+
+    public void disableManualReverse() {
+        manualReverseEnabled = false;
+        intake.setPower(0);
+    }
+
+    public void toggleManualReverse() {
+        if (manualReverseEnabled) {
+            disableManualReverse();
+        } else {
+            enableManualReverse();
+        }
+    }
+
+    public boolean isManualReverseEnabled() {
+        return manualReverseEnabled;
+    }
+
+    private void ensureScheduled() {
+        if (!autoIntakeScheduled) {
+            autoIntake.schedule();
+            autoIntakeScheduled = true;
+        }
     }
 
     // Utility getters
@@ -87,6 +157,6 @@ public class CurrentSensing implements Subsystem {
 
     /** Returns true when intake motor is driving (forward or reverse) beyond a small deadband. */
     public boolean isIntakeActive() {
-        return Math.abs(intake.getPower()) > 0.05;
-    }
-}
+         return Math.abs(intake.getPower()) > 0.05;
+     }
+ }
