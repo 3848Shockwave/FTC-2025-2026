@@ -123,13 +123,13 @@ public class Sort implements Subsystem {
                     // Only execute push when spindex is stable
                     if (spindexIsStable && !secondPressSeen&&!running) {
                         new SetPositions(
-                                servoLeft.to(-1.0),
-                                servoRight.to(1.0)
+                                servoLeft.to(1.0),
+                                servoRight.to(.34)
                         )
-                                .thenWait(0.5)
+                                .thenWait(0.35)
                                 .then(new SetPositions(
-                                        servoLeft.to(1.0),
-                                        servoRight.to(-1.0)
+                                        servoLeft.to(.6),
+                                        servoRight.to(.8)
                                 ))
                                 .schedule();
                         running = true;
@@ -288,8 +288,10 @@ public class Sort implements Subsystem {
 
     }
     public void restartScissor() {
-        servoLeft.setPosition(1.0);
-        servoRight.setPosition(-1.0);
+        new SetPositions(
+                        servoLeft.to(.6),
+                        servoRight.to(.8)
+                );
     }
 
     public double getServoPosition() {
@@ -420,13 +422,13 @@ public class Sort implements Subsystem {
                             case PUSH:
                                 // schedule the push/retract sequence
                                 new SetPositions(
-                                        servoLeft.to(-1.0),
-                                        servoRight.to(1.0)
+                                        servoLeft.to(1.0),
+                                        servoRight.to(.34)
                                 )
                                         .thenWait(0.35)
                                         .then(new SetPositions(
-                                                servoLeft.to(1.0),
-                                                servoRight.to(-1.0)
+                                                servoLeft.to(.6),
+                                                servoRight.to(.8)
                                         ))
                                         .schedule();
                                 timer.reset();
@@ -493,13 +495,13 @@ public class Sort implements Subsystem {
                                 break;
                             case PUSH:
                                 new SetPositions(
-                                        servoLeft.to(-1.0),
-                                        servoRight.to(1.0)
+                                        servoLeft.to(1.0),
+                                        servoRight.to(.34)
                                 )
-                                        .thenWait(0.25)
+                                        .thenWait(0.35)
                                         .then(new SetPositions(
-                                                servoLeft.to(1.0),
-                                                servoRight.to(-1.0)
+                                                servoLeft.to(.6),
+                                                servoRight.to(.8)
                                         ))
                                         .schedule();
                                 timer.reset();
@@ -566,13 +568,13 @@ public class Sort implements Subsystem {
                                 break;
                             case PUSH:
                                 new SetPositions(
-                                        servoLeft.to(-1.0),
-                                        servoRight.to(1.0)
+                                        servoLeft.to(1.0),
+                                        servoRight.to(.34)
                                 )
                                         .thenWait(0.35)
                                         .then(new SetPositions(
-                                                servoLeft.to(1.0),
-                                                servoRight.to(-1.0)
+                                                servoLeft.to(.6),
+                                                servoRight.to(.8)
                                         ))
                                         .schedule();
                                 timer.reset();
