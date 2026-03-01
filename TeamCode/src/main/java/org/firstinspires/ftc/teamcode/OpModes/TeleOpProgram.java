@@ -381,7 +381,7 @@ public static double Lkp =0.0004;
         double loopFrequency = 1000000000 / (currentLoopTime - lastLoopTime);
         lastLoopTime = currentLoopTime;
 
-        telemetry.addData("Loop Frequency", "%.0f Hz", loopFrequency);
+      //  telemetry.addData("Loop Frequency", "%.0f Hz", loopFrequency);
 
         telemetryManager.update(telemetry);
     }

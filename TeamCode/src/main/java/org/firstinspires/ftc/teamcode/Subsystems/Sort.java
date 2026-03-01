@@ -341,7 +341,7 @@ public class Sort implements Subsystem {
         spindexEncoder.updateRotations();
         spindexIsStable = spindexEncoder.isStable(.25, 4);
         double end = sortTimer.milliseconds();
-        ActiveOpMode.telemetry().addData("[Sort] TOTAL ms", end - start);
+        //ActiveOpMode.telemetry().addData("[Sort] TOTAL ms", end - start);
 
     }
 
