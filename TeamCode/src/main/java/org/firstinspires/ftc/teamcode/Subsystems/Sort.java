@@ -10,17 +10,21 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.Subsystems.Helpers.ELCEncoderV2;
 
 import dev.nextftc.core.commands.Command;
+import dev.nextftc.core.commands.delays.Delay;
+import dev.nextftc.core.commands.delays.WaitUntil;
 import dev.nextftc.core.commands.groups.SequentialGroup;
 import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.commands.utility.LambdaCommand;
 import dev.nextftc.core.subsystems.Subsystem;
 import dev.nextftc.ftc.ActiveOpMode;
-import com.qualcomm.robotcore.hardware.DigitalChannel;
+import dev.nextftc.hardware.impl.MotorEx;
 import dev.nextftc.hardware.impl.ServoEx;
 import dev.nextftc.hardware.positionable.SetPositions;
 public class Sort implements Subsystem {
 
     public static final Sort INSTANCE = new Sort();
+
+    MotorEx intake = new MotorEx("intakeMotor").brakeMode();
     ELCEncoderV2 spindexEncoder = null;
     ServoEx spindexRight;
     ServoEx spindexLeft;
@@ -56,11 +60,15 @@ public class Sort implements Subsystem {
     }
     // Assuming index 0 is Right side, index 1 is Left side (Adjust based on physical mounting)
     private Color[] colorArray = {Color.EMPTY, Color.EMPTY, Color.EMPTY};
+    private boolean intakeOn = true;
 
     // === Commands ===
     public Command pushBall = null;
     boolean shootComplete = false;
     public LambdaCommand pushBallAndBack = null;
+
+    public LambdaCommand positiveIntake = null;
+    public LambdaCommand negativeIntake = null;
 
     public LambdaCommand cycleLeft ;
     public LambdaCommand cycleRight;
@@ -74,12 +82,10 @@ public class Sort implements Subsystem {
     final ElapsedTime timer = new ElapsedTime();
     boolean isNotfull = false;
     private final ServoEx Light = new ServoEx("Light");
-    private DigitalChannel beamBreaker;
-    // Beam-breaker timing constants
-    private static final double BEAM_TIMEOUT       = 1.5; // s: fallback if beam is never broken
-    private static final double BEAM_CLEAR_TIMEOUT = 0.5; // s: fallback if beam never clears
-    private final ElapsedTime beamTimer = new ElapsedTime();
-    private boolean beamWasBroken = false; // used by pushBallAndBack phases
+
+    public InstantCommand stopIntake = new InstantCommand(() -> {
+        intakeOn = false;
+    });
 
     private Sort() {
     }
@@ -104,45 +110,34 @@ public class Sort implements Subsystem {
         spindexRight = new ServoEx(hardwareMap.get(Servo.class, "spindexRight"));
         spindexLeft = new ServoEx(hardwareMap.get(Servo.class, "spindexLeft"));
 
-        beamBreaker = hardwareMap.get(DigitalChannel.class, "beamBreaker");
-        beamBreaker.setMode(DigitalChannel.Mode.INPUT);
+
 
 
         pushBallAndBack = new LambdaCommand()
                 .setStart(() -> {
+                    // Reset internal latch
                     secondPressSeen = false;
-                    running = false;
-                    beamWasBroken = false;
+                    running=false;
                 })
                 .setUpdate(() -> {
-                    // Phase 1: extend scissor once spindex is stable
-                    if (spindexIsStable && !running) {
+                    // Only execute push when spindex is stable
+                    if (spindexIsStable && !secondPressSeen&&!running) {
                         new SetPositions(
-                                servoLeft.to(-1.0),
-                                servoRight.to(1.0)
-                        ).schedule();
-                        beamTimer.reset();
+                                servoLeft.to(1.0),
+                                servoRight.to(.34)
+                        )
+                                .thenWait(0.35)
+                                .then(new SetPositions(
+                                        servoLeft.to(.6),
+                                        servoRight.to(.8)
+                                ))
+                                .schedule();
                         running = true;
                     }
 
-                    if (!running) return;
-
-                    // Phase 2: wait for beam to be broken (ball arrived at turret)
-                    if (!beamWasBroken) {
-                        if (isBeamBroken() || beamTimer.seconds() >= BEAM_TIMEOUT) {
-                            beamWasBroken = true;
-                            beamTimer.reset(); // reuse timer for phase 3
-                        }
-                        return;
-                    }
-
-                    // Phase 3: wait for beam to clear (ball has passed through), then retract
-                    if (!isBeamBroken() || beamTimer.seconds() >= BEAM_CLEAR_TIMEOUT) {
-                        new SetPositions(
-                                servoLeft.to(1.0),
-                                servoRight.to(-1.0)
-                        ).schedule();
-                        secondPressSeen = true; // signal done
+                    // Detect the second press
+                    if (touchSensor.isPressed()) {
+                        secondPressSeen = true;
                     }
                 })
                 .setIsDone(() -> secondPressSeen)
@@ -151,8 +146,8 @@ public class Sort implements Subsystem {
         // Rotate Left (Index + 1)
         cycleLeft = new LambdaCommand()
                 .setStart(()->{
-                    hasRunL = false;
-                })
+                     hasRunL = false;
+                 })
                 .setUpdate(() -> {
                     if (!hasRunL && touchSensor.isPressed()) {
                         moveSpindex(1);
@@ -175,53 +170,109 @@ public class Sort implements Subsystem {
                 .setIsDone(() -> hasRunR)
                 .named("cycleRight");
 
-        // shootGreen / shootPurp delegate to the beam-closed shootNew* variants
-        shootGreen = new InstantCommand(() -> shootNewGreen().schedule()).named("shootGreen");
-        shootPurp  = new InstantCommand(() -> shootNewPurp().schedule()).named("shootPurp");
+
+
+        positiveIntake = new LambdaCommand()
+                .setStart(() -> intake.setPower(1.0))
+                .setInterruptible(true)
+                .setStop(interrupted -> intake.setPower(0.0))
+                .requires(intakeOn, this);
+
+        negativeIntake = new LambdaCommand()
+                .setStart(() -> intake.setPower(-1.0))
+                .setInterruptible(true)
+                .setStop(interrupted -> intake.setPower(0.0))
+                .requires(intakeOn, this);
+
+
+        shootGreen = new InstantCommand(() -> {
+            if (colorArray[2] == Color.GREEN) {
+                new SequentialGroup(
+                        new Delay(1),
+                        pushBallAndBack
+                ).schedule();
+
+            }
+            else if (colorArray[1] == Color.GREEN) {
+                new SequentialGroup(
+                        cycleLeft,
+                        new Delay(1),
+                        pushBallAndBack
+                ).schedule();
+
+            }
+            else if (colorArray[0] == Color.GREEN) {
+                new SequentialGroup(
+                        cycleRight,
+                        new Delay(1),
+                        pushBallAndBack
+                ).schedule();
+
+            }
+            colorArray[2]= Color.EMPTY;
+        }).named("shootGreen");
+
+        shootPurp = new InstantCommand(() -> {
+            if (colorArray[2] == Color.PURPLE) {
+                new SequentialGroup(
+                        new Delay(1),
+                        pushBallAndBack
+                ).schedule();
+
+            }
+            else if (colorArray[1] == Color.PURPLE) {
+                new SequentialGroup(
+                        cycleLeft,
+                        new Delay(1),
+                        pushBallAndBack
+                ).schedule();
+
+            }
+            else if (colorArray[0] == Color.PURPLE) {
+                new SequentialGroup(
+                        cycleRight,
+                        new Delay(1),
+                        pushBallAndBack
+                ).schedule();
+
+            }
+            colorArray[2]= Color.EMPTY;
+        }).named("shootPurp");
 
 
     }
     public boolean getSecondPressSeen(){
-        return secondPressSeen;
-    }
-
-    /**
-     * Returns true when the beam-breaker beam is interrupted (active-low: getState()==false means broken).
-     * Flip the logic here if your hardware reads the opposite polarity.
-     */
-    private boolean isBeamBroken() {
-        return !beamBreaker.getState();
-    }
+        return secondPressSeen;}
 
 
 
-    // direction 1 for clockwise (Next slot), -1 for counter-clockwise (Previous slot)
-    private void moveSpindex(int direction) {
-        currentIndex += direction;
+     // direction 1 for clockwise (Next slot), -1 for counter-clockwise (Previous slot)
+     private void moveSpindex(int direction) {
+         currentIndex += direction;
 
-        if (currentIndex > 2) {
-            currentIndex = 0;
-        } else if (currentIndex < 0) {
-            currentIndex = 2;
-        }
+         if (currentIndex > 2) {
+             currentIndex = 0;
+         } else if (currentIndex < 0) {
+             currentIndex = 2;
+         }
 
-        //Memory Shifting (Virtual Rotation)
-        Color temp;
-        if (direction == 1) {
-            // Rotating Left (1->2, 0->1, 2->0)
-            temp = colorArray[2];
-            colorArray[2] = colorArray[1];
-            colorArray[1] = colorArray[0];
-            colorArray[0] = temp;
-        } else {
-            // Rotating Right (0->2, 1->0, 2->1)
-            temp = colorArray[0];
-            colorArray[0] = colorArray[1];
-            colorArray[1] = colorArray[2];
-            colorArray[2] = temp;
-        }
+         //Memory Shifting (Virtual Rotation)
+         Color temp;
+         if (direction == 1) {
+             // Rotating Left (1->2, 0->1, 2->0)
+             temp = colorArray[2];
+             colorArray[2] = colorArray[1];
+             colorArray[1] = colorArray[0];
+             colorArray[0] = temp;
+         } else {
+             // Rotating Right (0->2, 1->0, 2->1)
+             temp = colorArray[0];
+             colorArray[0] = colorArray[1];
+             colorArray[1] = colorArray[2];
+             colorArray[2] = temp;
+         }
 
-    }
+     }
 
     public boolean isSpindexStable(){
         return spindexIsStable;
@@ -237,8 +288,10 @@ public class Sort implements Subsystem {
 
     }
     public void restartScissor() {
-        servoLeft.setPosition(1.0);
-        servoRight.setPosition(-1.0);
+        new SetPositions(
+                        servoLeft.to(.6),
+                        servoRight.to(.8)
+                );
     }
 
     public double getServoPosition() {
@@ -258,10 +311,10 @@ public class Sort implements Subsystem {
         if(autoModeIsEnabled){
             if(getColorArray()[2] != Color.EMPTY){
                 if(getColorArray()[1]==Color.EMPTY){
-                    cycleRight.schedule();
+                   cycleRight.schedule();
                 }
                 else if(getColorArray()[0]==Color.EMPTY){
-                    cycleLeft.schedule();
+                  cycleLeft.schedule();
                 }
             }
 
@@ -322,14 +375,15 @@ public class Sort implements Subsystem {
     public Color[] getColorArray() {
         return colorArray;
     }
-
-    private enum State { CHECK, WAIT_STABLE, PUSH, WAIT_BEAM_BROKEN, WAIT_BEAM_CLEAR, DONE }
+    
+   private enum State { CHECK, WAIT_STABLE, PUSH, WAIT_RETRACT, DONE }
 
     public Command shootNewGreen() {
         if (colorArray[0] == Color.GREEN || colorArray[1] == Color.GREEN || colorArray[2] == Color.GREEN) {
             final State[] state = { State.CHECK };
             final int[] targetIndex = { -1 };
 
+            final double retractDelay = 0.6;
             final double minStableWait = 0.3; // Minimum wait before checking stability
             final ElapsedTime stableTimer = new ElapsedTime();
             return new LambdaCommand()
@@ -338,8 +392,6 @@ public class Sort implements Subsystem {
                         state[0] = State.CHECK;
                         targetIndex[0] = -1;
                         timer.reset();
-                        beamWasBroken = false; // reset shared flag
-                        beamTimer.reset();
                     })
                     .setUpdate(() -> {
                         switch (state[0]) {
@@ -368,28 +420,22 @@ public class Sort implements Subsystem {
                                 }
                                 break;
                             case PUSH:
-                                // Extend scissor only — retract is triggered by beam-breaker
+                                // schedule the push/retract sequence
                                 new SetPositions(
-                                        servoLeft.to(-1.0),
-                                        servoRight.to(1.0)
-                                ).schedule();
-                                beamTimer.reset();
-                                state[0] = State.WAIT_BEAM_BROKEN;
+                                        servoLeft.to(1.0),
+                                        servoRight.to(.34)
+                                )
+                                        .thenWait(0.35)
+                                        .then(new SetPositions(
+                                                servoLeft.to(.6),
+                                                servoRight.to(.8)
+                                        ))
+                                        .schedule();
+                                timer.reset();
+                                state[0] = State.WAIT_RETRACT;
                                 break;
-                            case WAIT_BEAM_BROKEN:
-                                // Wait until ball interrupts the beam, or fallback timeout
-                                if (isBeamBroken() || beamTimer.seconds() >= BEAM_TIMEOUT) {
-                                    beamTimer.reset();
-                                    state[0] = State.WAIT_BEAM_CLEAR;
-                                }
-                                break;
-                            case WAIT_BEAM_CLEAR:
-                                // Wait until ball has fully passed (beam clears), or fallback timeout
-                                if (!isBeamBroken() || beamTimer.seconds() >= BEAM_CLEAR_TIMEOUT) {
-                                    new SetPositions(
-                                            servoLeft.to(1.0),
-                                            servoRight.to(-1.0)
-                                    ).schedule();
+                            case WAIT_RETRACT:
+                                if (timer.seconds() >= retractDelay) {
                                     colorArray[2] = Color.EMPTY;
                                     shootComplete = true;
                                     state[0] = State.DONE;
@@ -410,6 +456,7 @@ public class Sort implements Subsystem {
         if (colorArray[0] == Color.PURPLE || colorArray[1] == Color.PURPLE || colorArray[2] == Color.PURPLE) {
             final State[] state = { State.CHECK };
             final int[] targetIndex = { -1 };
+            final double retractDelay = 0.6;
             final double minStableWait = 0.2; // Minimum wait before checking stability
             final ElapsedTime stableTimer = new ElapsedTime();
             return new LambdaCommand()
@@ -418,8 +465,6 @@ public class Sort implements Subsystem {
                         state[0] = State.CHECK;
                         targetIndex[0] = -1;
                         timer.reset();
-                        beamWasBroken = false; // reset shared flag
-                        beamTimer.reset();
                     })
                     .setUpdate(() -> {
                         switch (state[0]) {
@@ -449,28 +494,21 @@ public class Sort implements Subsystem {
                                 }
                                 break;
                             case PUSH:
-                                // Extend scissor only — retract is triggered by beam-breaker
                                 new SetPositions(
-                                        servoLeft.to(-1.0),
-                                        servoRight.to(1.0)
-                                ).schedule();
-                                beamTimer.reset();
-                                state[0] = State.WAIT_BEAM_BROKEN;
+                                        servoLeft.to(1.0),
+                                        servoRight.to(.34)
+                                )
+                                        .thenWait(0.35)
+                                        .then(new SetPositions(
+                                                servoLeft.to(.6),
+                                                servoRight.to(.8)
+                                        ))
+                                        .schedule();
+                                timer.reset();
+                                state[0] = State.WAIT_RETRACT;
                                 break;
-                            case WAIT_BEAM_BROKEN:
-                                // Wait until ball interrupts the beam, or fallback timeout
-                                if (isBeamBroken() || beamTimer.seconds() >= BEAM_TIMEOUT) {
-                                    beamTimer.reset();
-                                    state[0] = State.WAIT_BEAM_CLEAR;
-                                }
-                                break;
-                            case WAIT_BEAM_CLEAR:
-                                // Wait until ball has fully passed (beam clears), or fallback timeout
-                                if (!isBeamBroken() || beamTimer.seconds() >= BEAM_CLEAR_TIMEOUT) {
-                                    new SetPositions(
-                                            servoLeft.to(1.0),
-                                            servoRight.to(-1.0)
-                                    ).schedule();
+                            case WAIT_RETRACT:
+                                if (timer.seconds() >= retractDelay) {
                                     colorArray[2] = Color.EMPTY;
                                     shootComplete = true;
                                     state[0] = State.DONE;
@@ -487,10 +525,11 @@ public class Sort implements Subsystem {
         return new InstantCommand(() -> {});
     }
 
-    public Command shootClosestBall() {
+   public Command shootClosestBall() {
         if (colorArray[2] != Color.EMPTY || colorArray[1] != Color.EMPTY || colorArray[0] != Color.EMPTY) {
             final State[] state = { State.CHECK };
             final int[] targetIndex = { -1 };
+            final double retractDelay = 0.6;
             final double minStableWait = 0.2; // Minimum wait before checking stability
             final ElapsedTime stableTimer = new ElapsedTime();
 
@@ -499,8 +538,6 @@ public class Sort implements Subsystem {
                         state[0] = State.CHECK;
                         targetIndex[0] = -1;
                         timer.reset();
-                        beamWasBroken = false; // reset shared flag
-                        beamTimer.reset();
                     })
                     .setUpdate(() -> {
                         switch (state[0]) {
@@ -530,28 +567,21 @@ public class Sort implements Subsystem {
                                 }
                                 break;
                             case PUSH:
-                                // Extend scissor only — retract is triggered by beam-breaker
                                 new SetPositions(
-                                        servoLeft.to(-1.0),
-                                        servoRight.to(1.0)
-                                ).schedule();
-                                beamTimer.reset();
-                                state[0] = State.WAIT_BEAM_BROKEN;
+                                        servoLeft.to(1.0),
+                                        servoRight.to(.34)
+                                )
+                                        .thenWait(0.35)
+                                        .then(new SetPositions(
+                                                servoLeft.to(.6),
+                                                servoRight.to(.8)
+                                        ))
+                                        .schedule();
+                                timer.reset();
+                                state[0] = State.WAIT_RETRACT;
                                 break;
-                            case WAIT_BEAM_BROKEN:
-                                // Wait until ball interrupts the beam, or fallback timeout
-                                if (isBeamBroken() || beamTimer.seconds() >= BEAM_TIMEOUT) {
-                                    beamTimer.reset();
-                                    state[0] = State.WAIT_BEAM_CLEAR;
-                                }
-                                break;
-                            case WAIT_BEAM_CLEAR:
-                                // Wait until ball has fully passed (beam clears), or fallback timeout
-                                if (!isBeamBroken() || beamTimer.seconds() >= BEAM_CLEAR_TIMEOUT) {
-                                    new SetPositions(
-                                            servoLeft.to(1.0),
-                                            servoRight.to(-1.0)
-                                    ).schedule();
+                            case WAIT_RETRACT:
+                                if (timer.seconds() >= retractDelay) {
                                     colorArray[2] = Color.EMPTY;
                                     state[0] = State.DONE;
                                 }
@@ -571,3 +601,4 @@ public class Sort implements Subsystem {
     }
 
 }
+

@@ -325,4 +325,5 @@ public class ELCEncoderV2 {
         }
         return channelB.getState();
     }
+
 }
