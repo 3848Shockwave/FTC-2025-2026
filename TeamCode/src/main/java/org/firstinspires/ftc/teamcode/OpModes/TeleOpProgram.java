@@ -87,6 +87,7 @@ public static double Lkp =0.0004;
     @Override
     public void onInit() {
         Turret.INSTANCE.setManualControl(false);
+        Sort.INSTANCE.setAutoModeIsEnabled(false);
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
         if(RobotConfig.autonomousStartEndPoses != null){
             startPose = RobotConfig.autonomousStartEndPoses.getEndPose();
@@ -369,6 +370,7 @@ public static double Lkp =0.0004;
         telemetryManager.addData("Current Spindex Index (0-2)", Sort.INSTANCE.getCurrentIndex());
         telemetryManager.addData("Spindex Stability", Sort.INSTANCE.isSpindexStable());
         telemetryManager.addData("ScissorLift Staus",Sort.INSTANCE.isTouchPressed());
+
 
         telemetryManager.addLine("-----------------------------");
         telemetryManager.addLine("===== LAUNCH SYSTEM ======");

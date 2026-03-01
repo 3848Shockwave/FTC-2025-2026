@@ -34,7 +34,7 @@ public class Sort implements Subsystem {
 
     ColorSensor colorSensorL1, colorSensorL2;
     ColorSensor colorSensorR1, colorSensorR2;
-    ColorSensor colorSensorFront;
+    ColorSensor colorSensorF1, colorSensorF2;
 
     HardwareMap hardwareMap;
     Telemetry telemetry;
@@ -44,7 +44,7 @@ public class Sort implements Subsystem {
     // 0.0 -> Position A
     // 0.45 -> Position C
     // 0.92 -> Position B
-    private double[] POSITIONS = {0.045, 0.51, 0.999};
+    private double[] POSITIONS = {0.09, 0.51, 0.94};
     private int currentIndex = 0; // Current slot index (0, 1, or 2)
 
     private double currentSpindexVelocity = 0.0;
@@ -105,10 +105,11 @@ public class Sort implements Subsystem {
         colorSensorL2 = hardwareMap.get(ColorSensor.class, "colorSensorL2");
         colorSensorR1 = hardwareMap.get(ColorSensor.class, "colorSensorR1");
         colorSensorR2 = hardwareMap.get(ColorSensor.class, "colorSensorR2");
-        colorSensorFront = hardwareMap.get(ColorSensor.class, "colorSensorFront");
+        colorSensorF1 = hardwareMap.get(ColorSensor.class, "colorSensorF1");
+        colorSensorF2 = hardwareMap.get(ColorSensor.class, "colorSensorF2");
 
-        spindexRight = new ServoEx(hardwareMap.get(Servo.class, "spindexRight"));
-        spindexLeft = new ServoEx(hardwareMap.get(Servo.class, "spindexLeft"));
+        spindexRight = new ServoEx( "spindexRight");
+        spindexLeft = new ServoEx( "spindexLeft");
 
 
 
@@ -128,7 +129,7 @@ public class Sort implements Subsystem {
                         )
                                 .thenWait(0.35)
                                 .then(new SetPositions(
-                                        servoLeft.to(.6),
+                                        servoLeft.to(.58),
                                         servoRight.to(.8)
                                 ))
                                 .schedule();
@@ -289,7 +290,7 @@ public class Sort implements Subsystem {
     }
     public void restartScissor() {
         new SetPositions(
-                        servoLeft.to(.6),
+                        servoLeft.to(.58),
                         servoRight.to(.8)
                 );
     }
@@ -349,8 +350,8 @@ public class Sort implements Subsystem {
         int blueNumL = (colorSensorL1.blue() + colorSensorL2.blue()) / 2;
         int greenNumR = (colorSensorR1.green() + colorSensorR2.green()) / 2;
         int blueNumR = (colorSensorR1.blue() + colorSensorR2.blue()) / 2;
-        int greenNumF = colorSensorFront.green();
-        int blueNumF = colorSensorFront.blue();
+        int greenNumF = (colorSensorF1.green() + colorSensorF2.green()) / 2;
+        int blueNumF = (colorSensorF1.blue() + colorSensorF2.blue()) / 2;
         // Color determination logic
         if (greenNumR > 100 && blueNumR > 100      ) {
             colorArray[0] = (greenNumR > blueNumR) ? Color.GREEN : Color.PURPLE;
@@ -427,7 +428,7 @@ public class Sort implements Subsystem {
                                 )
                                         .thenWait(0.35)
                                         .then(new SetPositions(
-                                                servoLeft.to(.6),
+                                                servoLeft.to(.58),
                                                 servoRight.to(.8)
                                         ))
                                         .schedule();
@@ -500,7 +501,7 @@ public class Sort implements Subsystem {
                                 )
                                         .thenWait(0.35)
                                         .then(new SetPositions(
-                                                servoLeft.to(.6),
+                                                servoLeft.to(.58),
                                                 servoRight.to(.8)
                                         ))
                                         .schedule();
