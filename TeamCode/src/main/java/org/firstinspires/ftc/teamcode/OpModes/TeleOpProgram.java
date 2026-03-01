@@ -110,6 +110,7 @@ public class TeleOpProgram extends NextFTCOpMode {
 
 
         Turret.INSTANCE.setManualControl(false);
+        Sort.INSTANCE.setAutoModeIsEnabled(false);
         telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
         if(RobotConfig.autonomousStartEndPoses != null){
             startPose = RobotConfig.autonomousStartEndPoses.getEndPose();
@@ -422,6 +423,7 @@ public class TeleOpProgram extends NextFTCOpMode {
         telemetryManager.addData("Current Spindex Index (0-2)", Sort.INSTANCE.getCurrentIndex());
         telemetryManager.addData("Spindex Stability", Sort.INSTANCE.isSpindexStable());
         telemetryManager.addData("ScissorLift Staus",Sort.INSTANCE.isTouchPressed());
+
 
         telemetryManager.addLine("-----------------------------");
         telemetryManager.addLine("===== INTAKE / JAM ======");

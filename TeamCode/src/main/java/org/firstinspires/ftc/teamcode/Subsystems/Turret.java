@@ -417,8 +417,10 @@ public class Turret implements Subsystem {
 //        ActiveOpMode.telemetry().addData("PowerRotate",Rpower);
 //        ActiveOpMode.telemetry().addData("Power Turret",Lpower);
 //        ActiveOpMode.telemetry().addData("calcLVelocity", Lvelocity);
-//        ActiveOpMode.telemetry().addData("calcmovement",calculatePosition());
-//        ActiveOpMode.telemetry().addData("calcnext",nextTurretPosition);
+        ActiveOpMode.telemetry().addData("pos",getRealTurretPosition());
+        ActiveOpMode.telemetry().addData("pos2",rotateEncoder.getTotalDegrees());
+      //  ActiveOpMode.telemetry().addData("calcmovement",calculatePosition());
+   //     ActiveOpMode.telemetry().addData("calcnext",nextTurretPosition);
 //        ActiveOpMode.telemetry().addData("Magic Math Calculation",nextTurretPosition+getBlindTrackingCoordinates());
 //
 //        if(!limelightProcessing.processTargets().isEmpty()) {
@@ -436,7 +438,7 @@ public class Turret implements Subsystem {
         if(Rpower<-1){
             Rpower = -1;
         }
-        turretRotateServo.setPower(-Rpower);
+       // turretRotateServo.setPower(-Rpower);
         if(voltSensor.getVoltage()<8){
             Lpower = Lpower * (12.5/voltSensor.getVoltage());
         }
