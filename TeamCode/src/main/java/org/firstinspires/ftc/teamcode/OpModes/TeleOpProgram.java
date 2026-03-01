@@ -22,7 +22,10 @@ import org.firstinspires.ftc.teamcode.Subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 import dev.nextftc.bindings.Button;
+import dev.nextftc.bindings.Button;
 import dev.nextftc.core.commands.CommandManager;
+import dev.nextftc.core.commands.groups.SequentialGroup;
+import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.PedroComponent;
@@ -38,7 +41,7 @@ import dev.nextftc.hardware.impl.MotorEx;
 @Configurable
 @TeleOp(name = "TeleOp Program", group = "Production")
 public class TeleOpProgram extends NextFTCOpMode {
-    public static RobotStateTracker antiCrazy;
+    public static RobotStateTracker antiCrazy = new RobotStateTracker();
     public static double newVelocity = 1345;
 
     public static double power = 1.0;
@@ -89,9 +92,10 @@ public class TeleOpProgram extends NextFTCOpMode {
     private boolean overrideUpdatePose = false;
     boolean isNotfull = false;
     double lastLoopTime = 0;
-    private DriverControlledCommand driverControlled;
     private FollowPath holdCommand;
     private Pose holdPose;
+    private DriverControlledCommand driverControlled;
+
 
 
     public TeleOpProgram() {
@@ -217,10 +221,13 @@ public class TeleOpProgram extends NextFTCOpMode {
 
 
         //Go to Preset Coordinate
-        Button y2 = button(()->gamepad2.y)
+        Button leftbumper2 = button(()->gamepad2.left_bumper)
                 .whenBecomesTrue(() -> {
-                    Pose currentPose = follower().getPose();
+                    if (driverControlled != null) {
+                        driverControlled.cancel();
+                    }
 
+                    Pose currentPose = follower().getPose();
                     Pose targetPose;
                     if (RobotConfig.alliance == RobotConfig.Alliance.BLUE) {
                         targetPose = new Pose(blueBaseX, blueBaseY, Math.toRadians(blueBaseHeading));
@@ -228,25 +235,34 @@ public class TeleOpProgram extends NextFTCOpMode {
                         targetPose = new Pose(redBaseX, redBaseY, Math.toRadians(redBaseHeading));
                     }
 
-                    // Build path from current position to target
                     PathChain pathToTarget = follower().pathBuilder()
                             .addPath(new BezierLine(currentPose, targetPose))
                             .setLinearHeadingInterpolation(currentPose.getHeading(), targetPose.getHeading())
                             .build();
 
-                    // Override pose update temporarily to avoid conflicts
                     overrideUpdatePose = true;
 
-                    new FollowPath(pathToTarget).schedule();
+                    new SequentialGroup(
+                            new FollowPath(pathToTarget),
+                            new InstantCommand(() -> {
+                                antiCrazy.updateLastPose(follower().getPose());
 
-                    // Provide feedback
+                                overrideUpdatePose = false;
+                                follower().startTeleopDrive();
+                                if (driverControlled != null) driverControlled.schedule();
+                            })
+                    ).schedule();
+
                     gamepad1.rumble(50);
                 });
 
-        Button x2 = button(()->gamepad2.x)
+        Button right_bumper2 = button(()->gamepad2.right_bumper)
                 .whenBecomesTrue(() -> {
-                    Pose currentPose = follower().getPose();
+                    if (driverControlled != null) {
+                        driverControlled.cancel();
+                    }
 
+                    Pose currentPose = follower().getPose();
                     Pose targetPose;
                     if (RobotConfig.alliance == RobotConfig.Alliance.BLUE) {
                         targetPose = new Pose(blueShootX, blueShootY, Math.toRadians(blueShootHeading));
@@ -261,13 +277,22 @@ public class TeleOpProgram extends NextFTCOpMode {
 
                     overrideUpdatePose = true;
 
-                    new FollowPath(pathToTarget).schedule();
+                    new SequentialGroup(
+                            new FollowPath(pathToTarget),
+                            new InstantCommand(() -> {
+                                antiCrazy.updateLastPose(follower().getPose());
+
+                                overrideUpdatePose = false;
+                                follower().startTeleopDrive();
+                                if (driverControlled != null) driverControlled.schedule();
+                            })
+                    ).schedule();
 
                     gamepad1.rumble(50);
                 });
 
-        Button a2 = button(()->gamepad2.a);
-        a2.whenTrue(() -> {
+        Button dpad_down2 = button(()->gamepad2.dpad_down);
+        dpad_down2.whenTrue(() -> {
             holdPose = follower().getPose();
             PathChain holdPath = follower().pathBuilder()
                     .addPath(new BezierLine(holdPose, holdPose))
@@ -282,7 +307,7 @@ public class TeleOpProgram extends NextFTCOpMode {
             holdCommand = new FollowPath(holdPath);
             holdCommand.schedule();
         });
-        a2.whenFalse(() -> {
+        dpad_down2.whenBecomesFalse(() -> {
             if (holdCommand != null) {
                 holdCommand.cancel();
                 holdCommand = null;
@@ -292,6 +317,7 @@ public class TeleOpProgram extends NextFTCOpMode {
                 driverControlled.schedule();
             }
         });
+
 
 
         // Triple Launch
@@ -352,10 +378,16 @@ public class TeleOpProgram extends NextFTCOpMode {
                     false
             );
         }
-
-        if(driverControlled != null) {
-            driverControlled.schedule();
+        if(driverControlled == null){
+            driverControlled = new PedroDriverControlled(
+                    Gamepads.gamepad1().leftStickY(),
+                    Gamepads.gamepad1().leftStickX(),
+                    Gamepads.gamepad1().rightStickX().negate(),
+                    false
+            );
         }
+
+        driverControlled.schedule();
     }
 
     @Override
@@ -386,13 +418,10 @@ public class TeleOpProgram extends NextFTCOpMode {
             }
         }
         if(antiCrazy.getLastMeasuredPose()!=null) {
-            if (!follower().getPose().roughlyEquals(antiCrazy.getLastMeasuredPose(), 15)&&!overrideUpdatePose) {
+            if (!follower().getPose().roughlyEquals(antiCrazy.getLastMeasuredPose(), 15) && !overrideUpdatePose) {
                 follower().setPose(antiCrazy.getLastMeasuredPose());
-            } else {
+            } else if (!overrideUpdatePose) {
                 antiCrazy.updateLastPose(follower().getPose());
-                if(overrideUpdatePose){
-                    overrideUpdatePose = false;
-                }
             }
         }
         else if(RobotConfig.finalMeasuredPose!=null&&ActiveOpMode.isStarted()){
@@ -405,7 +434,7 @@ public class TeleOpProgram extends NextFTCOpMode {
         telemetryManager.addLine("General TeleOp Info:");
         telemetryManager.addLine("-----------------------------");
         telemetryManager.addData("Commands:", CommandManager.INSTANCE.snapshot());
-        telemetryManager.addData("Side Selected: ", RobotConfig.alliance.name());
+        telemetryManager.addData("Side Selected: ", RobotConfig.alliance != null ? RobotConfig.alliance.name() : "NONE");
         telemetryManager.addData("Pose X & Y:", follower().getPose().getX()+" , "+follower().getPose().getY());
 
         telemetryManager.addLine("-----------------------------");
@@ -443,7 +472,7 @@ public class TeleOpProgram extends NextFTCOpMode {
         double loopFrequency = 1000000000 / (currentLoopTime - lastLoopTime);
         lastLoopTime = currentLoopTime;
 
-        telemetry.addData("Loop Frequency", "%.0f Hz", loopFrequency);
+        //telemetry.addData("Loop Frequency", "%.0f Hz", loopFrequency);
         telemetryManager.update(telemetry);
     }
 

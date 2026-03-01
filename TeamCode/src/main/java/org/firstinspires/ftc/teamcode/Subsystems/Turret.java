@@ -438,14 +438,14 @@ public class Turret implements Subsystem {
         if(Rpower<-1){
             Rpower = -1;
         }
-       // turretRotateServo.setPower(-Rpower);
+       turretRotateServo.setPower(-Rpower);
         if(voltSensor.getVoltage()<8){
             Lpower = Lpower * (12.5/voltSensor.getVoltage());
         }
         launchMotorLeft.setPower(-Lpower);
         launchMotorRight.setPower(-Lpower);
         double afterMotors = periodicTimer.milliseconds();
-        ActiveOpMode.telemetry().addData("[Turret] TOTAL ms", afterMotors - startTime);
+       // ActiveOpMode.telemetry().addData("[Turret] TOTAL ms", afterMotors - startTime);
 
 
     }

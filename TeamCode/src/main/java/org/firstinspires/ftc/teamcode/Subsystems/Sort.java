@@ -24,7 +24,6 @@ public class Sort implements Subsystem {
 
     public static final Sort INSTANCE = new Sort();
 
-    MotorEx intake = new MotorEx("intakeMotor").brakeMode();
     ELCEncoderV2 spindexEncoder = null;
     ServoEx spindexRight;
     ServoEx spindexLeft;
@@ -60,15 +59,11 @@ public class Sort implements Subsystem {
     }
     // Assuming index 0 is Right side, index 1 is Left side (Adjust based on physical mounting)
     private Color[] colorArray = {Color.EMPTY, Color.EMPTY, Color.EMPTY};
-    private boolean intakeOn = true;
 
     // === Commands ===
     public Command pushBall = null;
     boolean shootComplete = false;
     public LambdaCommand pushBallAndBack = null;
-
-    public LambdaCommand positiveIntake = null;
-    public LambdaCommand negativeIntake = null;
 
     public LambdaCommand cycleLeft ;
     public LambdaCommand cycleRight;
@@ -83,9 +78,6 @@ public class Sort implements Subsystem {
     boolean isNotfull = false;
     private final ServoEx Light = new ServoEx("Light");
 
-    public InstantCommand stopIntake = new InstantCommand(() -> {
-        intakeOn = false;
-    });
 
     private Sort() {
     }
@@ -170,21 +162,6 @@ public class Sort implements Subsystem {
                 })
                 .setIsDone(() -> hasRunR)
                 .named("cycleRight");
-
-
-
-        positiveIntake = new LambdaCommand()
-                .setStart(() -> intake.setPower(1.0))
-                .setInterruptible(true)
-                .setStop(interrupted -> intake.setPower(0.0))
-                .requires(intakeOn, this);
-
-        negativeIntake = new LambdaCommand()
-                .setStart(() -> intake.setPower(-1.0))
-                .setInterruptible(true)
-                .setStop(interrupted -> intake.setPower(0.0))
-                .requires(intakeOn, this);
-
 
         shootGreen = new InstantCommand(() -> {
             if (colorArray[2] == Color.GREEN) {
@@ -341,7 +318,7 @@ public class Sort implements Subsystem {
         spindexEncoder.updateRotations();
         spindexIsStable = spindexEncoder.isStable(.25, 4);
         double end = sortTimer.milliseconds();
-        ActiveOpMode.telemetry().addData("[Sort] TOTAL ms", end - start);
+       // ActiveOpMode.telemetry().addData("[Sort] TOTAL ms", end - start);
 
     }
 
