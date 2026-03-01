@@ -26,6 +26,7 @@ public class PTO implements Subsystem {
 
     public Command engageL = new SetPosition(linearServoL, 0.5).requires(linearServoL);
     public Command engageR = new SetPosition(linearServoR, 0.5).requires(linearServoR);
+
     public Command engage = new ParallelGroup(engageL, engageR).requires(linearServoL, linearServoR);
 
     public Command liftLeft = new SetPower(leftBack, 1.0);
