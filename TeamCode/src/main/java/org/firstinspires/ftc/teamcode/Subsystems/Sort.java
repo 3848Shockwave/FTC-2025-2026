@@ -73,6 +73,20 @@ public class Sort implements Subsystem {
     private boolean spindexIsStable = false;
     private boolean running = false;
 
+
+    // State machine for the scissor lift sequence
+    private enum PushState { IDLE, WAIT_LEAVE_BOTTOM, WAIT_RETURN_BOTTOM, DONE }
+    private PushState pushState = PushState.IDLE;
+
+    // Timer to track the exact timing of the scissor lift operations
+    private final ElapsedTime pushTimer = new ElapsedTime();
+
+    // Timer to prevent firing exactly when the spindex is given a new command but hasn't physically moved yet
+    private final ElapsedTime spindexMoveTimer = new ElapsedTime();
+
+
+
+
     RevTouchSensor touchSensor = null;
     final ElapsedTime timer = new ElapsedTime();
     boolean isNotfull = false;
@@ -108,33 +122,64 @@ public class Sort implements Subsystem {
 
         pushBallAndBack = new LambdaCommand()
                 .setStart(() -> {
-                    // Reset internal latch
+                    // Reset everything at the start of the command
+                    pushState = PushState.IDLE;
                     secondPressSeen = false;
-                    running=false;
+                    running = true;
                 })
                 .setUpdate(() -> {
-                    // Only execute push when spindex is stable
-                    if (spindexIsStable && !secondPressSeen&&!running) {
-                        new SetPositions(
-                                servoLeft.to(1.0),
-                                servoRight.to(.34)
-                        )
-                                .thenWait(0.35)
-                                .then(new SetPositions(
-                                        servoLeft.to(.58),
-                                        servoRight.to(.8)
-                                ))
-                                .schedule();
-                        running = true;
-                    }
+                    switch (pushState) {
+                        case IDLE:
+                            // Double Safety Lock: Spindex must be velocity-stable AND at least 0.3s must have passed since the last rotation command
+                            boolean isSpindexTrulyReady = spindexIsStable && (spindexMoveTimer.seconds() > 0.3);
 
-                    // Detect the second press
-                    if (touchSensor.isPressed()) {
-                        secondPressSeen = true;
+                            if (isSpindexTrulyReady && !secondPressSeen) {
+                                // 1. Start extending the scissor lift
+                                servoLeft.setPosition(1.0);
+                                servoRight.setPosition(0.34);
+
+                                pushTimer.reset();
+                                pushState = PushState.WAIT_LEAVE_BOTTOM;
+                            }
+                            break;
+
+                        case WAIT_LEAVE_BOTTOM:
+                            // 2. Wait for the scissor lift to fully extend (0.35s based on your original sequence)
+                            // We don't check the touch sensor here because it's leaving the bottom limit switch
+                            if (pushTimer.seconds() >= 0.35) {
+                                // Start retracting
+                                servoLeft.setPosition(0.58);
+                                servoRight.setPosition(0.8);
+
+                                pushTimer.reset();
+                                pushState = PushState.WAIT_RETURN_BOTTOM;
+                            }
+                            break;
+
+                        case WAIT_RETURN_BOTTOM:
+                            // 3. Wait until the touch sensor is pressed again (meaning it safely returned to the bottom)
+                            // We wait at least 0.1s to avoid false positives right as it starts reversing
+                            if (pushTimer.seconds() > 0.1 && touchSensor.isPressed()) {
+                                pushState = PushState.DONE;
+                            }
+                            // Fail-safe: If the sensor breaks or a ball jams it, don't hang the code forever (1.5s timeout)
+                            else if (pushTimer.seconds() > 1.5) {
+                                pushState = PushState.DONE;
+                            }
+                            break;
+
+                        case DONE:
+                            // 4. Clean up and mark the sequence as complete
+                            secondPressSeen = true;
+                            running = false;
+                            break;
                     }
                 })
-                .setIsDone(() -> secondPressSeen)
-                .named("pushBallAndBack");
+                .setIsDone(() -> pushState == PushState.DONE)
+                .named("pushBallAndBack_Secure");
+
+
+
         // Core Rotation Logic
         // Rotate Left (Index + 1)
         cycleLeft = new LambdaCommand()
@@ -224,33 +269,35 @@ public class Sort implements Subsystem {
 
 
 
-     // direction 1 for clockwise (Next slot), -1 for counter-clockwise (Previous slot)
-     private void moveSpindex(int direction) {
-         currentIndex += direction;
+    // direction 1 for clockwise (Next slot), -1 for counter-clockwise (Previous slot)
+    private void moveSpindex(int direction) {
+        currentIndex += direction;
 
-         if (currentIndex > 2) {
-             currentIndex = 0;
-         } else if (currentIndex < 0) {
-             currentIndex = 2;
-         }
+        if (currentIndex > 2) {
+            currentIndex = 0;
+        } else if (currentIndex < 0) {
+            currentIndex = 2;
+        }
 
-         //Memory Shifting (Virtual Rotation)
-         Color temp;
-         if (direction == 1) {
-             // Rotating Left (1->2, 0->1, 2->0)
-             temp = colorArray[2];
-             colorArray[2] = colorArray[1];
-             colorArray[1] = colorArray[0];
-             colorArray[0] = temp;
-         } else {
-             // Rotating Right (0->2, 1->0, 2->1)
-             temp = colorArray[0];
-             colorArray[0] = colorArray[1];
-             colorArray[1] = colorArray[2];
-             colorArray[2] = temp;
-         }
+        // Memory Shifting (Virtual Rotation)
+        Color temp;
+        if (direction == 1) {
+            // Rotating Left (1->2, 0->1, 2->0)
+            temp = colorArray[2];
+            colorArray[2] = colorArray[1];
+            colorArray[1] = colorArray[0];
+            colorArray[0] = temp;
+        } else {
+            // Rotating Right (0->2, 1->0, 2->1)
+            temp = colorArray[0];
+            colorArray[0] = colorArray[1];
+            colorArray[1] = colorArray[2];
+            colorArray[2] = temp;
+        }
 
-     }
+        // Reset the move timer every time the spindex is commanded to rotate
+        spindexMoveTimer.reset();
+    }
 
     public boolean isSpindexStable(){
         return spindexIsStable;

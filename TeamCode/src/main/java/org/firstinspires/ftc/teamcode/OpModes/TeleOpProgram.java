@@ -24,8 +24,6 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import dev.nextftc.bindings.Button;
 import dev.nextftc.bindings.Button;
 import dev.nextftc.core.commands.CommandManager;
-import dev.nextftc.core.commands.groups.SequentialGroup;
-import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.PedroComponent;
@@ -223,10 +221,6 @@ public class TeleOpProgram extends NextFTCOpMode {
         //Go to Preset Coordinate
         Button leftbumper2 = button(()->gamepad2.left_bumper)
                 .whenBecomesTrue(() -> {
-                    if (driverControlled != null) {
-                        driverControlled.cancel();
-                    }
-
                     Pose currentPose = follower().getPose();
                     Pose targetPose;
                     if (RobotConfig.alliance == RobotConfig.Alliance.BLUE) {
@@ -242,31 +236,18 @@ public class TeleOpProgram extends NextFTCOpMode {
 
                     overrideUpdatePose = true;
 
-                    new SequentialGroup(
-                            new FollowPath(pathToTarget),
-                            new InstantCommand(() -> {
-                                antiCrazy.updateLastPose(follower().getPose());
-
-                                overrideUpdatePose = false;
-                                follower().startTeleopDrive();
-                                if (driverControlled != null) driverControlled.schedule();
-                            })
-                    ).schedule();
+                    new FollowPath(pathToTarget).schedule();
 
                     gamepad1.rumble(50);
                 });
 
         Button right_bumper2 = button(()->gamepad2.right_bumper)
                 .whenBecomesTrue(() -> {
-                    if (driverControlled != null) {
-                        driverControlled.cancel();
-                    }
-
                     Pose currentPose = follower().getPose();
                     Pose targetPose;
                     if (RobotConfig.alliance == RobotConfig.Alliance.BLUE) {
                         targetPose = new Pose(blueShootX, blueShootY, Math.toRadians(blueShootHeading));
-                    }else{
+                    } else {
                         targetPose = new Pose(redShootX, redShootY, Math.toRadians(redShootHeading));
                     }
 
@@ -277,16 +258,7 @@ public class TeleOpProgram extends NextFTCOpMode {
 
                     overrideUpdatePose = true;
 
-                    new SequentialGroup(
-                            new FollowPath(pathToTarget),
-                            new InstantCommand(() -> {
-                                antiCrazy.updateLastPose(follower().getPose());
-
-                                overrideUpdatePose = false;
-                                follower().startTeleopDrive();
-                                if (driverControlled != null) driverControlled.schedule();
-                            })
-                    ).schedule();
+                    new FollowPath(pathToTarget).schedule();
 
                     gamepad1.rumble(50);
                 });
